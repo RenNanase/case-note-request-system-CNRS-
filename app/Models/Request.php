@@ -1,0 +1,391 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Builder;
+use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
+use Carbon\Carbon;
+
+class Request extends Model
+{
+    use SoftDeletes, LogsActivity;
+
+    // Request status constants
+    const STATUS_PENDING = 'pending';
+    const STATUS_APPROVED = 'approved';
+    const STATUS_IN_PROGRESS = 'in_progress';
+    const STATUS_COMPLETED = 'completed';
+    const STATUS_REJECTED = 'rejected';
+
+    // Priority constants
+    const PRIORITY_LOW = 'low';
+    const PRIORITY_NORMAL = 'normal';
+    const PRIORITY_HIGH = 'high';
+    const PRIORITY_URGENT = 'urgent';
+
+    protected $fillable = [
+        'request_number',
+        'patient_id',
+        'requested_by_user_id',
+        'department_id',
+        'doctor_id',
+        'location_id',
+        'priority',
+        'status',
+        'purpose',
+        'remarks',
+        'needed_date',
+        'approved_at',
+        'approved_by_user_id',
+        'approval_remarks',
+        'completed_at',
+        'completed_by_user_id',
+        'metadata',
+        'current_handover_id',
+        'current_pic_user_id',
+        'handover_status',
+        'batch_id',
+        // Individual verification fields
+        'is_received',
+        'received_at',
+        'received_by_user_id',
+        'reception_notes',
+    ];
+
+    protected $casts = [
+        'needed_date' => 'date',
+        'approved_at' => 'datetime',
+        'completed_at' => 'datetime',
+        'metadata' => 'array',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+        'deleted_at' => 'datetime',
+        'received_at' => 'datetime',
+        'is_received' => 'boolean',
+    ];
+
+    /**
+     * Activity log options
+     */
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['request_number', 'status', 'priority', 'approved_at', 'completed_at'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
+    }
+
+    /**
+     * Relationships
+     */
+    public function patient(): BelongsTo
+    {
+        return $this->belongsTo(Patient::class);
+    }
+
+    public function requestedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'requested_by_user_id');
+    }
+
+    public function department(): BelongsTo
+    {
+        return $this->belongsTo(Department::class);
+    }
+
+    public function doctor(): BelongsTo
+    {
+        return $this->belongsTo(Doctor::class);
+    }
+
+    public function location(): BelongsTo
+    {
+        return $this->belongsTo(Location::class);
+    }
+
+    public function approvedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by_user_id');
+    }
+
+    public function completedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'completed_by_user_id');
+    }
+
+    public function handovers(): HasMany
+    {
+        return $this->hasMany(CaseNoteHandover::class, 'case_note_request_id');
+    }
+
+    public function currentHandover(): BelongsTo
+    {
+        return $this->belongsTo(CaseNoteHandover::class, 'current_handover_id');
+    }
+
+    public function currentPIC(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'current_pic_user_id');
+    }
+
+    public function events(): HasMany
+    {
+        return $this->hasMany(RequestEvent::class)->orderBy('occurred_at');
+    }
+
+    public function batch(): BelongsTo
+    {
+        return $this->belongsTo(BatchRequest::class, 'batch_id');
+    }
+
+    public function receivedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'received_by_user_id');
+    }
+
+    public function notifications(): HasMany
+    {
+        return $this->hasMany(Notification::class, 'related_request_id');
+    }
+
+    /**
+     * Query scopes
+     */
+    public function scopePending(Builder $query): Builder
+    {
+        return $query->where('status', self::STATUS_PENDING);
+    }
+
+    public function scopeApproved(Builder $query): Builder
+    {
+        return $query->where('status', self::STATUS_APPROVED);
+    }
+
+    public function scopeInProgress(Builder $query): Builder
+    {
+        return $query->where('status', self::STATUS_IN_PROGRESS);
+    }
+
+    public function scopeCompleted(Builder $query): Builder
+    {
+        return $query->where('status', self::STATUS_COMPLETED);
+    }
+
+    public function scopeRejected(Builder $query): Builder
+    {
+        return $query->where('status', self::STATUS_REJECTED);
+    }
+
+    public function scopeOverdue(Builder $query): Builder
+    {
+        return $query->where('needed_date', '<', now()->startOfDay());
+    }
+
+    public function scopeByStatus(Builder $query, string $status): Builder
+    {
+        return $query->where('status', $status);
+    }
+
+    public function scopeByPriority(Builder $query, string $priority): Builder
+    {
+        return $query->where('priority', $priority);
+    }
+
+    public function scopeByDepartment(Builder $query, int $departmentId): Builder
+    {
+        return $query->where('department_id', $departmentId);
+    }
+
+    /**
+     * Accessors & Mutators
+     */
+    public function getStatusLabelAttribute(): string
+    {
+        return match($this->status) {
+            self::STATUS_PENDING => 'Pending',
+            self::STATUS_APPROVED => 'Approved',
+            self::STATUS_IN_PROGRESS => 'In Progress',
+            self::STATUS_COMPLETED => 'Completed',
+            self::STATUS_REJECTED => 'Rejected',
+            default => 'Unknown'
+        };
+    }
+
+    public function getPriorityLabelAttribute(): string
+    {
+        return match($this->priority) {
+            self::PRIORITY_LOW => 'Low',
+            self::PRIORITY_NORMAL => 'Normal',
+            self::PRIORITY_HIGH => 'High',
+            self::PRIORITY_URGENT => 'Urgent',
+            default => 'Normal'
+        };
+    }
+
+    public function getIsOverdueAttribute(): bool
+    {
+        return $this->needed_date &&
+               $this->needed_date->isPast() &&
+               !in_array($this->status, [self::STATUS_COMPLETED, self::STATUS_REJECTED]);
+    }
+
+    public function getCanBeApprovedAttribute(): bool
+    {
+        return $this->status === self::STATUS_PENDING;
+    }
+
+    public function getCanBeCompletedAttribute(): bool
+    {
+        return in_array($this->status, [self::STATUS_APPROVED, self::STATUS_IN_PROGRESS]);
+    }
+
+    public function getDaysToCompleteAttribute(): ?int
+    {
+        if (!$this->completed_at || !$this->created_at) {
+            return null;
+        }
+
+        return $this->created_at->diffInDays($this->completed_at);
+    }
+
+    /**
+     * Helper methods
+     */
+    public function approve(User $user, ?string $remarks = null): bool
+    {
+        if (!$this->can_be_approved) {
+            return false;
+        }
+
+        $this->update([
+            'status' => self::STATUS_APPROVED,
+            'approved_at' => now(),
+            'approved_by_user_id' => $user->id,
+            'approval_remarks' => $remarks,
+        ]);
+
+        $this->events()->create([
+            'type' => 'approved',
+            'actor_user_id' => $user->id,
+            'reason' => $remarks,
+            'occurred_at' => now(),
+        ]);
+
+        return true;
+    }
+
+    public function reject(User $user, string $reason): bool
+    {
+        if (!$this->can_be_approved) {
+            return false;
+        }
+
+        $this->update([
+            'status' => self::STATUS_REJECTED,
+            'approved_at' => now(),
+            'approved_by_user_id' => $user->id,
+            'approval_remarks' => $reason,
+        ]);
+
+        $this->events()->create([
+            'type' => 'rejected',
+            'actor_user_id' => $user->id,
+            'reason' => $reason,
+            'occurred_at' => now(),
+        ]);
+
+        return true;
+    }
+
+    public function complete(User $user): bool
+    {
+        if (!$this->can_be_completed) {
+            return false;
+        }
+
+        $this->update([
+            'status' => self::STATUS_COMPLETED,
+            'completed_at' => now(),
+            'completed_by_user_id' => $user->id,
+        ]);
+
+        $this->events()->create([
+            'type' => 'completed',
+            'actor_user_id' => $user->id,
+            'occurred_at' => now(),
+        ]);
+
+        return true;
+    }
+
+    public static function generateRequestNumber(): string
+    {
+        $prefix = 'REQ';
+        $date = now()->format('Ymd');
+        $sequence = str_pad(self::whereDate('created_at', today())->count() + 1, 4, '0', STR_PAD_LEFT);
+
+        return "{$prefix}{$date}{$sequence}";
+    }
+
+    public static function getStatusOptions(): array
+    {
+        return [
+            self::STATUS_PENDING => 'Pending',
+            self::STATUS_APPROVED => 'Approved',
+            self::STATUS_IN_PROGRESS => 'In Progress',
+            self::STATUS_COMPLETED => 'Completed',
+            self::STATUS_REJECTED => 'Rejected',
+        ];
+    }
+
+    public static function getPriorityOptions(): array
+    {
+        return [
+            self::PRIORITY_LOW => 'Low',
+            self::PRIORITY_NORMAL => 'Normal',
+            self::PRIORITY_HIGH => 'High',
+            self::PRIORITY_URGENT => 'Urgent',
+        ];
+    }
+
+    /**
+     * Mark case note as received
+     */
+    public function markAsReceived(int $receivedByUserId, ?string $notes = null): void
+    {
+        $this->update([
+            'is_received' => true,
+            'received_at' => now(),
+            'received_by_user_id' => $receivedByUserId,
+            'reception_notes' => $notes
+        ]);
+
+        // Create timeline event
+        $user = User::find($receivedByUserId);
+        $this->events()->create([
+            'type' => RequestEvent::TYPE_RECEIVED,
+            'actor_user_id' => $receivedByUserId,
+            'description' => "Case note received by {$user->name}",
+            'occurred_at' => now(),
+            'metadata' => [
+                'received_by_user_id' => $receivedByUserId,
+                'received_by_user_name' => $user->name,
+                'received_at' => now()->toDateTimeString(),
+                'reception_notes' => $notes,
+            ]
+        ]);
+    }
+
+    /**
+     * Check if case note can be marked as received
+     */
+    public function canBeReceived(): bool
+    {
+        return $this->status === self::STATUS_APPROVED && !$this->is_received;
+    }
+}

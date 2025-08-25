@@ -1,0 +1,96 @@
+PROJECT REQUIREMENT DOCUMENT
+
+DATE : 21 AUGUST 2025
+PROJECT NAME : Case Note Request System (CNRS)
+
+1. Introduction
+Currently, in JMC, the process of requesting Case Notes/Medical Notes between the Medical Record Department (MRD) and Clinic Assistants (CA) is manual and time-consuming. This leads to:
+	•	Delays in retrieving case notes
+	•	Miscommunication between departments
+	•	Difficulty in tracking request progress and tracing the physical case note
+
+There is an existing system, but it is too complicated and lacks user-friendliness, which discourages staff from using it effectively.
+2. Problem Statement
+The absence of a simple, centralized, and user-friendly system has caused:
+	•	Longer patient waiting times
+	•	Risk of lost or misplaced documents
+	•	Increased workload for both Clinic Assistants and Medical Record staff
+	•	Lack of proper audit trail and accountability
+ 
+3. Project Objective
+To develop a digital, centralized, and user-friendly Case Note Request System (CNRS) that:
+	•	Streamlines request and approval of case notes
+	•	Improves communication between Clinic Assistants and MRD staff
+	•	Provides real-time tracking of case notes
+	•	Ensures secure handling of medical records
+	•	Reduces administrative workload and waiting times
+4. Scope of the Project
+In-Scope:
+	•	Online request submission by Clinic Assistants
+	•	Real-time notifications to MRD staff for new requests
+	•	Request status tracking: Pending → In-progress → Completed
+	•	Case note movement tracking (e.g., case note transferred to another ward, doctor, or assistant)
+	•	Audit log for every case note transaction (who requested, who approved, where it was sent)
+	•	Secure login and user authentication for all users
+	•	Role-based access (different permissions for CA vs MRD staff vs Admin)
+	•	Request history and reporting dashboard
+
+ 
+5. Key Features
+	•	User Management & Authentication
+	•	Login system with role-based access control (CA, MR Staff, Admin)
+	•	Password reset & account security features
+	•	Case Note Request
+	•	Online request form (Patient Name / MRN / NRIC, Department, Doctor, Location)
+	•	Auto-suggestions for patient search (searchable database)
+	•	Approval Workflow
+	•	MRD staff view all pending requests
+	•	Approve or reject requests with remarks
+	•	Case Note Movement Tracking
+	•	Ability for CA to update status when handing case notes to another ward, doctor, or CA
+	•	Record “handover details” (who, where, when, reason)
+	•	Notifications & Alerts
+	•	Email/system notification for new requests & approvals
+	•	Alerts for overdue or unreturned case notes
+	•	Audit Trail & Logs
+	•	Full history of requests and movements for accountability
+	•	Exportable logs for reporting and compliance
+	•	Dashboard & Reporting
+	•	Overview of pending, in-progress, and completed requests
+	•	Daily/weekly/monthly request statistics
+	•	Top departments/doctors requesting notes
+ 
+6. User Flow (High-Level)
+Clinic Assistant (CA):
+	•	Login portal
+	•	Fill out request form → Search Patient (Name/MRN/NRIC) → Select Patient → Select Location → Select Doctor → Submit Request
+	•	Track request status in portal
+	•	Once case note is received → Update movement (handover to doctor/ward/CA) → Insert reason/details
+	•	After note is returned → Mark request as Complete
+Medical Record (MR) Staff:
+	•	Login portal
+	•	View new requests
+	•	Approve/reject requests → Assign case note for retrieval
+	•	Acknowledge completed requests
+	•	View system logs
+	•	Generate reports
+Admin :
+	•	Manage users and permissions
+
+7. Technical Requirements (Recommended)
+	•	Frontend: React.js (user-friendly interface)
+	•	Backend: Laravel (API + logic)
+	•	Database: MySQL (secure data storage)
+	•	Authentication: JWT or Laravel Passport for API security
+	•	Deployment: On-premise server (hospital IT infra)
+
+8. Expected Benefits
+	•	Efficiency: Reduce waiting time for patients
+	•	Transparency: Clear tracking of case notes and requests
+	•	Accountability: Full audit trail of who accessed and moved case notes
+	•	User Adoption: Simple, intuitive interface to encourage daily use
+	•	Data-driven decisions: Reporting for management to optimize workflow
+
+
+
+
