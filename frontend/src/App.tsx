@@ -8,13 +8,14 @@ import DashboardPage from '@/pages/DashboardPage';
 import RequestsPage from '@/pages/RequestsPage';
 import CreateRequestPage from '@/pages/CreateRequestPage';
 import RequestDetailsPage from '@/pages/RequestDetailsPage';
-import PatientSearchPage from '@/pages/PatientSearchPage';
 import AdminPatientsPage from '@/pages/AdminPatientsPage';
 import MyRequestsPage from '@/pages/MyRequestsPage';
 import AdminCaseNoteSearchPage from '@/pages/AdminCaseNoteSearchPage';
 import { BatchRequestsPage } from '@/pages/BatchRequestsPage';
 import VerifyCaseNotesPage from '@/pages/VerifyCaseNotesPage';
-import HandoverCaseNotesPage from '@/pages/HandoverCaseNotesPage';
+import MRStaffCaseNoteRequestsPage from '@/pages/MRStaffCaseNoteRequestsPage';
+import CaseNoteTimelinePage from '@/pages/CaseNoteTimelinePage';
+import HandoverRequestsPage from '@/pages/HandoverRequestsPage';
 
 // Loading component
 function LoadingScreen() {
@@ -74,13 +75,14 @@ function AppContent() {
           <Route path="requests/new" element={<CreateRequestPage />} />
           <Route path="requests/:id" element={<RequestDetailsPage />} />
           <Route path="my-requests" element={<MyRequestsPage />} />
-          <Route path="patients" element={<PatientSearchPage />} />
           <Route path="admin/patients" element={<AdminPatientsPage />} />
           <Route path="admin/case-note-search" element={<AdminCaseNoteSearchPage />} />
           <Route path="batch-requests" element={<BatchRequestsPage />} />
           <Route path="batch-requests/:id" element={<BatchRequestsPage />} />
           <Route path="verify-case-notes" element={<VerifyCaseNotesPage />} />
-          <Route path="handover-case-notes" element={<HandoverCaseNotesPage />} />
+          <Route path="mrs-case-note-requests" element={<MRStaffCaseNoteRequestsPage />} />
+          <Route path="case-note-timeline" element={<CaseNoteTimelinePage />} />
+          <Route path="handover-requests" element={<HandoverRequestsPage />} />
           <Route index element={<Navigate to="/dashboard" replace />} />
         </Route>
 

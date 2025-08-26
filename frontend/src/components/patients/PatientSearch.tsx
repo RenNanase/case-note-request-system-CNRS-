@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, User, AlertCircle, Clock, CheckCircle2 } from 'lucide-react';
+import { Search, User, AlertCircle, Clock, CheckCircle2, XCircle, CheckCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -16,6 +16,7 @@ interface PatientSearchProps {
   placeholder?: string;
   disabled?: boolean;
   className?: string;
+  onRequestHandover?: (patient: Patient) => void; // New prop for handover requests
 }
 
 export default function PatientSearch({
@@ -23,7 +24,8 @@ export default function PatientSearch({
   selectedPatient,
   placeholder = "Search by MRN, NRIC, or patient name...",
   disabled = false,
-  className
+  className,
+  onRequestHandover
 }: PatientSearchProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Patient[]>([]);
@@ -73,6 +75,7 @@ export default function PatientSearch({
       console.log('✅ Response.patients length:', response.patients?.length);
 
       if (response.success) {
+        console.log('✅ Patient data with availability:', response.patients);
         setResults(response.patients);
         setIsOpen(true);
         setFocusedIndex(-1);
@@ -281,53 +284,127 @@ export default function PatientSearch({
             ) : (
               <div className="py-2">
                 {results.map((patient, index) => (
-                  <button
-                    key={patient.id}
-                    type="button"
-                    onClick={() => handlePatientSelect(patient)}
-                    className={cn(
-                      "w-full px-4 py-3 text-left hover:bg-gray-50 focus:bg-gray-50 focus:outline-none transition-colors",
-                      focusedIndex === index && "bg-blue-50"
-                    )}
-                  >
-                    <div className="flex items-center space-x-3">
-                      <Avatar className="h-10 w-10">
-                        <AvatarFallback className="bg-gray-100">
-                          <User className="h-5 w-5 text-gray-500" />
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center space-x-2">
-                          <h3 className="font-medium text-gray-900 truncate">
-                            {patient.name}
-                          </h3>
-                          {patient.has_medical_alerts && (
-                            <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
+                  <div key={patient.id} className="relative">
+                    <button
+                      type="button"
+                      onClick={() => handlePatientSelect(patient)}
+                      disabled={patient.has_existing_requests && !patient.is_available}
+                      className={cn(
+                        "w-full px-4 py-3 text-left hover:bg-gray-50 focus:bg-gray-50 focus:outline-none transition-colors",
+                        focusedIndex === index && "bg-blue-50",
+                        patient.has_existing_requests && !patient.is_available && "cursor-not-allowed hover:bg-gray-100",
+                        patient.has_existing_requests && !patient.is_available && "bg-pink-50 border-l-4 border-l-red-300"
+                      )}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <Avatar className="h-10 w-10">
+                          <AvatarFallback className="bg-gray-100">
+                            <User className="h-5 w-5 text-gray-500" />
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center space-x-2">
+                            <h3 className="font-medium text-gray-900 truncate">
+                              {patient.name}
+                            </h3>
+                            {patient.has_medical_alerts && (
+                              <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
+                            )}
+                            {/* Availability indicators */}
+                            {patient.has_existing_requests && (
+                              patient.handover_status === 'requested' ? (
+                                <Badge variant="outline" className="text-xs text-orange-600 border-orange-200">
+                                  <Clock className="h-3 w-3 mr-1" />
+                                  Handover Requested
+                                </Badge>
+                              ) : !patient.is_available ? (
+                                <Badge variant="destructive" className="text-xs">
+                                  <XCircle className="h-3 w-3 mr-1" />
+                                  Unavailable
+                                </Badge>
+                              ) : (
+                                <Badge variant="default" className="text-xs bg-green-100 text-green-700 border-green-200">
+                                  <CheckCircle className="h-3 w-3 mr-1" />
+                                  Available
+                                </Badge>
+                              )
+                            )}
+                          </div>
+                          <div className="flex items-center space-x-4 text-sm text-gray-500">
+                            <span>MRN: {patient.mrn}</span>
+                            {patient.nric && patient.nric !== 'N/A' && (
+                              <span>NRIC: {patient.nric}</span>
+                            )}
+                            {patient.nationality_id && (
+                              <span>IC: {patient.nationality_id}</span>
+                            )}
+                            {patient.age && patient.age > 0 && (
+                              <span>{formatAge(patient.age)}</span>
+                            )}
+                            {formatSex(patient.sex) && (
+                              <span>{formatSex(patient.sex)}</span>
+                            )}
+                          </div>
+                          {patient.phone && (
+                            <p className="text-xs text-gray-400 mt-1">
+                              📞 {patient.phone}
+                            </p>
                           )}
+                          {/* Status information for patients with existing requests */}
+                          {patient.has_existing_requests && (() => {
+                            console.log('🔍 Patient availability check:', {
+                              name: patient.name,
+                              has_existing_requests: patient.has_existing_requests,
+                              is_available: patient.is_available,
+                              handover_status: patient.handover_status,
+                              current_holder: patient.current_holder
+                            });
+                            return (
+                              <div className="mt-2 space-y-1">
+                                {patient.handover_status === 'requested' && (
+                                  <p className="text-xs text-orange-600">
+                                    ⚠️ Handover request pending for this patient
+                                  </p>
+                                )}
+                                {!patient.is_available && patient.current_holder && (
+                                  <p className="text-xs text-red-600">
+                                    🔒 Currently held by: {patient.current_holder.name}
+                                  </p>
+                                )}
+                                {patient.is_available && patient.has_existing_requests && (
+                                  <p className="text-xs text-green-600">
+                                    ✅ Available for new request
+                                  </p>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </div>
-                        <div className="flex items-center space-x-4 text-sm text-gray-500">
-                          <span>MRN: {patient.mrn}</span>
-                          {patient.nric && patient.nric !== 'N/A' && (
-                            <span>NRIC: {patient.nric}</span>
-                          )}
-                          {patient.nationality_id && (
-                            <span>IC: {patient.nationality_id}</span>
-                          )}
-                          {patient.age && patient.age > 0 && (
-                            <span>{formatAge(patient.age)}</span>
-                          )}
-                          {formatSex(patient.sex) && (
-                            <span>{formatSex(patient.sex)}</span>
-                          )}
-                        </div>
-                        {patient.phone && (
-                          <p className="text-xs text-gray-400 mt-1">
-                            📞 {patient.phone}
-                          </p>
-                        )}
                       </div>
-                    </div>
-                  </button>
+                    </button>
+
+                    {/* Handover request button - positioned outside the main button */}
+                    {!patient.is_available && patient.has_existing_requests && onRequestHandover && (
+                      <div className="absolute top-2 right-2 z-10">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            console.log('🔵 Handover button clicked!');
+                            e.stopPropagation();
+                            console.log('🔵 Request Handover clicked for patient:', patient.name);
+                            if (onRequestHandover) {
+                              onRequestHandover(patient);
+                            } else {
+                              console.error('❌ onRequestHandover function is not available');
+                            }
+                          }}
+                          className="text-xs bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 transition-colors font-medium shadow-sm border border-blue-500"
+                        >
+                          📋 Request
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 ))}
               </div>
             )}

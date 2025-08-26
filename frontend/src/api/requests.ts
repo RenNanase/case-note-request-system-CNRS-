@@ -199,6 +199,57 @@ export const requestsApi = {
     return response.data;
   },
 
+  // Get acknowledged handovers for current user (as receiver)
+  getAcknowledgedHandovers: async (): Promise<ApiResponse<any>> => {
+    const response = await apiClient.get('/handovers/acknowledged');
+    return response.data;
+  },
+
+  // Search case notes by patient name, MRN, or nationality ID
+  searchCaseNotes: async (query: string): Promise<ApiResponse<any>> => {
+    const response = await apiClient.get(`/case-notes/search?q=${encodeURIComponent(query)}`);
+    return response.data;
+  },
+
+  // Get timeline events for a specific case note
+  getCaseNoteTimeline: async (caseNoteId: number): Promise<ApiResponse<any>> => {
+    const response = await apiClient.get(`/case-notes/${caseNoteId}/timeline`);
+    return response.data;
+  },
+
+  // Request handover for a case note
+  requestHandover: async (caseNoteId: number, data: {
+    reason: string;
+    priority: string;
+    department_id: number;
+    location_id?: number;
+    doctor_id?: number;
+  }): Promise<ApiResponse<any>> => {
+    const response = await apiClient.post(`/case-notes/${caseNoteId}/request-handover`, data);
+    return response.data;
+  },
+
+  // Get my handover requests
+  getMyHandoverRequests: async (): Promise<ApiResponse<any>> => {
+    const response = await apiClient.get('/handover-requests/my-requests');
+    return response.data;
+  },
+
+  // Get incoming handover requests
+  getIncomingHandoverRequests: async (): Promise<ApiResponse<any>> => {
+    const response = await apiClient.get('/handover-requests/incoming');
+    return response.data;
+  },
+
+  // Respond to handover request
+  respondToHandoverRequest: async (handoverRequestId: number, data: {
+    action: 'approve' | 'reject';
+    notes?: string;
+  }): Promise<ApiResponse<any>> => {
+    const response = await apiClient.post(`/handover-requests/${handoverRequestId}/respond`, data);
+    return response.data;
+  },
+
   // Get handover history for current user (as sender)
   getHandoverHistory: async (): Promise<ApiResponse<any>> => {
     const response = await apiClient.get('/handovers/history');
@@ -210,6 +261,12 @@ export const requestsApi = {
     verification_notes?: string;
   }): Promise<ApiResponse<any>> => {
     const response = await apiClient.post(`/handovers/${handoverId}/verify`, data);
+    return response.data;
+  },
+
+  // Get case note request ID by patient MRN
+  getCaseNoteRequestId: async (mrn: string): Promise<ApiResponse<any>> => {
+    const response = await apiClient.get(`/patients/mrn/${encodeURIComponent(mrn)}/case-note-request`);
     return response.data;
   },
 

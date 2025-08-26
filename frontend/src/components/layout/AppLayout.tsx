@@ -6,17 +6,17 @@ import {
   Users,
   Settings,
   BarChart3,
-  Search,
   Shield,
   Layers,
   CheckSquare,
-  ArrowRightLeft,
   ClipboardList,
   Menu,
   X,
   LogOut,
   Bell,
-  ChevronRight
+  ChevronRight,
+  Clock,
+  ArrowRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -49,12 +49,13 @@ const breadcrumbMap: Record<string, string> = {
   '/requests/search': 'Search Requests',
   '/batch-requests': 'Batch Requests',
   '/verify-case-notes': 'Verify Case Notes',
-  '/handover-case-notes': 'Handover Case Notes',
-  '/patients': 'Patient Search',
+  '/mrs-case-note-requests': 'MR Staff Case Note Requests',
+  '/case-note-timeline': 'Case Note Timeline',
   '/admin/patients': 'Patient Management',
   '/users': 'User Management',
   '/settings': 'Settings',
   '/reports': 'Reports & Analytics',
+  '/handover-requests': 'Handover Requests',
 };
 
 export default function AppLayout() {
@@ -74,8 +75,19 @@ export default function AppLayout() {
       name: 'Case Note Requests',
       href: '/requests',
       icon: FileText,
-      roles: ['CA', 'MR_STAFF', 'ADMIN'],
-      badge: undefined // Remove hardcoded badge for now
+      roles: ['CA', 'MR_STAFF', 'ADMIN']
+    },
+    {
+      name: 'MR Staff Case Note Requests',
+      href: '/mrs-case-note-requests',
+      icon: FileText,
+      roles: ['MR_STAFF']
+    },
+    {
+      name: 'Case Note Timeline',
+      href: '/case-note-timeline',
+      icon: Clock,
+      roles: ['MR_STAFF']
     },
     {
       name: 'Batch Requests',
@@ -90,16 +102,10 @@ export default function AppLayout() {
       roles: ['CA']
     },
     {
-      name: 'Handover Case Notes',
-      href: '/handover-case-notes',
-      icon: ArrowRightLeft,
+      name: 'Handover Requests',
+      href: '/handover-requests',
+      icon: ArrowRight,
       roles: ['CA']
-    },
-    {
-      name: 'Patient Search',
-      href: '/patients',
-      icon: Search,
-      roles: ['CA', 'MR_STAFF', 'ADMIN']
     },
     {
       name: 'Patient Management',

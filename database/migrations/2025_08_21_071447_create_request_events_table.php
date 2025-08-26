@@ -15,8 +15,9 @@ return new class extends Migration
             $table->id();
             $table->foreignId('request_id')->constrained('requests')->onDelete('cascade')->comment('Request this event belongs to');
             $table->enum('type', [
-                'created', 'submitted', 'approved', 'rejected', 
-                'in_progress', 'handed_over', 'received', 'completed', 'returned'
+                'created', 'submitted', 'approved', 'rejected',
+                'in_progress', 'handed_over', 'received', 'completed', 'returned',
+                'handover_requested', 'handover_approved', 'handover_rejected'
             ])->comment('Type of event that occurred');
             $table->foreignId('actor_user_id')->constrained('users')->onDelete('restrict')->comment('User who performed the action');
             $table->foreignId('to_location_id')->nullable()->constrained('locations')->onDelete('set null')->comment('Location where item was sent');

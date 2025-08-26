@@ -2,15 +2,24 @@
 
 export interface Patient {
   id: number;
-  mrn: string;
   name: string;
-  nric?: string | null; // May not be available in simplified structure
-  nationality_id?: string | null; // New field for NRIC/IC
-  date_of_birth?: string | null; // May not be available in simplified structure
-  age?: number | null; // May not be available in simplified structure
-  sex?: string | null; // May not be available in simplified structure
-  phone?: string | null; // May not be available in simplified structure
-  has_medical_alerts?: boolean; // May not be available in simplified structure
+  mrn: string;
+  nric?: string | null;
+  nationality_id?: string | null;
+  date_of_birth?: string | null;
+  age?: number | null;
+  sex?: string | null;
+  phone?: string | null;
+  has_medical_alerts?: boolean;
+  has_existing_requests?: boolean;
+  is_available?: boolean;
+  handover_status?: string;
+  current_holder?: {
+    id: number;
+    name: string;
+    email: string;
+  };
+  case_note_request_id?: number;
 }
 
 export interface Department {
@@ -91,8 +100,6 @@ export interface CaseNoteRequest {
   doctor?: {
     id: number;
     name: string;
-    title?: string;
-    specialization?: string;
   };
   location?: {
     id: number;

@@ -25,6 +25,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import PatientSearch from '@/components/patients/PatientSearch';
+import { HandoverRequestModal } from '@/components/modals/HandoverRequestModal';
 import { requestsApi, resourcesApi } from '@/api/requests';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
@@ -104,8 +105,10 @@ export const BatchRequestForm: React.FC<BatchRequestFormProps> = ({
   const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [showHandoverModal, setShowHandoverModal] = useState(false);
+  const [selectedPatientForHandover, setSelectedPatientForHandover] = useState<Patient | null>(null);
 
   // Resource data
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -204,10 +207,37 @@ export const BatchRequestForm: React.FC<BatchRequestFormProps> = ({
   // Handle patient selection for a specific case note
   const handlePatientSelect = (index: number, patient: Patient) => {
     console.log(`Debug - Setting patient for case note ${index}:`, patient);
+
+    // Check if patient is available
+    if (patient.has_existing_requests && !patient.is_available) {
+      toast({
+        title: 'Patient Not Available',
+        description: patient.handover_status === 'requested'
+          ? 'This patient has a pending handover request and cannot be selected.'
+          : 'This patient is currently held by another CA and cannot be selected.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setValue(`case_notes.${index}.patient_id`, patient.id);
     setValue(`case_notes.${index}.patient`, patient);
     form.clearErrors(`case_notes.${index}.patient_id`);
     console.log(`Debug - Form values after setting patient:`, getValues());
+  };
+
+  // Handle handover request
+  const handleRequestHandover = (patient: Patient) => {
+    console.log('🔵 BatchRequestForm: handleRequestHandover called with patient:', patient);
+    console.log('🔵 BatchRequestForm: patient.case_note_request_id:', patient.case_note_request_id);
+    setSelectedPatientForHandover(patient);
+    setShowHandoverModal(true);
+  };
+
+  const handleHandoverRequestSuccess = () => {
+    setShowHandoverModal(false);
+    setSelectedPatientForHandover(null);
+    // Optionally refresh patient search or show success message
   };
 
   // Add new case note
@@ -320,15 +350,34 @@ export const BatchRequestForm: React.FC<BatchRequestFormProps> = ({
     }
   };
 
-  // Get priority badge color
-  const getPriorityColor = (priority: string) => {
-    switch (priority.toLowerCase()) {
-      case 'urgent': return 'destructive';
-      case 'high': return 'secondary';
-      case 'normal': return 'outline';
-      case 'low': return 'outline';
-      default: return 'outline';
-    }
+  // Get priority badge with proper styling
+  const getPriorityBadge = (priority: string) => {
+    const config = {
+      low: {
+        variant: 'outline' as const,
+        className: 'border-gray-300 text-gray-700 bg-gray-50'
+      },
+      normal: {
+        variant: 'outline' as const,
+        className: 'border-blue-300 text-blue-700 bg-blue-50'
+      },
+      high: {
+        variant: 'outline' as const,
+        className: 'border-orange-300 text-orange-700 bg-orange-50'
+      },
+      urgent: {
+        variant: 'outline' as const,
+        className: 'border-red-300 text-red-700 bg-red-50'
+      },
+    };
+
+    const configItem = config[priority.toLowerCase() as keyof typeof config] || config.normal;
+
+    return (
+      <Badge variant={configItem.variant} className={`ml-2 ${configItem.className}`}>
+        {priorities.find(p => p.value === priority)?.label}
+      </Badge>
+    );
   };
 
   // Format date for display
@@ -454,6 +503,7 @@ export const BatchRequestForm: React.FC<BatchRequestFormProps> = ({
                             <PatientSearch
                               onPatientSelect={(patient) => handlePatientSelect(index, patient)}
                               selectedPatient={getValues(`case_notes.${index}.patient`)}
+                              onRequestHandover={handleRequestHandover}
                             />
                           </FormControl>
                           <FormDescription>
@@ -769,9 +819,7 @@ export const BatchRequestForm: React.FC<BatchRequestFormProps> = ({
                     <div className="bg-gray-50 rounded-lg p-4 space-y-3">
                       <div className="flex items-center justify-between">
                         <span className="font-medium">Priority:</span>
-                        <Badge variant={getPriorityColor(getValues('priority'))} className="ml-2">
-                          {priorities.find(p => p.value === getValues('priority'))?.label}
-                        </Badge>
+                        {getPriorityBadge(getValues('priority'))}
                       </div>
                       <div>
                         <span className="font-medium">Needed by:</span>
@@ -862,6 +910,17 @@ export const BatchRequestForm: React.FC<BatchRequestFormProps> = ({
           </div>
         </form>
       </Form>
+
+      {/* Handover Request Modal */}
+      <HandoverRequestModal
+        patient={selectedPatientForHandover}
+        isOpen={showHandoverModal}
+        onClose={() => setShowHandoverModal(false)}
+        onSuccess={handleHandoverRequestSuccess}
+      />
     </div>
   );
+
+  // Debug logging
+  console.log('🔵 BatchRequestForm: Modal state - isOpen:', showHandoverModal, 'patient:', selectedPatientForHandover?.name);
 };

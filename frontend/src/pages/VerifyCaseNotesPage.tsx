@@ -227,15 +227,34 @@ const VerifyCaseNotesPage: React.FC = () => {
     }
   };
 
-  // Get priority badge variant
-  const getPriorityVariant = (priority: string) => {
-    switch (priority.toLowerCase()) {
-      case 'urgent': return 'destructive';
-      case 'high': return 'default';
-      case 'normal': return 'secondary';
-      case 'low': return 'outline';
-      default: return 'secondary';
-    }
+  // Get priority badge with proper styling
+  const getPriorityBadge = (priority: string) => {
+    const config = {
+      low: {
+        variant: 'outline' as const,
+        className: 'border-gray-300 text-gray-700 bg-gray-50 text-xs'
+      },
+      normal: {
+        variant: 'outline' as const,
+        className: 'border-blue-300 text-blue-700 bg-blue-50 text-xs'
+      },
+      high: {
+        variant: 'outline' as const,
+        className: 'border-orange-300 text-orange-700 bg-orange-50 text-xs'
+      },
+      urgent: {
+        variant: 'outline' as const,
+        className: 'border-red-300 text-red-700 bg-red-50 text-xs'
+      },
+    };
+
+    const configItem = config[priority.toLowerCase() as keyof typeof config] || config.normal;
+
+    return (
+      <Badge variant={configItem.variant} className={configItem.className}>
+        {priority.charAt(0).toUpperCase() + priority.slice(1)}
+      </Badge>
+    );
   };
 
   if (!hasRole('CA')) {
@@ -458,9 +477,7 @@ const VerifyCaseNotesPage: React.FC = () => {
                               <Badge variant="outline" className="text-xs">
                                 MRN: {caseNote.patient.mrn}
                               </Badge>
-                              <Badge variant={getPriorityVariant(caseNote.priority)} className="text-xs">
-                                {caseNote.priority}
-                              </Badge>
+                              {getPriorityBadge(caseNote.priority)}
                               {caseNote.batch_number && (
                                 <Badge variant="outline" className="text-xs">
                                   Batch: {caseNote.batch_number}

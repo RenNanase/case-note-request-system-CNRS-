@@ -16,11 +16,6 @@ class Doctor extends Model
 
     protected $fillable = [
         'name',
-        'title',
-        'specialization',
-        'license_number',
-        'phone',
-        'email',
         'department_id',
         'is_active',
     ];
@@ -38,7 +33,7 @@ class Doctor extends Model
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['name', 'title', 'specialization', 'department_id', 'is_active'])
+            ->logOnly(['name', 'department_id', 'is_active'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs();
     }
@@ -76,12 +71,7 @@ class Doctor extends Model
 
     public function scopeSearch($query, string $term): Builder
     {
-        return $query->where(function ($q) use ($term) {
-            $q->where('name', 'LIKE', "%{$term}%")
-              ->orWhere('title', 'LIKE', "%{$term}%")
-              ->orWhere('specialization', 'LIKE', "%{$term}%")
-              ->orWhere('license_number', 'LIKE', "%{$term}%");
-        });
+        return $query->where('name', 'LIKE', "%{$term}%");
     }
 
     /**
@@ -89,31 +79,17 @@ class Doctor extends Model
      */
     public function getFullNameAttribute(): string
     {
-        return $this->title ? "{$this->title} {$this->name}" : $this->name;
+        return $this->name;
     }
 
     public function getDisplayNameAttribute(): string
     {
-        $name = $this->full_name;
-        if ($this->specialization) {
-            $name .= " ({$this->specialization})";
-        }
-        return $name;
+        return $this->name;
     }
 
     public function setNameAttribute($value): void
     {
         $this->attributes['name'] = ucwords(strtolower($value));
-    }
-
-    public function setTitleAttribute($value): void
-    {
-        $this->attributes['title'] = $value ? ucfirst(strtolower($value)) : null;
-    }
-
-    public function setSpecializationAttribute($value): void
-    {
-        $this->attributes['specialization'] = $value ? ucwords(strtolower($value)) : null;
     }
 
     /**

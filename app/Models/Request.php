@@ -70,6 +70,29 @@ class Request extends Model
     ];
 
     /**
+     * Boot method to set up model events
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        // Create a "created" event when a new request is created
+        static::created(function ($request) {
+            $request->events()->create([
+                'type' => 'created',
+                'actor_user_id' => $request->requested_by_user_id,
+                'occurred_at' => $request->created_at,
+                'reason' => 'Case note request created',
+                'metadata' => [
+                    'request_number' => $request->request_number,
+                    'purpose' => $request->purpose,
+                    'priority' => $request->priority
+                ]
+            ]);
+        });
+    }
+
+    /**
      * Activity log options
      */
     public function getActivitylogOptions(): LogOptions
@@ -274,6 +297,12 @@ class Request extends Model
             'actor_user_id' => $user->id,
             'reason' => $remarks,
             'occurred_at' => now(),
+            'metadata' => [
+                'approved_by_name' => $user->name,
+                'approval_remarks' => $remarks,
+                'old_status' => 'pending',
+                'new_status' => 'approved'
+            ]
         ]);
 
         return true;
@@ -297,6 +326,12 @@ class Request extends Model
             'actor_user_id' => $user->id,
             'reason' => $reason,
             'occurred_at' => now(),
+            'metadata' => [
+                'rejected_by_name' => $user->name,
+                'rejection_reason' => $reason,
+                'old_status' => 'pending',
+                'new_status' => 'rejected'
+            ]
         ]);
 
         return true;
@@ -318,6 +353,11 @@ class Request extends Model
             'type' => 'completed',
             'actor_user_id' => $user->id,
             'occurred_at' => now(),
+            'metadata' => [
+                'completed_by_name' => $user->name,
+                'old_status' => $this->getOriginal('status'),
+                'new_status' => 'completed'
+            ]
         ]);
 
         return true;
@@ -370,7 +410,7 @@ class Request extends Model
         $this->events()->create([
             'type' => RequestEvent::TYPE_RECEIVED,
             'actor_user_id' => $receivedByUserId,
-            'description' => "Case note received by {$user->name}",
+            'reason' => "Case note received by {$user->name}",
             'occurred_at' => now(),
             'metadata' => [
                 'received_by_user_id' => $receivedByUserId,

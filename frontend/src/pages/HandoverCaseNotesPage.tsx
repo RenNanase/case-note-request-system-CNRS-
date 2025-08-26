@@ -46,6 +46,7 @@ interface CaseNote {
     name: string;
   };
   is_received?: boolean; // Added is_received to the interface
+  handover_status?: string; // Added handover_status to the interface
 }
 
 interface User {
@@ -187,6 +188,14 @@ const HandoverCaseNotesPage: React.FC = () => {
     }
   }, [searchTerm, caseNotes]);
 
+  // Filter case notes that can be handed over
+  const handoverableCaseNotes = caseNotes.filter(caseNote =>
+    caseNote.status === 'approved' &&
+    caseNote.is_received === true &&
+    caseNote.handover_status !== 'pending_acknowledgement' &&
+    caseNote.handover_status !== 'acknowledged'
+  );
+
   // Handle case note selection
   const handleSelectCaseNote = (caseNote: CaseNote) => {
     try {
@@ -272,25 +281,64 @@ const HandoverCaseNotesPage: React.FC = () => {
     }
   };
 
-  // Get priority badge variant
-  const getPriorityVariant = (priority: string) => {
-    switch (priority.toLowerCase()) {
-      case 'urgent': return 'destructive';
-      case 'high': return 'default';
-      case 'normal': return 'secondary';
-      case 'low': return 'outline';
-      default: return 'secondary';
-    }
+  // Get priority badge with proper styling
+  const getPriorityBadge = (priority: string) => {
+    const config = {
+      low: {
+        variant: 'outline' as const,
+        className: 'border-gray-300 text-gray-700 bg-gray-50 text-xs'
+      },
+      normal: {
+        variant: 'outline' as const,
+        className: 'border-blue-300 text-blue-700 bg-blue-50 text-xs'
+      },
+      high: {
+        variant: 'outline' as const,
+        className: 'border-orange-300 text-orange-700 bg-orange-50 text-xs'
+      },
+      urgent: {
+        variant: 'outline' as const,
+        className: 'border-red-300 text-red-700 bg-red-50 text-xs'
+      },
+    };
+
+    const configItem = config[priority.toLowerCase() as keyof typeof config] || config.normal;
+
+    return (
+      <Badge variant={configItem.variant} className={configItem.className}>
+        {priority.charAt(0).toUpperCase() + priority.slice(1)}
+      </Badge>
+    );
   };
 
-  // Get status badge variant
-  const getStatusVariant = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'approved': return 'default';
-      case 'assigned': return 'secondary';
-      case 'in-progress': return 'outline';
-      default: return 'secondary';
-    }
+  // Get status badge with proper styling
+  const getStatusBadge = (status: string) => {
+    const config = {
+      'approved': {
+        variant: 'outline' as const,
+        className: 'border-green-300 text-green-700 bg-green-50 text-xs'
+      },
+      'assigned': {
+        variant: 'outline' as const,
+        className: 'border-blue-300 text-blue-700 bg-blue-50 text-xs'
+      },
+      'in-progress': {
+        variant: 'outline' as const,
+        className: 'border-yellow-300 text-yellow-700 bg-yellow-50 text-xs'
+      },
+      'pending': {
+        variant: 'outline' as const,
+        className: 'border-gray-300 text-gray-700 bg-gray-50 text-xs'
+      },
+    };
+
+    const configItem = config[status.toLowerCase() as keyof typeof config] || config.pending;
+
+    return (
+      <Badge variant={configItem.variant} className={configItem.className}>
+        {status.charAt(0).toUpperCase() + status.slice(1)}
+      </Badge>
+    );
   };
 
   // Show loading state while checking permissions
@@ -371,25 +419,15 @@ const HandoverCaseNotesPage: React.FC = () => {
                 <Loader2 className="h-8 w-8 animate-spin mr-3" />
                 <span>Loading case notes...</span>
               </div>
-            ) : filteredCaseNotes.length === 0 ? (
+            ) : handoverableCaseNotes.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
-                {caseNotes.length === 0 ? (
-                  <>
-                    <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                    <h3 className="text-lg font-medium mb-2">No Case Notes</h3>
-                    <p>You don't have any case notes that can be handed over.</p>
-                  </>
-                ) : (
-                  <>
-                    <Search className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                    <h3 className="text-lg font-medium mb-2">No Results</h3>
-                    <p>No case notes match your search criteria.</p>
-                  </>
-                )}
+                <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                <h3 className="text-lg font-medium mb-2">No Case Notes Available for Handover</h3>
+                <p>Only approved and received case notes that haven't been handed over can be selected.</p>
               </div>
             ) : (
-              <div className="space-y-3 max-h-96 overflow-y-auto">
-                {filteredCaseNotes.map(caseNote => (
+              <div className="space-y-3">
+                {handoverableCaseNotes.map((caseNote) => (
                   <div
                     key={caseNote.id}
                     className={`p-3 rounded-lg border cursor-pointer transition-colors ${
@@ -404,12 +442,8 @@ const HandoverCaseNotesPage: React.FC = () => {
                     <div className="flex items-center justify-between mb-2">
                       <h4 className="font-medium">{caseNote.patient?.name || 'Unknown Patient'}</h4>
                       <div className="flex gap-1">
-                        <Badge variant={getPriorityVariant(caseNote.priority)} className="text-xs">
-                          {caseNote.priority}
-                        </Badge>
-                        <Badge variant={getStatusVariant(caseNote.status)} className="text-xs">
-                          {caseNote.status}
-                        </Badge>
+                        {getPriorityBadge(caseNote.priority)}
+                        {getStatusBadge(caseNote.status)}
                       </div>
                     </div>
 
@@ -603,9 +637,9 @@ const HandoverCaseNotesPage: React.FC = () => {
             <h3 className="text-lg font-medium mb-2">Handover History</h3>
             <p>This section will show the status of all case notes you've handed over.</p>
             <p className="text-sm mt-2">
-              • Pending = Waiting for receiving CA to verify<br/>
-              • Verified = Receiving CA confirmed they received it<br/>
-              • Overdue = Receiving CA did not verify within 6 hours
+              • Pending Acknowledgement = Waiting for receiving CA to acknowledge<br/>
+              • Acknowledged = Receiving CA confirmed they received it<br/>
+              • Overdue = Receiving CA did not acknowledge within 6 hours
             </p>
           </div>
         </CardContent>

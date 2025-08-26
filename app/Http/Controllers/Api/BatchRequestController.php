@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use App\Models\User; // Added this import for User model
 
 class BatchRequestController extends Controller
 {
@@ -41,10 +42,39 @@ class BatchRequestController extends Controller
         // Add request counts to each batch
         foreach ($batchRequests as $batch) {
             $requests = $batch->requests; // Use already loaded relationship
-            $batch->requests_count = $requests->count();
+
+            // Filter out approved case notes - only show pending ones in batch requests
+            $pendingRequests = $requests->where('status', Request::STATUS_PENDING);
+
+            // Only show the latest 3 pending case notes to avoid overwhelming the UI
+            $latestPendingRequests = $pendingRequests->sortByDesc('created_at')->take(3);
+
+            // Add availability information to each case note
+            foreach ($latestPendingRequests as $request) {
+                // Check if there's a current PIC
+                $hasCurrentPIC = !is_null($request->current_pic_user_id);
+
+                // Check if there are any pending handover requests for this case note
+                $pendingHandoverRequests = \App\Models\HandoverRequest::where('case_note_id', $request->id)
+                    ->where('status', 'pending')
+                    ->count();
+
+                // A case note is available if it's not currently held by anyone AND has no pending handover requests
+                $request->is_available = !$hasCurrentPIC && $pendingHandoverRequests === 0;
+
+                // If not available, get the current holder information
+                if (!$request->is_available && $request->current_pic_user_id) {
+                    $request->current_holder = User::find($request->current_pic_user_id);
+                }
+
+                // Add handover status information
+                $request->handover_status = $pendingHandoverRequests > 0 ? 'requested' : 'none';
+            }
+
+            $batch->requests_count = $pendingRequests->count(); // Total pending count
             $batch->approved_count = $requests->where('status', Request::STATUS_APPROVED)->count();
             $batch->rejected_count = $requests->where('status', Request::STATUS_REJECTED)->count();
-            $batch->pending_count = $requests->where('status', Request::STATUS_PENDING)->count();
+            $batch->pending_count = $pendingRequests->count();
 
             // Add verification counts
             $approvedRequests = $requests->where('status', Request::STATUS_APPROVED);
@@ -54,6 +84,10 @@ class BatchRequestController extends Controller
             if ($batch->approved_count > 0) {
                 $batch->is_verified = ($batch->received_count === $batch->approved_count);
             }
+
+            // Only include latest pending requests in the batch display
+            $batch->requests = $latestPendingRequests;
+            $batch->has_more_pending = $pendingRequests->count() > 3;
         }
 
         Log::info('Batch requests loaded for user:', [
@@ -422,7 +456,9 @@ class BatchRequestController extends Controller
             foreach ($approvedRequests as $caseNoteRequest) {
                 $caseNoteRequest->events()->create([
                     'type' => \App\Models\RequestEvent::TYPE_VERIFIED_RECEIVED,
-                    'description' => "Case note receipt verified by {$user->name}",
+                    'actor_user_id' => $user->id,
+                    'reason' => "Case note receipt verified by {$user->name}",
+                    'occurred_at' => now(),
                     'metadata' => [
                         'verified_by_user_id' => $user->id,
                         'verified_by_user_name' => $user->name,

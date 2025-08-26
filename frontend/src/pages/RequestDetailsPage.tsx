@@ -39,7 +39,6 @@ import {
 import { requestsApi } from '@/api/requests';
 import { useAuth } from '@/contexts/AuthContext';
 import type { CaseNoteRequest, RequestEvent } from '@/types/requests';
-import { HandoverForm } from '@/components/forms/HandoverForm';
 
 export default function RequestDetailsPage() {
   const { id } = useParams<{ id: string }>();
@@ -57,7 +56,6 @@ export default function RequestDetailsPage() {
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [rejectReasonError, setRejectReasonError] = useState('');
-  const [showHandoverForm, setShowHandoverForm] = useState(false);
 
   // Load request details
   useEffect(() => {
@@ -228,14 +226,16 @@ export default function RequestDetailsPage() {
   // Priority badge colors
   const getPriorityBadge = (priority: string) => {
     const priorityColors = {
-      'urgent': 'destructive' as const,
-      'high': 'secondary' as const,
-      'normal': 'outline' as const,
-      'low': 'outline' as const
+      'urgent': { variant: 'outline' as const, className: 'border-red-300 text-red-700 bg-red-50' },
+      'high': { variant: 'outline' as const, className: 'border-orange-300 text-orange-700 bg-orange-50' },
+      'normal': { variant: 'outline' as const, className: 'border-blue-300 text-blue-700 bg-blue-50' },
+      'low': { variant: 'outline' as const, className: 'border-gray-300 text-gray-700 bg-gray-50' }
     };
 
+    const config = priorityColors[priority.toLowerCase() as keyof typeof priorityColors] || priorityColors.normal;
+
     return (
-      <Badge variant={priorityColors[priority.toLowerCase() as keyof typeof priorityColors] || 'outline'}>
+      <Badge variant={config.variant} className={config.className}>
         {priority.toUpperCase()}
       </Badge>
     );
@@ -990,17 +990,7 @@ export default function RequestDetailsPage() {
             </Card>
           )}
 
-          {/* Handover Button - Only for CA users */}
-          {hasRole('CA') && (
-            <Button
-              onClick={() => setShowHandoverForm(true)}
-              disabled={!!actionLoading}
-              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
-            >
-              <ArrowRight className="h-4 w-4 mr-2" />
-              Handover Case Note
-            </Button>
-          )}
+          {/* Handover functionality has been removed */}
         </div>
       </div>
 
@@ -1050,36 +1040,6 @@ export default function RequestDetailsPage() {
                   </>
                 )}
               </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Handover Form Modal */}
-      {showHandoverForm && request && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" style={{ zIndex: 9999 }}>
-          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto overflow-x-visible">
-            <div className="p-4">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold">Handover Case Note</h2>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowHandoverForm(false)}
-                >
-                  ✕
-                </Button>
-              </div>
-              <HandoverForm
-                caseNoteRequestId={parseInt(id!)}
-                currentPIC={request.current_pic}
-                onHandoverSuccess={() => {
-                  setShowHandoverForm(false);
-                  // Navigate to dashboard to see updated stats
-                  navigate('/dashboard');
-                }}
-                onCancel={() => setShowHandoverForm(false)}
-              />
             </div>
           </div>
         </div>

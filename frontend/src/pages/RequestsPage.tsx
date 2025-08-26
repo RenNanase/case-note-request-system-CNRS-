@@ -34,6 +34,15 @@ import type { CaseNoteRequest, RequestsListParams } from '@/types/requests';
 export default function RequestsPage() {
   const navigate = useNavigate();
   const { hasPermission, hasRole } = useAuth();
+
+  // Redirect MR Staff to their specialized page
+  useEffect(() => {
+    if (hasRole('MR_STAFF')) {
+      navigate('/mrs-case-note-requests', { replace: true });
+      return;
+    }
+  }, [hasRole, navigate]);
+
   const [requests, setRequests] = useState<CaseNoteRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

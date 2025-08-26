@@ -11,12 +11,9 @@ import {
   Activity,
   ArrowRight,
   BarChart3,
-  Settings,
   Shield,
-  Eye,
   XCircle,
-  ArrowUpRight,
-  Search
+  ArrowUpRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -189,19 +186,6 @@ function CADashboard({ user, stats, recentRequests, loading }: any) {
                   <div className="flex-1">
                     <h4 className="text-sm font-medium">Create Request</h4>
                     <p className="text-xs text-gray-500">Request access to patient case notes</p>
-                  </div>
-                  <ArrowRight className="h-4 w-4 text-gray-400" />
-                </div>
-              </Link>
-
-              <Link to="/patients">
-                <div className="flex items-center p-3 rounded-lg border hover:bg-blue-50 transition-colors">
-                  <div className="p-2 rounded-lg bg-blue-500 text-white mr-3">
-                    <Users className="h-4 w-4" />
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="text-sm font-medium">Search Patients</h4>
-                    <p className="text-xs text-gray-500">Find patients to create requests for</p>
                   </div>
                   <ArrowRight className="h-4 w-4 text-gray-400" />
                 </div>
@@ -403,19 +387,6 @@ function MRStaffDashboard({ user, stats, recentRequests, loading }: any) {
                 </div>
               </Link>
 
-              <Link to="/patients">
-                <div className="flex items-center p-3 rounded-lg border hover:bg-green-50 transition-colors">
-                  <div className="p-2 rounded-lg bg-green-500 text-white mr-3">
-                    <Users className="h-4 w-4" />
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="text-sm font-medium">Patient Search</h4>
-                    <p className="text-xs text-gray-500">Search patient records</p>
-                  </div>
-                  <ArrowRight className="h-4 w-4 text-gray-400" />
-                </div>
-              </Link>
-
               <Link to="/reports">
                 <div className="flex items-center p-3 rounded-lg border hover:bg-purple-50 transition-colors">
                   <div className="p-2 rounded-lg bg-purple-500 text-white mr-3">
@@ -594,101 +565,6 @@ function AdminDashboard({ user, stats, loading }: any) {
           </Card>
         </div>
       ) : null}
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Admin Quick Actions */}
-        <div className="lg:col-span-1">
-          <Card>
-            <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
-              <CardDescription>Administrative tasks and controls</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <Link to="/admin/users">
-                <div className="flex items-center p-3 rounded-lg border hover:bg-purple-50 transition-colors">
-                  <div className="p-2 rounded-lg bg-purple-500 text-white mr-3">
-                    <Users className="h-4 w-4" />
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="text-sm font-medium">Manage Users</h4>
-                    <p className="text-xs text-gray-500">Add or modify user accounts</p>
-                  </div>
-                  <ArrowRight className="h-4 w-4 text-gray-400" />
-                </div>
-              </Link>
-
-              <Link to="/admin/reports">
-                <div className="flex items-center p-3 rounded-lg border hover:bg-red-50 transition-colors">
-                  <div className="p-2 rounded-lg bg-red-500 text-white mr-3">
-                    <BarChart3 className="h-4 w-4" />
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="text-sm font-medium">System Reports</h4>
-                    <p className="text-xs text-gray-500">View system analytics and reports</p>
-                  </div>
-                  <ArrowRight className="h-4 w-4 text-gray-400" />
-                </div>
-              </Link>
-
-              <Link to="/admin/audit">
-                <div className="flex items-center p-3 rounded-lg border hover:bg-orange-50 transition-colors">
-                  <div className="p-2 rounded-lg bg-orange-500 text-white mr-3">
-                    <Eye className="h-4 w-4" />
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="text-sm font-medium">Audit Logs</h4>
-                    <p className="text-xs text-gray-500">View system audit trails</p>
-                  </div>
-                  <ArrowRight className="h-4 w-4 text-gray-400" />
-                </div>
-              </Link>
-
-              <Link to="/admin/settings">
-                <div className="flex items-center p-3 rounded-lg border hover:bg-gray-50 transition-colors">
-                  <div className="p-2 rounded-lg bg-gray-500 text-white mr-3">
-                    <Settings className="h-4 w-4" />
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="text-sm font-medium">System Settings</h4>
-                    <p className="text-xs text-gray-500">Configure system parameters</p>
-                  </div>
-                  <ArrowRight className="h-4 w-4 text-gray-400" />
-                </div>
-              </Link>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Admin Case Note Search */}
-        <div className="lg:col-span-2">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Case Note Search</CardTitle>
-                  <CardDescription>Search for specific case notes by patient name or MRN</CardDescription>
-                </div>
-                <Button asChild variant="outline" size="sm">
-                  <Link to="/admin/case-note-search">Advanced Search</Link>
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8">
-                <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500 mb-2">Search for case notes to view details</p>
-                <p className="text-sm text-gray-400 mb-4">Enter patient name or MRN to find specific case notes</p>
-                <Link to="/admin/case-note-search">
-                  <Button>
-                    <Search className="h-4 w-4 mr-2" />
-                    Search Case Notes
-                  </Button>
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
     </div>
   );
 }

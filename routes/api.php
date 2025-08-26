@@ -58,6 +58,7 @@ Route::middleware('auth:api')->group(function () {
     // Patient search
     Route::get('patients/search', [App\Http\Controllers\Api\PatientController::class, 'search']);
     Route::get('patients/{patient}', [App\Http\Controllers\Api\PatientController::class, 'show']);
+    Route::get('patients/mrn/{mrn}/case-note-request', [App\Http\Controllers\Api\PatientController::class, 'getCaseNoteRequestId']);
 
     // Dashboard stats
     Route::get('dashboard/stats', [App\Http\Controllers\Api\RequestController::class, 'getStats']);
@@ -88,6 +89,7 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/handovers', [App\Http\Controllers\Api\HandoverController::class, 'store']);
     Route::post('/handovers/{handoverId}/verify', [App\Http\Controllers\Api\HandoverController::class, 'verifyReceived']);
     Route::get('/handovers/pending', [App\Http\Controllers\Api\HandoverController::class, 'getPendingHandovers']);
+    Route::get('/handovers/acknowledged', [App\Http\Controllers\Api\HandoverController::class, 'getAcknowledgedHandovers']);
     Route::get('/handovers/history', [App\Http\Controllers\Api\HandoverController::class, 'getHandoverHistory']);
     Route::get('/handovers/stats', [App\Http\Controllers\Api\HandoverController::class, 'getHandoverStats']);
     Route::get('/requests/{requestId}/handovers', [App\Http\Controllers\Api\HandoverController::class, 'getRequestHandovers']);
@@ -112,6 +114,16 @@ Route::middleware('auth:api')->group(function () {
         Route::get('/approved-for-verification', [App\Http\Controllers\Api\CaseNoteVerificationController::class, 'getApprovedForVerification']);
         Route::post('/verify-received', [App\Http\Controllers\Api\CaseNoteVerificationController::class, 'verifyReceived']);
     });
+
+    // Case note timeline routes
+    Route::get('/case-notes/search', [App\Http\Controllers\Api\CaseNoteTimelineController::class, 'search']);
+    Route::get('/case-notes/{caseNoteId}/timeline', [App\Http\Controllers\Api\CaseNoteTimelineController::class, 'getTimeline']);
+
+    // Handover request routes
+    Route::post('/case-notes/{caseNoteId}/request-handover', [App\Http\Controllers\Api\HandoverRequestController::class, 'requestHandover']);
+    Route::get('/handover-requests/my-requests', [App\Http\Controllers\Api\HandoverRequestController::class, 'getMyHandoverRequests']);
+    Route::get('/handover-requests/incoming', [App\Http\Controllers\Api\HandoverRequestController::class, 'getIncomingHandoverRequests']);
+    Route::post('/handover-requests/{handoverRequestId}/respond', [App\Http\Controllers\Api\HandoverRequestController::class, 'respondToHandoverRequest']);
 });
 
 // Health check route (public)

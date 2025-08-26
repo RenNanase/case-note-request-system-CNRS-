@@ -19,7 +19,8 @@ class HandoverController extends Controller
 {
     // Handover status constants
     const STATUS_PENDING = 'pending';
-    const STATUS_VERIFIED = 'verified';
+    const STATUS_ACKNOWLEDGED = 'acknowledged';
+    const STATUS_COMPLETED = 'completed';
     const STATUS_OVERDUE = 'overdue';
     const STATUS_ESCALATED = 'escalated';
 
@@ -108,16 +109,13 @@ class HandoverController extends Controller
                 'handover_reason' => $request->handover_reason,
                 'additional_notes' => $request->additional_notes,
                 'status' => self::STATUS_PENDING,
-                'handed_over_at' => now(),
-                'reminder_sent_at' => null,
-                'escalation_sent_at' => null,
             ]);
 
             // Update the case note request
             $caseNoteRequest->update([
                 'current_handover_id' => $handover->id,
                 'current_pic_user_id' => $request->handed_over_to_user_id,
-                'handover_status' => 'pending',
+                'handover_status' => 'pending_acknowledgement',
                 'handover_pending_since' => now(),
             ]);
 
@@ -203,16 +201,16 @@ class HandoverController extends Controller
 
             // Update handover status
             $handover->update([
-                'status' => self::STATUS_VERIFIED,
-                'verified_at' => now(),
+                'status' => self::STATUS_ACKNOWLEDGED,
+                'acknowledged_at' => now(),
                 'verification_notes' => $request->verification_notes,
             ]);
 
             // Update case note request
             $caseNoteRequest = $handover->caseNoteRequest;
             $caseNoteRequest->update([
-                'handover_status' => 'verified',
-                'handover_verified_at' => now(),
+                'handover_status' => 'acknowledged',
+                'handover_acknowledged_at' => now(),
             ]);
 
             // Create timeline event for verification
@@ -270,10 +268,10 @@ class HandoverController extends Controller
         ])
         ->where('handed_over_to_user_id', $user->id)
         ->where('status', self::STATUS_PENDING)
-        ->orderBy('handed_over_at', 'desc')
+        ->orderBy('created_at', 'desc')
         ->get()
         ->groupBy(function ($handover) {
-            return $handover->handed_over_at->format('Y-m-d');
+            return $handover->created_at->format('Y-m-d');
         });
 
         return response()->json([
@@ -296,25 +294,60 @@ class HandoverController extends Controller
             ], 403);
         }
 
-        $handoverHistory = CaseNoteHandover::with([
+        $handovers = CaseNoteHandover::with([
             'caseNoteRequest.patient',
             'caseNoteRequest.department',
-            'handedOverTo',
+            'handedOverBy',
             'department',
             'location'
         ])
         ->where('handed_over_by_user_id', $user->id)
-        ->orderBy('handed_over_at', 'desc')
+        ->orderBy('created_at', 'desc')
         ->get()
         ->map(function ($handover) {
-            $handover->time_since_handover = $handover->handed_over_at->diffForHumans();
-            $handover->is_overdue = $this->isHandoverOverdue($handover);
+            $handover->handover_date = $handover->created_at->format('Y-m-d');
             return $handover;
         });
 
         return response()->json([
             'success' => true,
-            'handovers' => $handoverHistory,
+            'handovers' => $handovers,
+        ]);
+    }
+
+    /**
+     * Get acknowledged handovers for current user (as receiver)
+     */
+    public function getAcknowledgedHandovers(): JsonResponse
+    {
+        $user = Auth::user();
+
+        if (!$user->hasRole('CA', 'api')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only Clinic Assistants can access this endpoint'
+            ], 403);
+        }
+
+        $acknowledgedHandovers = CaseNoteHandover::with([
+            'caseNoteRequest.patient',
+            'caseNoteRequest.department',
+            'handedOverBy',
+            'department',
+            'location'
+        ])
+        ->where('handed_over_to_user_id', $user->id)
+        ->where('status', self::STATUS_ACKNOWLEDGED)
+        ->orderBy('acknowledged_at', 'desc')
+        ->get()
+        ->map(function ($handover) {
+            $handover->time_since_acknowledgment = $handover->acknowledged_at->diffForHumans();
+            return $handover;
+        });
+
+        return response()->json([
+            'success' => true,
+            'handovers' => $acknowledgedHandovers,
         ]);
     }
 
@@ -339,7 +372,7 @@ class HandoverController extends Controller
                 ->where('status', self::STATUS_PENDING)->count(),
             'overdue' => CaseNoteHandover::where('handed_over_to_user_id', $user->id)
                 ->where('status', self::STATUS_PENDING)
-                ->where('handed_over_at', '<=', now()->subHours(self::OVERDUE_HOURS))
+                ->where('created_at', '<=', now()->subHours(self::OVERDUE_HOURS))
                 ->count(),
         ];
 
@@ -355,7 +388,7 @@ class HandoverController extends Controller
     private function isHandoverOverdue($handover): bool
     {
         return $handover->status === self::STATUS_PENDING &&
-               $handover->handed_over_at->diffInHours(now()) >= self::OVERDUE_HOURS;
+               $handover->created_at->diffInHours(now()) >= self::OVERDUE_HOURS;
     }
 
     /**
@@ -414,7 +447,7 @@ class HandoverController extends Controller
                     'verified_by_user_name' => $verifiedByUser->name,
                     'verification_notes' => $handover->verification_notes,
                     'verified_at' => now()->toDateTimeString(),
-                    'handover_status' => self::STATUS_VERIFIED,
+                    'handover_status' => self::STATUS_ACKNOWLEDGED,
                 ]
             ]);
         } catch (\Exception $e) {
@@ -432,7 +465,7 @@ class HandoverController extends Controller
     public function processOverdueHandovers(): void
     {
         $overdueHandovers = CaseNoteHandover::where('status', self::STATUS_PENDING)
-            ->where('handed_over_at', '<=', now()->subHours(self::OVERDUE_HOURS))
+            ->where('created_at', '<=', now()->subHours(self::OVERDUE_HOURS))
             ->get();
 
         foreach ($overdueHandovers as $handover) {
@@ -483,6 +516,27 @@ class HandoverController extends Controller
                 'handover_id' => $handover->id,
                 'error' => $e->getMessage(),
             ]);
+        }
+    }
+
+    /**
+     * Get status label for a handover
+     */
+    private function getStatusLabel($status): string
+    {
+        switch ($status) {
+            case self::STATUS_PENDING:
+                return 'Pending';
+            case self::STATUS_ACKNOWLEDGED:
+                return 'Acknowledged';
+            case self::STATUS_COMPLETED:
+                return 'Completed';
+            case self::STATUS_OVERDUE:
+                return 'Overdue';
+            case self::STATUS_ESCALATED:
+                return 'Escalated';
+            default:
+                return 'Unknown';
         }
     }
 }
