@@ -15,6 +15,7 @@ use App\Models\Doctor;
 use App\Models\Department;
 use App\Models\Location;
 use App\Models\RequestEvent;
+use Illuminate\Support\Facades\DB; // Added DB facade
 
 class RequestController extends Controller
 {
@@ -776,5 +777,257 @@ class RequestController extends Controller
             'system_health' => 'Good',
             'active_sessions' => rand(5, 15), // Placeholder for now
         ];
+    }
+
+    /**
+     * Verify case notes as received
+     */
+    public function verifyCaseNotesReceived(HttpRequest $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'case_note_ids' => 'required|array|min:1',
+            'case_note_ids.*' => 'required|integer|exists:requests,id',
+            'verification_notes' => 'nullable|string|max:1000',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $user = Auth::user();
+        $caseNoteIds = $request->case_note_ids;
+        $verificationNotes = $request->verification_notes;
+
+        try {
+            DB::beginTransaction();
+
+            $caseNotes = Request::whereIn('id', $caseNoteIds)
+                ->where('status', Request::STATUS_APPROVED)
+                ->where('is_received', false)
+                ->get();
+
+            if ($caseNotes->isEmpty()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No valid case notes found for verification'
+                ], 400);
+            }
+
+            $verifiedCount = 0;
+            foreach ($caseNotes as $caseNote) {
+                $caseNote->update([
+                    'is_received' => true,
+                    'received_at' => now(),
+                    'received_by_user_id' => $user->id,
+                ]);
+
+                // Create timeline event for verification
+                $caseNote->events()->create([
+                    'type' => RequestEvent::TYPE_RECEIVED, // Changed from 'received' to RequestEvent::TYPE_RECEIVED
+                    'actor_user_id' => $user->id,
+                    'occurred_at' => now(),
+                    'reason' => 'Case note verified as received',
+                    'metadata' => [
+                        'received_by_user_id' => $user->id,
+                        'received_by_user_name' => $user->name,
+                        'verification_notes' => $verificationNotes,
+                        'received_at' => now()->toDateTimeString(),
+                    ]
+                ]);
+
+                $verifiedCount++;
+            }
+
+            DB::commit();
+
+            Log::info('Case notes verified as received', [
+                'user_id' => $user->id,
+                'verified_count' => $verifiedCount,
+                'case_note_ids' => $caseNoteIds,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => "Successfully verified {$verifiedCount} case note(s) as received",
+                'verified_count' => $verifiedCount,
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error verifying case notes as received:', [
+                'user_id' => $user->id,
+                'case_note_ids' => $caseNoteIds,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to verify case notes: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Reject case notes as not received (Not Verify)
+     */
+    public function rejectCaseNotesNotReceived(HttpRequest $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'case_note_ids' => 'required|array|min:1',
+            'case_note_ids.*' => 'required|integer|exists:requests,id',
+            'rejection_reason' => 'required|string|max:1000',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $user = Auth::user();
+        $caseNoteIds = $request->case_note_ids;
+        $rejectionReason = $request->rejection_reason;
+
+        try {
+            DB::beginTransaction();
+
+            $caseNotes = Request::whereIn('id', $caseNoteIds)
+                ->where('status', Request::STATUS_APPROVED)
+                ->where('is_received', false)
+                ->get();
+
+            if ($caseNotes->isEmpty()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No valid case notes found for rejection'
+                ], 400);
+            }
+
+            $rejectedCount = 0;
+            foreach ($caseNotes as $caseNote) {
+                // Reset the case note to pending status for re-request
+                $caseNote->update([
+                    'status' => Request::STATUS_PENDING,
+                    'is_received' => false,
+                    'received_at' => null,
+                    'received_by_user_id' => null,
+                    'approved_at' => null,
+                    'approved_by_user_id' => null,
+                    'approval_remarks' => null,
+                    // Store rejection information
+                    'rejection_reason' => $rejectionReason,
+                    'rejected_at' => now(),
+                    'rejected_by_user_id' => $user->id,
+                ]);
+
+                // Create timeline event for rejection
+                $caseNote->events()->create([
+                    'type' => RequestEvent::TYPE_REJECTED_NOT_RECEIVED, // Changed from 'rejected_not_received' to RequestEvent::TYPE_REJECTED_NOT_RECEIVED
+                    'actor_user_id' => $user->id,
+                    'occurred_at' => now(),
+                    'reason' => 'Case note rejected - not received correctly',
+                    'metadata' => [
+                        'rejected_by_user_id' => $user->id,
+                        'rejected_by_user_name' => $user->name,
+                        'rejection_reason' => $rejectionReason,
+                        'rejected_at' => now()->toDateTimeString(),
+                        'previous_status' => Request::STATUS_APPROVED,
+                        'new_status' => Request::STATUS_PENDING,
+                    ]
+                ]);
+
+                $rejectedCount++;
+            }
+
+            DB::commit();
+
+            Log::info('Case notes rejected as not received', [
+                'user_id' => $user->id,
+                'rejected_count' => $rejectedCount,
+                'case_note_ids' => $caseNoteIds,
+                'rejection_reason' => $rejectionReason,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => "Successfully rejected {$rejectedCount} case note(s) - returned to MR staff for re-request",
+                'rejected_count' => $rejectedCount,
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error rejecting case notes as not received:', [
+                'user_id' => $user->id,
+                'case_note_ids' => $caseNoteIds,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to reject case notes: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get approved case notes for verification by CA users
+     */
+    public function getApprovedCaseNotesForVerification(): JsonResponse
+    {
+        $user = Auth::user();
+
+        if (!$user->hasRole('CA', 'api')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only Clinic Assistants can access this endpoint'
+            ], 403);
+        }
+
+        try {
+            $caseNotes = \App\Models\Request::with([
+                'patient',
+                'requestedBy',
+                'department',
+                'doctor',
+                'approvedBy',
+                'batch'
+            ])
+            ->where('status', \App\Models\Request::STATUS_APPROVED)
+            ->where('is_received', false)
+            ->whereNotNull('approved_at') // Ensure approved_at is not null
+            ->orderBy('approved_at', 'desc')
+            ->get();
+
+            $caseNotes = $caseNotes->map(function ($caseNote) {
+                // Add batch number if available
+                $caseNote->batch_number = $caseNote->batch ? $caseNote->batch->batch_number : null;
+                return $caseNote;
+            });
+
+            return response()->json([
+                'success' => true,
+                'case_notes' => $caseNotes,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error fetching approved case notes for verification:', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch approved case notes: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

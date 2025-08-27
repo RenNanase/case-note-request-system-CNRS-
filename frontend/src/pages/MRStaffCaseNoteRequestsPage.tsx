@@ -49,6 +49,15 @@ interface CaseNoteRequest {
     name: string;
     email: string;
   };
+  // Rejection fields (when returned by CA)
+  rejection_reason?: string;
+  rejected_at?: string;
+  rejected_by_user_id?: number;
+  rejected_by?: {
+    id: number;
+    name: string;
+    email: string;
+  };
 }
 
 interface CARequestGroup {
@@ -370,21 +379,21 @@ const MRStaffCaseNoteRequestsPage: React.FC = () => {
   // Get priority badge with proper styling
   const getPriorityBadge = (priority: string) => {
     const config = {
-      low: { 
-        variant: 'outline' as const, 
-        className: 'border-gray-300 text-gray-700 bg-gray-50 text-xs' 
+      low: {
+        variant: 'outline' as const,
+        className: 'border-gray-300 text-gray-700 bg-gray-50 text-xs'
       },
-      normal: { 
-        variant: 'outline' as const, 
-        className: 'border-blue-300 text-blue-700 bg-blue-50 text-xs' 
+      normal: {
+        variant: 'outline' as const,
+        className: 'border-blue-300 text-blue-700 bg-blue-50 text-xs'
       },
-      high: { 
-        variant: 'outline' as const, 
-        className: 'border-orange-300 text-orange-700 bg-orange-50 text-xs' 
+      high: {
+        variant: 'outline' as const,
+        className: 'border-orange-300 text-orange-700 bg-orange-50 text-xs'
       },
-      urgent: { 
-        variant: 'outline' as const, 
-        className: 'border-red-300 text-red-700 bg-red-50 text-xs' 
+      urgent: {
+        variant: 'outline' as const,
+        className: 'border-red-300 text-red-700 bg-red-50 text-xs'
       },
     };
 
@@ -416,9 +425,9 @@ const MRStaffCaseNoteRequestsPage: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Pending Case Note Requests</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Pending & Returned Case Note Requests</h1>
           <p className="text-gray-600 mt-1">
-            Review and approve pending case note requests from Clinic Assistants
+            Review and approve pending case note requests from Clinic Assistants. Returned case notes (in red) were rejected by CAs during verification.
           </p>
         </div>
         <div className="text-right">
@@ -498,6 +507,12 @@ const MRStaffCaseNoteRequestsPage: React.FC = () => {
                     <Badge variant="secondary" className="bg-yellow-50 text-yellow-700 border-yellow-200">
                       {caGroup.pending_count} pending
                     </Badge>
+                    {/* Show returned case notes count if any */}
+                    {caGroup.requests.filter(r => r.status === 'pending' && r.rejection_reason).length > 0 && (
+                      <Badge variant="destructive" className="bg-red-50 text-red-700 border-red-200">
+                        {caGroup.requests.filter(r => r.status === 'pending' && r.rejection_reason).length} returned
+                      </Badge>
+                    )}
                     <Button
                       variant="default"
                       size="sm"
@@ -518,18 +533,26 @@ const MRStaffCaseNoteRequestsPage: React.FC = () => {
       <Dialog open={!!selectedCA} onOpenChange={() => setSelectedCA(null)}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Approve Pending Case Notes - {selectedCA?.ca_name}</DialogTitle>
+            <DialogTitle>Review Case Notes - {selectedCA?.ca_name}</DialogTitle>
             <DialogDescription>
-              Review and approve pending case note requests from this Clinic Assistant
+              Review and approve pending case note requests from this Clinic Assistant. Returned case notes (in red) were rejected during verification.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             {/* Simple Header Info */}
             <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-              <div>
-                <span className="text-sm text-gray-500">Pending case notes:</span>
-                <span className="ml-2 font-medium text-gray-900">{selectedCA?.pending_count}</span>
+              <div className="flex items-center space-x-6">
+                <div>
+                  <span className="text-sm text-gray-500">Pending case notes:</span>
+                  <span className="ml-2 font-medium text-gray-900">{selectedCA?.pending_count}</span>
+                </div>
+                <div>
+                  <span className="text-sm text-gray-500">Returned case notes:</span>
+                  <span className="ml-2 font-medium text-red-600">
+                    {selectedCA?.requests.filter(r => r.status === 'pending' && r.rejection_reason).length || 0}
+                  </span>
+                </div>
               </div>
               <div>
                 <span className="text-sm text-gray-500">Total requests:</span>
@@ -551,17 +574,40 @@ const MRStaffCaseNoteRequestsPage: React.FC = () => {
                   .map((request) => (
                   <div
                     key={request.id}
-                    className="p-4 border border-yellow-300 bg-yellow-50 rounded-lg"
+                    className={`p-4 border rounded-lg ${
+                      request.rejection_reason
+                        ? 'border-red-300 bg-red-50' // Returned case notes - red styling
+                        : 'border-yellow-300 bg-yellow-50' // Regular pending case notes - yellow styling
+                    }`}
                   >
-                    <div className="flex items-start space-x-3">
-                      <Checkbox
-                        checked={selectedRequests.includes(request.id)}
-                        onCheckedChange={(checked) =>
-                          handleCaseNoteSelection(request.id, checked as boolean)
-                        }
-                        className="mt-1"
-                      />
-                      <div className="flex-1">
+                                          <div className="flex items-start space-x-3">
+                        <Checkbox
+                          checked={selectedRequests.includes(request.id)}
+                          onCheckedChange={(checked) =>
+                            handleCaseNoteSelection(request.id, checked as boolean)
+                          }
+                          className="mt-1"
+                        />
+                        <div className="flex-1">
+                          {/* Rejection Information - Show prominently for returned case notes */}
+                          {request.rejection_reason && (
+                            <div className="mb-3 p-3 bg-red-100 border border-red-200 rounded-md">
+                              <div className="flex items-center gap-2 mb-2">
+                                <XCircle className="h-4 w-4 text-red-600" />
+                                <span className="text-sm font-semibold text-red-800">
+                                  Case Note Returned by CA
+                                </span>
+                              </div>
+                              <div className="text-sm text-red-700">
+                                <div className="font-medium mb-1">Rejection Reason:</div>
+                                <div className="italic">"{request.rejection_reason}"</div>
+                                <div className="text-xs mt-2 text-red-600">
+                                  Returned by: {request.rejected_by?.name || 'Unknown CA'} on{' '}
+                                  {request.rejected_at ? new Date(request.rejected_at).toLocaleDateString() : 'Unknown date'}
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         <div className="flex items-center justify-between mb-2">
                           <h4 className="font-medium">{request.patient.name}</h4>
                           <div className="flex gap-2">

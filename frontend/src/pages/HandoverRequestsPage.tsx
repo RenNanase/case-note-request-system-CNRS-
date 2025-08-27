@@ -189,7 +189,7 @@ const HandoverRequestsPage: React.FC = () => {
           description: `Handover request ${action}d successfully`,
           variant: 'success',
         });
-        
+
         // Add a small delay to ensure toast is displayed before closing modal
         setTimeout(() => {
           setShowResponseModal(false);
@@ -218,21 +218,21 @@ const HandoverRequestsPage: React.FC = () => {
 
   const getPriorityBadge = (priority: string) => {
     const config = {
-      low: { 
-        variant: 'outline' as const, 
-        className: 'border-gray-300 text-gray-700 bg-gray-50' 
+      low: {
+        variant: 'outline' as const,
+        className: 'border-gray-300 text-gray-700 bg-gray-50'
       },
-      normal: { 
-        variant: 'secondary' as const, 
-        className: 'bg-blue-100 text-blue-800 border-blue-200' 
+      normal: {
+        variant: 'secondary' as const,
+        className: 'bg-blue-100 text-blue-800 border-blue-200'
       },
-      high: { 
-        variant: 'outline' as const, 
-        className: 'border-orange-300 text-orange-700 bg-orange-50' 
+      high: {
+        variant: 'outline' as const,
+        className: 'border-orange-300 text-orange-700 bg-orange-50'
       },
-      urgent: { 
-        variant: 'outline' as const, 
-        className: 'border-red-300 text-red-700 bg-red-50' 
+      urgent: {
+        variant: 'outline' as const,
+        className: 'border-red-300 text-red-700 bg-red-50'
       },
     };
 
@@ -247,21 +247,21 @@ const HandoverRequestsPage: React.FC = () => {
 
   const getStatusBadge = (status: string) => {
     const config = {
-      pending: { 
-        variant: 'outline' as const, 
-        icon: Clock, 
+      pending: {
+        variant: 'outline' as const,
+        icon: Clock,
         text: 'Pending',
         className: 'border-yellow-300 text-yellow-700 bg-yellow-50'
       },
-      approved: { 
-        variant: 'outline' as const, 
-        icon: CheckCircle, 
+      approved: {
+        variant: 'outline' as const,
+        icon: CheckCircle,
         text: 'Approved',
         className: 'border-green-300 text-green-700 bg-green-50'
       },
-      rejected: { 
-        variant: 'outline' as const, 
-        icon: XCircle, 
+      rejected: {
+        variant: 'outline' as const,
+        icon: XCircle,
         text: 'Rejected',
         className: 'border-red-300 text-red-700 bg-red-50'
       },
@@ -369,10 +369,10 @@ const HandoverRequestsPage: React.FC = () => {
                           </div>
                           <div>
                             <h3 className="font-semibold text-gray-900">
-                              {request.case_note.patient.name}
+                              {request.case_note?.patient?.name || 'Unknown Patient'}
                             </h3>
                             <p className="text-sm text-gray-500">
-                              MRN: {request.case_note.patient.mrn} • {request.case_note.department.name}
+                              MRN: {request.case_note?.patient?.mrn || 'N/A'} • {request.case_note?.department?.name || 'Unknown Department'}
                             </p>
                           </div>
                           <div className="flex items-center space-x-2">
@@ -435,10 +435,10 @@ const HandoverRequestsPage: React.FC = () => {
                           </div>
                           <div>
                             <h3 className="font-semibold text-gray-900">
-                              {request.case_note.patient.name}
+                              {request.case_note?.patient?.name || 'Unknown Patient'}
                             </h3>
                             <p className="text-sm text-gray-500">
-                              MRN: {request.case_note.patient.mrn} • {request.case_note.department.name}
+                              MRN: {request.case_note?.patient?.mrn || 'N/A'} • {request.case_note?.department?.name || 'Unknown Department'}
                             </p>
                             <p className="text-sm text-red-600">
                               Requested by: {request.requester?.name}
@@ -499,7 +499,7 @@ const HandoverRequestsPage: React.FC = () => {
           <DialogHeader>
             <DialogTitle>Respond to Handover Request</DialogTitle>
             <DialogDescription>
-              {selectedRequest?.case_note.patient.name} - {selectedRequest?.reason}
+              {selectedRequest?.case_note?.patient?.name || 'Unknown Patient'} - {selectedRequest?.reason}
             </DialogDescription>
           </DialogHeader>
 

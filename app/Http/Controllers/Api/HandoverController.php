@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use App\Models\Doctor;
 
 class HandoverController extends Controller
 {
@@ -23,6 +24,7 @@ class HandoverController extends Controller
     const STATUS_COMPLETED = 'completed';
     const STATUS_OVERDUE = 'overdue';
     const STATUS_ESCALATED = 'escalated';
+    const STATUS_VERIFIED = 'verified'; // Added for receipt verification
 
     // Time constants (in hours)
     const REMINDER_HOURS = 3;
@@ -236,11 +238,105 @@ class HandoverController extends Controller
                 'handover_id' => $handoverId,
                 'user_id' => $user->id,
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to verify handover: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Verify handover case note receipt by requesting CA
+     */
+    public function verifyReceipt(HttpRequest $request, $handoverId): JsonResponse
+    {
+        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
+            'receipt_verification_notes' => 'nullable|string|max:1000',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $user = Auth::user();
+        $handover = CaseNoteHandover::with(['caseNoteRequest', 'handedOverBy'])->find($handoverId);
+
+        if (!$handover) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Handover not found'
+            ], 404);
+        }
+
+        // Check if user is the one who originally requested the handover
+        if ($handover->handed_over_by_user_id !== $user->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You can only verify receipt of handovers you requested'
+            ], 403);
+        }
+
+        // Check if handover has been acknowledged by the recipient
+        if ($handover->status !== self::STATUS_ACKNOWLEDGED) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Handover must be acknowledged by the recipient before you can verify receipt'
+            ], 400);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            // Update handover status to completed
+            $handover->update([
+                'status' => self::STATUS_COMPLETED,
+                'completed_at' => now(),
+                'receipt_verification_notes' => $request->receipt_verification_notes,
+            ]);
+
+            // Update case note request
+            $caseNoteRequest = $handover->caseNoteRequest;
+            $caseNoteRequest->update([
+                'handover_status' => 'completed',
+                'handover_completed_at' => now(),
+            ]);
+
+            // Create timeline event for receipt verification
+            $this->createReceiptVerificationTimelineEvent($caseNoteRequest, $handover, $user);
+
+            DB::commit();
+
+            Log::info('Handover receipt verified successfully', [
+                'handover_id' => $handover->id,
+                'request_id' => $caseNoteRequest->id,
+                'verified_by' => $user->id,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Handover receipt verified successfully',
+                'handover' => $handover->load(['caseNoteRequest', 'handedOverBy']),
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error verifying handover receipt:', [
+                'handover_id' => $handoverId,
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to verify handover receipt: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -399,6 +495,7 @@ class HandoverController extends Controller
         try {
             $department = Department::find($handover->department_id);
             $location = $handover->location_id ? Location::find($handover->location_id) : null;
+            $doctor = $handover->handover_doctor_id ? Doctor::find($handover->handover_doctor_id) : null;
 
             $caseNoteRequest->events()->create([
                 'type' => \App\Models\RequestEvent::TYPE_HANDED_OVER,
@@ -417,6 +514,8 @@ class HandoverController extends Controller
                     'department_name' => $department ? $department->name : 'Unknown Department',
                     'location_id' => $handover->location_id,
                     'location_name' => $location ? $location->name : 'No specific location',
+                    'handover_doctor_id' => $handover->handover_doctor_id,
+                    'handover_doctor_name' => $doctor ? $doctor->name : null,
                     'handover_status' => self::STATUS_PENDING,
                     'handover_pending_since' => now()->toDateTimeString(),
                 ]
@@ -538,5 +637,142 @@ class HandoverController extends Controller
             default:
                 return 'Unknown';
         }
+    }
+
+    /**
+     * Get verified handovers for current user (as sender)
+     */
+    public function getVerifiedHandovers(): JsonResponse
+    {
+        $user = Auth::user();
+
+        if (!$user->hasRole('CA', 'api')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only Clinic Assistants can access this endpoint'
+            ], 403);
+        }
+
+        $handovers = CaseNoteHandover::with([
+            'caseNoteRequest.patient',
+            'caseNoteRequest.department',
+            'handedOverTo',
+            'department',
+            'location',
+            'handoverDoctor'
+        ])
+        ->where('handed_over_by_user_id', $user->id)
+        ->where('status', self::STATUS_VERIFIED)
+        ->orderBy('verified_at', 'desc')
+        ->get()
+        ->groupBy(function ($handover) {
+            return $handover->verified_at->format('Y-m-d');
+        });
+
+        return response()->json([
+            'success' => true,
+            'handovers' => $handovers,
+        ]);
+    }
+
+    /**
+     * Create receipt verification timeline event
+     */
+    private function createReceiptVerificationTimelineEvent($caseNoteRequest, $handover, $verifiedByUser): void
+    {
+        try {
+            $caseNoteRequest->events()->create([
+                'type' => 'handover_receipt_verified',
+                'actor_user_id' => $verifiedByUser->id,
+                'reason' => "Handover receipt verified by {$verifiedByUser->name}",
+                'occurred_at' => now(),
+                'metadata' => [
+                    'handover_id' => $handover->id,
+                    'verified_by_user_id' => $verifiedByUser->id,
+                    'verified_by_user_name' => $verifiedByUser->name,
+                    'receipt_verification_notes' => $handover->receipt_verification_notes,
+                    'verified_at' => now()->toDateTimeString(),
+                    'handover_status' => self::STATUS_COMPLETED,
+                ]
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to create receipt verification timeline event:', [
+                'handover_id' => $handover->id,
+                'request_id' => $caseNoteRequest->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Get handovers that need verification by the requesting CA
+     */
+    public function getHandoversNeedingVerification(): JsonResponse
+    {
+        $user = Auth::user();
+
+        if (!$user->hasRole('CA', 'api')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only Clinic Assistants can access this endpoint'
+            ], 403);
+        }
+
+        $handovers = CaseNoteHandover::with([
+            'caseNoteRequest.patient',
+            'caseNoteRequest.department',
+            'handedOverTo',
+            'department',
+            'location',
+            'handoverDoctor'
+        ])
+        ->where('handed_over_by_user_id', $user->id)
+        ->where('status', self::STATUS_ACKNOWLEDGED)
+        ->orderBy('acknowledged_at', 'desc')
+        ->get()
+        ->groupBy(function ($handover) {
+            return $handover->acknowledged_at->format('Y-m-d');
+        });
+
+        return response()->json([
+            'success' => true,
+            'handovers' => $handovers,
+        ]);
+    }
+
+    /**
+     * Get handovers that need verification by the receiving CA
+     */
+    public function getHandoversNeedingAcknowledgement(): JsonResponse
+    {
+        $user = Auth::user();
+
+        if (!$user->hasRole('CA', 'api')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only Clinic Assistants can access this endpoint'
+            ], 403);
+        }
+
+        $handovers = CaseNoteHandover::with([
+            'caseNoteRequest.patient',
+            'caseNoteRequest.department',
+            'handedOverBy',
+            'department',
+            'location',
+            'handoverDoctor'
+        ])
+        ->where('handed_over_to_user_id', $user->id)
+        ->where('status', self::STATUS_PENDING)
+        ->orderBy('created_at', 'desc')
+        ->get()
+        ->groupBy(function ($handover) {
+            return $handover->created_at->format('Y-m-d');
+        });
+
+        return response()->json([
+            'success' => true,
+            'handovers' => $handovers,
+        ]);
     }
 }

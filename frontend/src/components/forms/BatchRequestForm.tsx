@@ -53,7 +53,7 @@ const caseNoteSchema = z.object({
 // Batch request form schema
 const batchRequestSchema = z.object({
   case_notes: z.array(caseNoteSchema).min(1, 'Please add at least one case note').max(10, 'Maximum 10 case notes allowed'),
-  department_id: z.number().min(1, 'Please select a department'),
+  department_id: z.number().min(1, 'Please select a department').or(z.literal(0)), // Allow 0 for initial state
   doctor_id: z.number().optional(),
   location_id: z.number().optional(),
   priority: z.string().min(1, 'Please select a priority'),
@@ -110,6 +110,11 @@ export const BatchRequestForm: React.FC<BatchRequestFormProps> = ({
   const [showHandoverModal, setShowHandoverModal] = useState(false);
   const [selectedPatientForHandover, setSelectedPatientForHandover] = useState<Patient | null>(null);
 
+  // Debug currentStep changes
+  useEffect(() => {
+    console.log('Debug - currentStep changed to:', currentStep);
+  }, [currentStep]);
+
   // Resource data
   const [departments, setDepartments] = useState<Department[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
@@ -137,7 +142,6 @@ export const BatchRequestForm: React.FC<BatchRequestFormProps> = ({
     name: 'case_notes'
   });
 
-  const selectedDepartmentId = watch('department_id');
   const watchedValues = watch(['priority', 'purpose', 'needed_date']);
   const caseNotesValues = watch('case_notes'); // Watch for changes to trigger re-validation
 
@@ -181,17 +185,12 @@ export const BatchRequestForm: React.FC<BatchRequestFormProps> = ({
     loadResources();
   }, [toast]);
 
-  // Load doctors when department changes
+  // Load doctors - show all doctors regardless of department
   useEffect(() => {
     const loadDoctors = async () => {
-      if (!selectedDepartmentId || selectedDepartmentId === 0) {
-        setDoctors([]);
-        setValue('doctor_id', undefined);
-        return;
-      }
-
       try {
-        const response = await resourcesApi.getDoctors(selectedDepartmentId);
+        // Load all doctors regardless of department selection
+        const response = await resourcesApi.getDoctors();
         if (response.success) {
           setDoctors(response.doctors);
         }
@@ -202,7 +201,7 @@ export const BatchRequestForm: React.FC<BatchRequestFormProps> = ({
     };
 
     loadDoctors();
-  }, [selectedDepartmentId, setValue]);
+  }, []); // Load all doctors once on component mount
 
   // Handle patient selection for a specific case note
   const handlePatientSelect = (index: number, patient: Patient) => {
@@ -281,8 +280,27 @@ export const BatchRequestForm: React.FC<BatchRequestFormProps> = ({
   };
 
   const goToNext = () => {
+    console.log('Debug - goToNext called');
+    console.log('Debug - currentStep:', currentStep);
+    console.log('Debug - STEPS.length:', STEPS.length);
+    console.log('Debug - canGoNext():', canGoNext());
+    console.log('Debug - condition check:', currentStep < STEPS.length - 1 && canGoNext());
+
+    // Check form validation state
+    const formState = form.formState;
+    console.log('Debug - Form errors:', formState.errors);
+    console.log('Debug - Form is valid:', formState.isValid);
+    console.log('Debug - Form is dirty:', formState.isDirty);
+    console.log('Debug - Form values:', getValues());
+
     if (currentStep < STEPS.length - 1 && canGoNext()) {
-      setCurrentStep(prev => prev + 1);
+      console.log('Debug - About to set currentStep to:', currentStep + 1);
+      setCurrentStep(prev => {
+        console.log('Debug - setCurrentStep called with prev:', prev);
+        return prev + 1;
+      });
+    } else {
+      console.log('Debug - goToNext condition failed');
     }
   };
 
@@ -574,19 +592,14 @@ export const BatchRequestForm: React.FC<BatchRequestFormProps> = ({
                   name="doctor_id"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Requesting Doctor (Optional)</FormLabel>
+                      <FormLabel>Requesting Doctor</FormLabel>
                       <Select
                         onValueChange={(value) => field.onChange(value ? Number(value) : undefined)}
                         value={field.value?.toString() || ''}
-                        disabled={!selectedDepartmentId || doctors.length === 0}
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder={
-                              !selectedDepartmentId ? "Select a department first" :
-                              doctors.length === 0 ? "No doctors available" :
-                              "Select a doctor"
-                            } />
+                            <SelectValue placeholder="Select a doctor" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -597,11 +610,6 @@ export const BatchRequestForm: React.FC<BatchRequestFormProps> = ({
                           ))}
                         </SelectContent>
                       </Select>
-                      <FormDescription>
-                        {selectedDepartmentId && doctors.length === 0 &&
-                          "No doctors found for the selected department"
-                        }
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -612,7 +620,7 @@ export const BatchRequestForm: React.FC<BatchRequestFormProps> = ({
                   name="location_id"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Location (Optional)</FormLabel>
+                      <FormLabel>Location</FormLabel>
                       <Select onValueChange={(value) => field.onChange(value ? Number(value) : undefined)} value={field.value?.toString() || ''}>
                         <FormControl>
                           <SelectTrigger>

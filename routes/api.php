@@ -83,13 +83,26 @@ Route::middleware('auth:api')->group(function () {
             Route::patch('{patient}/status', [App\Http\Controllers\Api\Admin\AdminPatientController::class, 'updateStatus']);
             Route::patch('bulk-status', [App\Http\Controllers\Api\Admin\AdminPatientController::class, 'bulkUpdateStatus']);
         });
+
+        // Doctor management
+        Route::prefix('doctors')->group(function () {
+            Route::get('/', [App\Http\Controllers\Api\DoctorController::class, 'index']);
+            Route::post('/', [App\Http\Controllers\Api\DoctorController::class, 'store']);
+            Route::get('/{doctor}', [App\Http\Controllers\Api\DoctorController::class, 'show']);
+            Route::put('/{doctor}', [App\Http\Controllers\Api\DoctorController::class, 'update']);
+            Route::delete('/{doctor}', [App\Http\Controllers\Api\DoctorController::class, 'destroy']);
+            Route::patch('/{doctor}/toggle-status', [App\Http\Controllers\Api\DoctorController::class, 'toggleStatus']);
+        });
     });
 
     // Handover routes
     Route::post('/handovers', [App\Http\Controllers\Api\HandoverController::class, 'store']);
     Route::post('/handovers/{handoverId}/verify', [App\Http\Controllers\Api\HandoverController::class, 'verifyReceived']);
+    Route::post('/handovers/{handoverId}/verify-receipt', [App\Http\Controllers\Api\HandoverController::class, 'verifyReceipt']);
     Route::get('/handovers/pending', [App\Http\Controllers\Api\HandoverController::class, 'getPendingHandovers']);
     Route::get('/handovers/acknowledged', [App\Http\Controllers\Api\HandoverController::class, 'getAcknowledgedHandovers']);
+    Route::get('/handovers/needing-verification', [App\Http\Controllers\Api\HandoverController::class, 'getHandoversNeedingVerification']);
+    Route::get('/handovers/needing-acknowledgement', [App\Http\Controllers\Api\HandoverController::class, 'getHandoversNeedingAcknowledgement']);
     Route::get('/handovers/history', [App\Http\Controllers\Api\HandoverController::class, 'getHandoverHistory']);
     Route::get('/handovers/stats', [App\Http\Controllers\Api\HandoverController::class, 'getHandoverStats']);
     Route::get('/requests/{requestId}/handovers', [App\Http\Controllers\Api\HandoverController::class, 'getRequestHandovers']);
@@ -111,13 +124,15 @@ Route::middleware('auth:api')->group(function () {
 
     // Case note verification routes
     Route::prefix('case-notes')->group(function () {
-        Route::get('/approved-for-verification', [App\Http\Controllers\Api\CaseNoteVerificationController::class, 'getApprovedForVerification']);
-        Route::post('/verify-received', [App\Http\Controllers\Api\CaseNoteVerificationController::class, 'verifyReceived']);
+        Route::get('/approved-for-verification', [App\Http\Controllers\Api\RequestController::class, 'getApprovedCaseNotesForVerification']);
+        Route::post('/verify-received', [App\Http\Controllers\Api\RequestController::class, 'verifyCaseNotesReceived']);
+        Route::post('/reject-not-received', [App\Http\Controllers\Api\RequestController::class, 'rejectCaseNotesNotReceived']);
     });
 
     // Case note timeline routes
     Route::get('/case-notes/search', [App\Http\Controllers\Api\CaseNoteTimelineController::class, 'search']);
     Route::get('/case-notes/{caseNoteId}/timeline', [App\Http\Controllers\Api\CaseNoteTimelineController::class, 'getTimeline']);
+    Route::post('/case-notes/timeline/update-doctor-info', [App\Http\Controllers\Api\CaseNoteTimelineController::class, 'updateExistingEventsWithDoctorInfo']);
 
     // Handover request routes
     Route::post('/case-notes/{caseNoteId}/request-handover', [App\Http\Controllers\Api\HandoverRequestController::class, 'requestHandover']);

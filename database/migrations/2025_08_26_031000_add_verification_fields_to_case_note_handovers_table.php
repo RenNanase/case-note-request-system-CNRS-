@@ -1,0 +1,29 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::table('case_note_handovers', function (Blueprint $table) {
+            $table->text('receipt_verification_notes')->nullable()->after('acknowledgment_notes');
+            $table->timestamp('completed_at')->nullable()->after('acknowledged_at');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::table('case_note_handovers', function (Blueprint $table) {
+            $table->dropColumn(['receipt_verification_notes', 'completed_at']);
+        });
+    }
+};

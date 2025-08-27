@@ -113,7 +113,9 @@ class HandoverRequestController extends Controller
                     'reason' => $request->reason,
                     'priority' => $request->priority,
                     'requested_by_name' => $user->name,
-                    'current_holder_name' => $caseNote->currentPIC?->name ?? 'Unknown'
+                    'current_holder_name' => $caseNote->currentPIC?->name ?? 'Unknown',
+                    'doctor_id' => $request->doctor_id,
+                    'doctor_name' => $request->doctor_id ? \App\Models\Doctor::find($request->doctor_id)?->name : null
                 ]
             ]);
 

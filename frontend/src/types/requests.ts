@@ -117,6 +117,16 @@ export interface CaseNoteRequest {
     email: string;
   };
 
+  // Rejection fields (when returned by CA)
+  rejection_reason?: string;
+  rejected_at?: string;
+  rejected_by_user_id?: number;
+  rejected_by?: {
+    id: number;
+    name: string;
+    email: string;
+  };
+
   // Handover fields
   current_pic_user_id?: number | null;
   handover_status?: 'none' | 'pending' | 'acknowledged' | 'completed';
@@ -253,4 +263,14 @@ export interface CreateRequestResponse {
   success: boolean;
   message: string;
   request: CaseNoteRequest;
+}
+
+export interface VerificationSubmission {
+  case_note_ids: number[];
+  verification_notes?: string;
+}
+
+export interface RejectionSubmission {
+  case_note_ids: number[];
+  rejection_reason: string;
 }

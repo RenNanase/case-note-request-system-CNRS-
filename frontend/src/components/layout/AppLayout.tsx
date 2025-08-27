@@ -16,7 +16,8 @@ import {
   Bell,
   ChevronRight,
   Clock,
-  ArrowRight
+  ArrowRight,
+  User
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -52,6 +53,7 @@ const breadcrumbMap: Record<string, string> = {
   '/mrs-case-note-requests': 'MR Staff Case Note Requests',
   '/case-note-timeline': 'Case Note Timeline',
   '/admin/patients': 'Patient Management',
+  '/admin/doctors': 'Doctor Management',
   '/users': 'User Management',
   '/settings': 'Settings',
   '/reports': 'Reports & Analytics',
@@ -111,6 +113,12 @@ export default function AppLayout() {
       name: 'Patient Management',
       href: '/admin/patients',
       icon: Layers,
+      roles: ['ADMIN']
+    },
+    {
+      name: 'Doctor Management',
+      href: '/admin/doctors',
+      icon: User,
       roles: ['ADMIN']
     },
     {
@@ -250,8 +258,8 @@ export default function AppLayout() {
             </div>
           </div>
           <div className="mt-2 flex flex-wrap gap-1">
-            {user?.roles.map((role) => (
-              <Badge key={role} variant="outline" className="text-xs">
+            {user?.roles.map((role, index) => (
+              <Badge key={`${role}-${index}`} variant="outline" className="text-xs">
                 {role === 'CA' ? 'CA' : role === 'MR_STAFF' ? 'MR' : 'ADMIN'}
               </Badge>
             ))}

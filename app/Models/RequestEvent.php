@@ -24,6 +24,7 @@ class RequestEvent extends Model
     const TYPE_VERIFIED_RECEIVED = 'verified_received';
     const TYPE_COMPLETED = 'completed';
     const TYPE_RETURNED = 'returned';
+    const TYPE_REJECTED_NOT_RECEIVED = 'rejected_not_received';
 
     protected $fillable = [
         'request_id',

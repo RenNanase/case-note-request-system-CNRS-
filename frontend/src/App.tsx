@@ -16,6 +16,7 @@ import VerifyCaseNotesPage from '@/pages/VerifyCaseNotesPage';
 import MRStaffCaseNoteRequestsPage from '@/pages/MRStaffCaseNoteRequestsPage';
 import CaseNoteTimelinePage from '@/pages/CaseNoteTimelinePage';
 import HandoverRequestsPage from '@/pages/HandoverRequestsPage';
+import DoctorManagementPage from '@/pages/DoctorManagementPage';
 
 // Loading component
 function LoadingScreen() {
@@ -76,6 +77,7 @@ function AppContent() {
           <Route path="requests/:id" element={<RequestDetailsPage />} />
           <Route path="my-requests" element={<MyRequestsPage />} />
           <Route path="admin/patients" element={<AdminPatientsPage />} />
+          <Route path="admin/doctors" element={<DoctorManagementPage />} />
           <Route path="admin/case-note-search" element={<AdminCaseNoteSearchPage />} />
           <Route path="batch-requests" element={<BatchRequestsPage />} />
           <Route path="batch-requests/:id" element={<BatchRequestsPage />} />

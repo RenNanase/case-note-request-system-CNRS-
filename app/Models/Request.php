@@ -78,6 +78,13 @@ class Request extends Model
 
         // Create a "created" event when a new request is created
         static::created(function ($request) {
+            // Load the doctor relationship to get the doctor name
+            $doctorName = null;
+            if ($request->doctor_id) {
+                $doctor = \App\Models\Doctor::find($request->doctor_id);
+                $doctorName = $doctor ? $doctor->name : null;
+            }
+
             $request->events()->create([
                 'type' => 'created',
                 'actor_user_id' => $request->requested_by_user_id,
@@ -86,7 +93,9 @@ class Request extends Model
                 'metadata' => [
                     'request_number' => $request->request_number,
                     'purpose' => $request->purpose,
-                    'priority' => $request->priority
+                    'priority' => $request->priority,
+                    'doctor_id' => $request->doctor_id,
+                    'doctor_name' => $doctorName
                 ]
             ]);
         });
@@ -169,6 +178,11 @@ class Request extends Model
     public function receivedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'received_by_user_id');
+    }
+
+    public function rejectedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'rejected_by_user_id');
     }
 
     public function notifications(): HasMany

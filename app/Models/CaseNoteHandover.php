@@ -26,16 +26,20 @@ class CaseNoteHandover extends Model
         'handed_over_to_user_id',
         'department_id',
         'location_id',
+        'handover_doctor_id',
         'handover_reason',
         'additional_notes',
         'status',
         'acknowledged_at',
         'acknowledged_by_user_id',
         'acknowledgment_notes',
+        'verified_at',
+        'receipt_verification_notes',
     ];
 
     protected $casts = [
         'acknowledged_at' => 'datetime',
+        'completed_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'deleted_at' => 'datetime',
@@ -78,6 +82,11 @@ class CaseNoteHandover extends Model
     public function location(): BelongsTo
     {
         return $this->belongsTo(Location::class);
+    }
+
+    public function handoverDoctor(): BelongsTo
+    {
+        return $this->belongsTo(Doctor::class, 'handover_doctor_id');
     }
 
     public function acknowledgedBy(): BelongsTo

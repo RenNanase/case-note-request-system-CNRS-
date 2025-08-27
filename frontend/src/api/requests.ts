@@ -14,7 +14,9 @@ import type {
   PrioritiesResponse,
   StatusesResponse,
   Patient,
-  CreateRequestResponse
+  CreateRequestResponse,
+  VerificationSubmission,
+  RejectionSubmission
 } from '@/types/requests';
 
 // Case Note Request API
@@ -162,12 +164,31 @@ export const requestsApi = {
     return response.data;
   },
 
-  verifyCaseNotesReceived: async (data: {
-    case_note_ids: number[];
-    verification_notes?: string;
-  }): Promise<ApiResponse<any>> => {
-    const response = await apiClient.post('/case-notes/verify-received', data);
-    return response.data;
+  verifyCaseNotesReceived: async (data: VerificationSubmission): Promise<{ success: boolean; message?: string; verified_count?: number }> => {
+    try {
+      const response = await apiClient.post('/case-notes/verify-received', data);
+      return response.data;
+    } catch (error: any) {
+      console.error('Error verifying case notes as received:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to verify case notes as received'
+      };
+    }
+  },
+
+  // Reject case notes as not received (Not Verify)
+  rejectCaseNotesNotReceived: async (data: RejectionSubmission): Promise<{ success: boolean; message?: string; rejected_count?: number }> => {
+    try {
+      const response = await apiClient.post('/case-notes/reject-not-received', data);
+      return response.data;
+    } catch (error: any) {
+      console.error('Error rejecting case notes as not received:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to reject case notes as not received'
+      };
+    }
   },
 
   // My requests endpoint
