@@ -4,11 +4,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Search, Eye, CheckCircle, XCircle, Clock, Filter, Package } from 'lucide-react';
+import { Plus, Search, CheckCircle, XCircle, Clock, Filter, Package, ChevronDown, ChevronUp } from 'lucide-react';
 import { useToast } from '@/contexts/ToastContext';
 import { requestsApi } from '@/api/requests';
 import { useAuth } from '@/contexts/AuthContext';
-import { Link } from 'react-router-dom';
+
 import { BatchRequestForm } from '@/components/forms/BatchRequestForm';
 import { VerifyIndividualReceiptModal } from '@/components/modals/VerifyIndividualReceiptModal';
 
@@ -86,6 +86,7 @@ export const BatchRequestsPage: React.FC = () => {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showVerifyModal, setShowVerifyModal] = useState(false);
   const [selectedBatchForVerification, setSelectedBatchForVerification] = useState<BatchRequest | null>(null);
+  const [minimizedCards, setMinimizedCards] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     loadBatchRequests();
@@ -97,27 +98,33 @@ export const BatchRequestsPage: React.FC = () => {
       const response = await requestsApi.getBatchRequests();
 
       if (response && response.success) {
-        setBatchRequests(response.batch_requests || []);
-        setError(null); // Clear any previous errors
+        const requests = response.batch_requests || [];
+        setBatchRequests(requests);
+
+        // Minimize all cards by default
+        const allBatchIds = new Set<number>(requests.map((batch: BatchRequest) => batch.id));
+        setMinimizedCards(allBatchIds);
       } else {
-        console.error('API returned error:', response);
-        toast({
-          title: 'Error',
-          description: response.message || 'Failed to load batch requests',
-          variant: 'destructive',
-        });
+        setError(response.message || 'Failed to load case note requests');
       }
-    } catch (error) {
-      console.error('Error loading batch requests:', error);
-      setError(error instanceof Error ? error.message : 'Failed to load batch requests');
-      toast({
-        title: 'Error',
-        description: 'Failed to load batch requests',
-        variant: 'destructive',
-      });
+    } catch (error: any) {
+      console.error('Error loading case note requests:', error);
+      setError(error instanceof Error ? error.message : 'Failed to load case note requests');
     } finally {
       setLoading(false);
     }
+  };
+
+  const toggleCardMinimize = (batchId: number) => {
+    setMinimizedCards(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(batchId)) {
+        newSet.delete(batchId);
+      } else {
+        newSet.add(batchId);
+      }
+      return newSet;
+    });
   };
 
   const getStatusBadge = (status: string) => {
@@ -266,11 +273,11 @@ export const BatchRequestsPage: React.FC = () => {
   return (
     <div className="container mx-auto py-6">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Batch Requests</h1>
+        <h1 className="text-3xl font-bold text-gray-900">Case Note Requests</h1>
         {hasRole('CA') && (
           <Button onClick={() => setShowCreateForm(true)}>
             <Plus className="h-4 w-4 mr-2" />
-            Create Batch Request
+            Create Case Note Request
           </Button>
         )}
       </div>
@@ -340,19 +347,19 @@ export const BatchRequestsPage: React.FC = () => {
             <div className="text-gray-400 mb-4">
               <Clock className="h-12 w-12 mx-auto" />
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No batch requests found</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No Case Note requests found</h3>
             <p className="text-gray-500">
               {searchTerm || statusFilter !== 'all'
                 ? 'Try adjusting your search or filters'
                 : hasRole('CA')
-                  ? 'Get started by creating your first batch request'
+                  ? 'Get started by creating your first case note request'
                   : 'All case note requests have been processed'
               }
             </p>
             {!searchTerm && statusFilter === 'all' && hasRole('CA') && (
               <Button onClick={() => setShowCreateForm(true)} className="mt-4">
                 <Plus className="h-4 w-4 mr-2" />
-                Create Batch Request
+                Create Case Note Request
               </Button>
             )}
           </CardContent>
@@ -381,13 +388,28 @@ export const BatchRequestsPage: React.FC = () => {
                           <span>{batch.requests_count + batch.approved_count + batch.rejected_count} total</span>
                         </div>
                       </div>
-                      <div className="ml-auto">
+                      <div className="flex items-center space-x-2">
                         {getStatusBadge(batch.status)}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => toggleCardMinimize(batch.id)}
+                          className="ml-2 p-1 h-8 w-8"
+                        >
+                          {minimizedCards.has(batch.id) ? (
+                            <ChevronDown className="h-4 w-4" />
+                          ) : (
+                            <ChevronUp className="h-4 w-4" />
+                          )}
+                        </Button>
                       </div>
                     </div>
 
-                    {/* Progress Section */}
-                    <div className="mb-6">
+                    {/* Collapsible Content */}
+                    {!minimizedCards.has(batch.id) && (
+                      <>
+                        {/* Progress Section */}
+                        <div className="mb-6">
                       <div className="flex justify-between items-center mb-2">
                         <span className="text-sm font-medium text-gray-700">Processing Progress</span>
                         <span className="text-sm text-gray-500">
@@ -515,6 +537,8 @@ export const BatchRequestsPage: React.FC = () => {
                         <p className="text-gray-700 mt-1 text-sm">{batch.batch_notes}</p>
                       </div>
                     )}
+                      </>
+                    )}
                   </div>
 
                   {/* Action Buttons */}
@@ -525,10 +549,7 @@ export const BatchRequestsPage: React.FC = () => {
                       asChild
                       className="w-full"
                     >
-                      <Link to={`/batch-requests/${batch.id}`}>
-                        <Eye className="h-4 w-4 mr-2" />
-                        View Details
-                      </Link>
+
                     </Button>
 
                     {/* Verify Received button - only for CAs on their own approved batches */}

@@ -27,6 +27,12 @@ export const requestsApi = {
     return response.data;
   },
 
+  // Get optimized dashboard stats (consolidated)
+  getOptimizedDashboardStats: async (): Promise<DashboardStatsResponse> => {
+    const response = await apiClient.get('/dashboard/stats');
+    return response.data;
+  },
+
   // List requests with filters and pagination
   getRequests: async (params?: RequestsListParams): Promise<RequestsListResponse> => {
     const response = await apiClient.get('/requests', { params });
@@ -104,18 +110,63 @@ export const requestsApi = {
     return response.data;
   },
 
+  // Individual request methods
+  createIndividualRequest: async (data: {
+    patient_id: number;
+    department_id: number;
+    doctor_id?: number;
+    location_id?: number;
+    priority: string;
+    purpose: string;
+    needed_date: string;
+    remarks?: string;
+  }): Promise<ApiResponse<any>> => {
+    const response = await apiClient.post('/individual-requests', data);
+    return response.data;
+  },
+
+  getIndividualRequests: async (params?: {
+    search?: string;
+    status?: string;
+    priority?: string;
+    department_id?: number;
+    per_page?: number;
+  }): Promise<ApiResponse<any>> => {
+    const response = await apiClient.get('/individual-requests', { params });
+    return response.data;
+  },
+
+  getIndividualRequest: async (id: number): Promise<ApiResponse<any>> => {
+    const response = await apiClient.get(`/individual-requests/${id}`);
+    return response.data;
+  },
+
+  updateIndividualRequest: async (id: number, data: any): Promise<ApiResponse<any>> => {
+    const response = await apiClient.put(`/individual-requests/${id}`, data);
+    return response.data;
+  },
+
+  deleteIndividualRequest: async (id: number): Promise<ApiResponse<any>> => {
+    const response = await apiClient.delete(`/individual-requests/${id}`);
+    return response.data;
+  },
+
+  getIndividualRequestStats: async (): Promise<ApiResponse<any>> => {
+    const response = await apiClient.get('/individual-requests/stats');
+    return response.data;
+  },
+
   // Batch request methods
   createBatchRequest: async (data: {
     case_notes: Array<{
       patient_id: number;
-      department_id: number;
-      doctor_id?: number;
-      location_id?: number;
-      priority: string;
-      purpose: string;
-      needed_date: string;
-      remarks?: string;
     }>;
+    department_id: number;
+    doctor_id?: number;
+    location_id?: number;
+    priority: string;
+    purpose: string;
+    needed_date: string;
     batch_notes?: string;
   }): Promise<ApiResponse<any>> => {
     const response = await apiClient.post('/batch-requests', data);
@@ -197,6 +248,8 @@ export const requestsApi = {
     return response.data;
   },
 
+
+
   // Handover endpoint
   handoverRequest: async (id: number, data: {
     handover_to_user_id: number;
@@ -262,6 +315,27 @@ export const requestsApi = {
     return response.data;
   },
 
+  // Get all incoming handover requests for statistics
+  getAllIncomingHandoverRequests: async (): Promise<ApiResponse<any>> => {
+    const response = await apiClient.get('/handover-requests/incoming-all');
+    return response.data;
+  },
+
+  // Get handover requests pending verification by the requesting CA
+  getHandoverRequestsPendingVerification: async (): Promise<ApiResponse<any>> => {
+    const response = await apiClient.get('/handover-requests/pending-verification');
+    return response.data;
+  },
+
+  // Verify handover request by the requesting CA
+  verifyHandoverRequest: async (handoverRequestId: number, data: {
+    action: 'approve' | 'reject';
+    verification_notes?: string;
+  }): Promise<ApiResponse<any>> => {
+    const response = await apiClient.post(`/handover-requests/${handoverRequestId}/verify`, data);
+    return response.data;
+  },
+
   // Respond to handover request
   respondToHandoverRequest: async (handoverRequestId: number, data: {
     action: 'approve' | 'reject';
@@ -295,6 +369,59 @@ export const requestsApi = {
   getUsers: async (role: string): Promise<ApiResponse<{ users: any[] }>> => {
     const response = await apiClient.get(`/users?role=${role}`);
     return response.data;
+  },
+
+  // Return case notes
+  returnCaseNotes: async (data: {
+    case_note_ids: number[];
+    return_notes?: string;
+  }): Promise<{ success: boolean; message?: string; returned_count?: number }> => {
+    try {
+      const response = await apiClient.post('/case-notes/return', data);
+      return response.data;
+    } catch (error: any) {
+      console.error('Error returning case notes:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to return case notes'
+      };
+    }
+  },
+
+  // Get returnable case notes (received but not yet returned)
+  getReturnableCaseNotes: async (): Promise<{ success: boolean; requests?: any[]; case_notes?: any[]; message?: string }> => {
+    try {
+      const response = await apiClient.get('/requests/returnable');
+      // The API returns 'case_notes' but frontend expects 'requests'
+      // Map the response to maintain compatibility
+      if (response.data.success && response.data.case_notes) {
+        return {
+          ...response.data,
+          requests: response.data.case_notes // Map case_notes to requests for compatibility
+        };
+      }
+      return response.data;
+    } catch (error: any) {
+      console.error('Error getting returnable case notes:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to get returnable case notes'
+      };
+    }
+  },
+
+  // Get pending verification case notes (returned but waiting for MR staff verification)
+  getPendingVerificationCaseNotes: async (): Promise<{ success: boolean; case_notes?: any[]; message?: string }> => {
+    try {
+      const response = await apiClient.get('/case-notes/pending-verification');
+      return response.data;
+    } catch (error: any) {
+      console.error('Error getting pending verification case notes:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to get pending verification case notes'
+      };
+    }
   }
 };
 
@@ -309,6 +436,43 @@ export const patientsApi = {
   // Get patient by ID
   getPatient: async (id: number): Promise<ApiResponse<Patient>> => {
     const response = await apiClient.get(`/patients/${id}`);
+    return response.data;
+  }
+};
+
+// Admin Patient Import API
+export const adminPatientsApi = {
+  // Get import progress for ongoing imports
+  getImportProgress: async (): Promise<ApiResponse<{
+    active_imports: any[];
+    recent_imports: any[];
+  }>> => {
+    const response = await apiClient.get('/admin/patients/import-progress');
+    return response.data;
+  },
+
+  // Cancel an ongoing import
+  cancelImport: async (importId: number): Promise<ApiResponse<any>> => {
+    const response = await apiClient.post(`/admin/patients/import/${importId}/cancel`);
+    return response.data;
+  },
+
+  // Import Excel file
+  importExcel: async (file: File): Promise<ApiResponse<any>> => {
+    const formData = new FormData();
+    formData.append('excel_file', file);
+
+    const response = await apiClient.post('/admin/patients/import-excel', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+
+  // Get import template
+  getImportTemplate: async (): Promise<ApiResponse<any>> => {
+    const response = await apiClient.get('/admin/patients/import-template');
     return response.data;
   }
 };

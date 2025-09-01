@@ -4,18 +4,20 @@ import { Search, User, AlertCircle, FileText, Plus } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import PatientSearch from '@/components/patients/PatientSearch';
+import { HandoverRequestModal } from '@/components/modals/HandoverRequestModal';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/contexts/ToastContext';
 import type { Patient } from '@/types/requests';
 
 // Utility functions for handling null/undefined patient data
 const formatDateOfBirth = (dateOfBirth: string | null | undefined): string => {
   if (!dateOfBirth) return '-';
-  
+
   try {
     const date = new Date(dateOfBirth);
     // Check if the date is valid
     if (isNaN(date.getTime())) return '-';
-    
+
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
@@ -26,15 +28,7 @@ const formatDateOfBirth = (dateOfBirth: string | null | undefined): string => {
   }
 };
 
-const formatAge = (age: number | null | undefined): string => {
-  return age && age > 0 ? `${age} years old` : 'Age unknown';
-};
 
-const formatSex = (sex: string | null | undefined): string => {
-  if (sex === 'M') return 'Male';
-  if (sex === 'F') return 'Female';
-  return sex || '-';
-};
 
 const formatNRIC = (nric: string | null | undefined, nationalityId: string | null | undefined): string => {
   return nric || nationalityId || '-';
@@ -42,7 +36,12 @@ const formatNRIC = (nric: string | null | undefined, nationalityId: string | nul
 
 export default function PatientSearchPage() {
   const { hasPermission } = useAuth();
+  const { toast } = useToast();
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+
+  // Handover request modal state
+  const [showHandoverModal, setShowHandoverModal] = useState(false);
+  const [selectedPatientForHandover, setSelectedPatientForHandover] = useState<Patient | null>(null);
 
   const handlePatientSelect = (patient: Patient) => {
     setSelectedPatient(patient);
@@ -50,6 +49,23 @@ export default function PatientSearchPage() {
 
   const handleClearSelection = () => {
     setSelectedPatient(null);
+  };
+
+  // Handover request handlers
+  const handleRequestHandover = (patient: Patient) => {
+    console.log('🔵 Request Handover clicked for patient:', patient.name);
+    setSelectedPatientForHandover(patient);
+    setShowHandoverModal(true);
+  };
+
+  const handleHandoverRequestSuccess = () => {
+    setShowHandoverModal(false);
+    setSelectedPatientForHandover(null);
+    toast({
+      title: 'Success',
+      description: 'Handover request submitted successfully!',
+      variant: 'default',
+    });
   };
 
   return (
@@ -76,6 +92,7 @@ export default function PatientSearchPage() {
             onPatientSelect={handlePatientSelect}
             selectedPatient={selectedPatient || undefined}
             placeholder="Search by MRN, NRIC, or patient name..."
+            onRequestHandover={handleRequestHandover}
           />
         </CardContent>
       </Card>
@@ -104,34 +121,24 @@ export default function PatientSearchPage() {
                   <label className="text-sm font-medium text-gray-600">Patient Name</label>
                   <p className="text-lg font-semibold text-gray-900">{selectedPatient.name}</p>
                 </div>
-                
+
                 <div>
                   <label className="text-sm font-medium text-gray-600">Medical Record Number (MRN)</label>
                   <p className="text-gray-900">{selectedPatient.mrn}</p>
                 </div>
-                
+
                 <div>
                   <label className="text-sm font-medium text-gray-600">NRIC</label>
                   <p className="text-gray-900">{formatNRIC(selectedPatient.nric, selectedPatient.nationality_id)}</p>
                 </div>
               </div>
-              
+
               <div className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-600">Age</label>
-                  <p className="text-gray-900">{formatAge(selectedPatient.age)}</p>
-                </div>
-                
-                <div>
-                  <label className="text-sm font-medium text-gray-600">Sex</label>
-                  <p className="text-gray-900">{formatSex(selectedPatient.sex)}</p>
-                </div>
-                
                 <div>
                   <label className="text-sm font-medium text-gray-600">Date of Birth</label>
                   <p className="text-gray-900">{formatDateOfBirth(selectedPatient.date_of_birth)}</p>
                 </div>
-                
+
                 {selectedPatient.phone && (
                   <div>
                     <label className="text-sm font-medium text-gray-600">Phone</label>
@@ -187,6 +194,14 @@ export default function PatientSearchPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Handover Request Modal */}
+      <HandoverRequestModal
+        patient={selectedPatientForHandover}
+        isOpen={showHandoverModal}
+        onClose={() => setShowHandoverModal(false)}
+        onSuccess={handleHandoverRequestSuccess}
+      />
     </div>
   );
 }

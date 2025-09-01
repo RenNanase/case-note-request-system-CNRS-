@@ -19,7 +19,7 @@ class AuthController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'email' => 'required|email',
-            'password' => 'required|min:6',
+            'password' => 'required|min:1', // No strict rules as per requirements
         ]);
 
         if ($validator->fails()) {
@@ -33,6 +33,18 @@ class AuthController extends Controller
         // Try to authenticate user
         if (Auth::attempt(['email' => $request->email, 'password' => $request->password])) {
             $user = Auth::user();
+
+            // Check if user account is active
+            if (!$user->is_active) {
+                Auth::logout();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Account is deactivated. Please contact IT Department.',
+                ], 401);
+            }
+
+            // Update last login timestamp
+            $user->updateLastLogin();
 
             // Create token for the user
             $token = $user->createToken('authToken')->accessToken;
@@ -52,6 +64,7 @@ class AuthController extends Controller
                     'email' => $user->email,
                     'roles' => $user->getRoleNames(),
                     'permissions' => $user->getAllPermissions()->pluck('name'),
+                    'needs_password_change' => $user->needsPasswordChange(),
                 ],
                 'access_token' => $token,
                 'token_type' => 'Bearer',
@@ -63,6 +76,54 @@ class AuthController extends Controller
             'success' => false,
             'message' => 'Invalid credentials',
         ], 401);
+    }
+
+    /**
+     * Change user password
+     */
+    public function changePassword(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'current_password' => 'required',
+            'new_password' => 'required|min:1', // No strict rules as per requirements
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation errors',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $user = $request->user();
+
+        // Verify current password
+        if (!Hash::check($request->current_password, $user->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Current password is incorrect',
+            ], 400);
+        }
+
+        // Update password
+        $user->update([
+            'password' => Hash::make($request->new_password),
+        ]);
+
+        // Mark password as changed
+        $user->markPasswordAsChanged();
+
+        // Log the password change
+        activity()
+            ->performedOn($user)
+            ->causedBy($user)
+            ->log('Password changed');
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Password changed successfully',
+        ], 200);
     }
 
     /**
@@ -80,6 +141,9 @@ class AuthController extends Controller
                 'email' => $user->email,
                 'roles' => $user->getRoleNames(),
                 'permissions' => $user->getAllPermissions()->pluck('name'),
+                'needs_password_change' => $user->needsPasswordChange(),
+                'is_active' => $user->is_active,
+                'last_login_at' => $user->last_login_at,
             ]
         ], 200);
     }

@@ -7,8 +7,6 @@ export interface Patient {
   nric?: string | null;
   nationality_id?: string | null;
   date_of_birth?: string | null;
-  age?: number | null;
-  sex?: string | null;
   phone?: string | null;
   has_medical_alerts?: boolean;
   has_existing_requests?: boolean;
@@ -82,6 +80,9 @@ export interface CaseNoteRequest {
   approval_remarks?: string;
   completed_at?: string;
   completed_by_user_id?: number;
+  is_received?: boolean;
+  received_at?: string;
+  received_by_user_id?: number;
   created_at: string;
   updated_at: string;
 
@@ -127,9 +128,21 @@ export interface CaseNoteRequest {
     email: string;
   };
 
+  // Return fields
+  is_returned?: boolean;
+  returned_at?: string;
+  returned_by_user_id?: number;
+  returned_by?: {
+    id: number;
+    name: string;
+    email: string;
+  };
+  return_notes?: string;
+  is_rejected_return?: boolean;
+
   // Handover fields
   current_pic_user_id?: number | null;
-  handover_status?: 'none' | 'pending' | 'acknowledged' | 'completed';
+  handover_status?: 'none' | 'pending' | 'acknowledged' | 'completed' | 'approved_pending_verification' | 'verified' | 'rejected';
   current_pic?: {
     id: number;
     name: string;
@@ -143,6 +156,13 @@ export interface CaseNoteRequest {
   can_be_approved: boolean;
   can_be_completed: boolean;
   days_to_complete?: number;
+
+  // Waiting for Approval status (for pending handover requests)
+  display_status?: string;
+  is_waiting_for_approval?: boolean;
+
+  // Pending return status (for case notes submitted for return but waiting for MR staff verification)
+  is_pending_return?: boolean;
 }
 
 export interface RequestFormData {
@@ -195,8 +215,13 @@ export interface DashboardStats {
   my_pending?: number;
   my_completed?: number;
   my_rejected?: number;
+  pending_verifications?: number;
   handed_over_to_me?: number;
   my_handovers?: number;
+  total_handovers?: number;
+  pending_handovers?: number;
+  completed_handovers?: number;
+  active_case_notes?: number;
 
   // MR Staff-specific stats
   total_requests?: number;
@@ -250,7 +275,9 @@ export interface StatusesResponse {
 
 export interface DashboardStatsResponse {
   success: boolean;
-  stats: DashboardStats;
+  data: DashboardStats;
+  execution_time_ms?: number;
+  cached?: boolean;
 }
 
 export interface RequestDetailsResponse {

@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Activitylog\LogOptions;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class Request extends Model
 {
@@ -21,6 +22,7 @@ class Request extends Model
     const STATUS_IN_PROGRESS = 'in_progress';
     const STATUS_COMPLETED = 'completed';
     const STATUS_REJECTED = 'rejected';
+    const STATUS_PENDING_RETURN_VERIFICATION = 'pending_return_verification';
 
     // Priority constants
     const PRIORITY_LOW = 'low';
@@ -49,12 +51,21 @@ class Request extends Model
         'current_handover_id',
         'current_pic_user_id',
         'handover_status',
-        'batch_id',
         // Individual verification fields
         'is_received',
         'received_at',
         'received_by_user_id',
         'reception_notes',
+        // Rejection fields
+        'rejection_reason',
+        'rejected_at',
+        'rejected_by_user_id',
+        // Return fields
+        'is_returned',
+        'returned_at',
+        'returned_by_user_id',
+        'return_notes',
+        'is_rejected_return',
     ];
 
     protected $casts = [
@@ -67,6 +78,10 @@ class Request extends Model
         'deleted_at' => 'datetime',
         'received_at' => 'datetime',
         'is_received' => 'boolean',
+        'rejected_at' => 'datetime',
+        'returned_at' => 'datetime',
+        'is_returned' => 'boolean',
+        'is_rejected_return' => 'boolean',
     ];
 
     /**
@@ -170,10 +185,7 @@ class Request extends Model
         return $this->hasMany(RequestEvent::class)->orderBy('occurred_at');
     }
 
-    public function batch(): BelongsTo
-    {
-        return $this->belongsTo(BatchRequest::class, 'batch_id');
-    }
+
 
     public function receivedBy(): BelongsTo
     {
@@ -183,6 +195,16 @@ class Request extends Model
     public function rejectedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'rejected_by_user_id');
+    }
+
+    public function returnedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'returned_by_user_id');
+    }
+
+    public function handoverRequests(): HasMany
+    {
+        return $this->hasMany(HandoverRequest::class, 'case_note_id');
     }
 
     public function notifications(): HasMany
@@ -379,11 +401,8 @@ class Request extends Model
 
     public static function generateRequestNumber(): string
     {
-        $prefix = 'REQ';
-        $date = now()->format('Ymd');
-        $sequence = str_pad(self::whereDate('created_at', today())->count() + 1, 4, '0', STR_PAD_LEFT);
-
-        return "{$prefix}{$date}{$sequence}";
+        // Use the atomic sequence generation from RequestSequence model
+        return \App\Models\RequestSequence::generateRequestNumber();
     }
 
     public static function getStatusOptions(): array

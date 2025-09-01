@@ -23,6 +23,9 @@ class HandoverRequest extends Model
         'requested_at',
         'responded_at',
         'response_notes',
+        'verified_at',
+        'verified_by_user_id',
+        'verification_notes',
     ];
 
     protected $casts = [
@@ -34,6 +37,8 @@ class HandoverRequest extends Model
     const STATUS_PENDING = 'pending';
     const STATUS_APPROVED = 'approved';
     const STATUS_REJECTED = 'rejected';
+    const STATUS_APPROVED_PENDING_VERIFICATION = 'approved_pending_verification';
+    const STATUS_VERIFIED = 'verified';
 
     // Priority constants
     const PRIORITY_LOW = 'low';
@@ -57,6 +62,11 @@ class HandoverRequest extends Model
     public function currentHolder(): BelongsTo
     {
         return $this->belongsTo(User::class, 'current_holder_user_id');
+    }
+
+    public function verifiedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'verified_by_user_id');
     }
 
     public function department(): BelongsTo

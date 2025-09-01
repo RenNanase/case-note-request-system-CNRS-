@@ -110,8 +110,6 @@ class Patient extends Model
             'nric' => $this->nationality_id ?: 'N/A', // Use nationality_id as NRIC
             'nationality_id' => $this->nationality_id,
             'date_of_birth' => null, // Field not available in simplified structure
-            'age' => 0, // Field not available, default to 0
-            'sex' => 'N/A', // Field not available in simplified structure
             'phone' => null, // Field not available in simplified structure
             'has_medical_alerts' => false, // Field not available, default to false
         ];

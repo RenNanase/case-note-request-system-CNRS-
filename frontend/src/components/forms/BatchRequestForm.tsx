@@ -52,7 +52,7 @@ const caseNoteSchema = z.object({
 
 // Batch request form schema
 const batchRequestSchema = z.object({
-  case_notes: z.array(caseNoteSchema).min(1, 'Please add at least one case note').max(10, 'Maximum 10 case notes allowed'),
+  case_notes: z.array(caseNoteSchema).min(1, 'Please add at least one case note').max(20, 'Maximum 20 case notes allowed'),
   department_id: z.number().min(1, 'Please select a department').or(z.literal(0)), // Allow 0 for initial state
   doctor_id: z.number().optional(),
   location_id: z.number().optional(),
@@ -75,7 +75,7 @@ const STEPS = [
     id: 'case-notes',
     title: 'Add Case Notes',
     icon: Users,
-    description: 'Add patients whose case notes you need (up to 10)'
+    description: 'Add patients whose case notes you need (up to 20)'
   },
   {
     id: 'department',
@@ -241,7 +241,7 @@ export const BatchRequestForm: React.FC<BatchRequestFormProps> = ({
 
   // Add new case note
   const addCaseNote = () => {
-    if (fields.length < 10) {
+            if (fields.length < 20) {
       append({ patient_id: 0 });
     }
   };
@@ -325,14 +325,13 @@ export const BatchRequestForm: React.FC<BatchRequestFormProps> = ({
       const apiData = {
         case_notes: data.case_notes.map(cn => ({
           patient_id: cn.patient_id,
-          department_id: data.department_id,
-          doctor_id: data.doctor_id || undefined,
-          location_id: data.location_id || undefined,
-          priority: data.priority,
-          purpose: data.purpose,
-          needed_date: data.needed_date,
-          remarks: data.batch_notes || undefined,
         })),
+        department_id: data.department_id,
+        doctor_id: data.doctor_id || undefined,
+        location_id: data.location_id || undefined,
+        priority: data.priority,
+        purpose: data.purpose,
+        needed_date: data.needed_date,
         batch_notes: data.batch_notes || undefined,
       };
 
@@ -415,20 +414,8 @@ export const BatchRequestForm: React.FC<BatchRequestFormProps> = ({
   return (
     <div className="max-w-4xl mx-auto">
       <div className="mb-8">
-        <div className="flex items-center space-x-4 mb-4">
-          <Button
-            variant="ghost"
-            onClick={onCancel}
-            className="flex items-center space-x-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span>Back to Batch Requests</span>
-          </Button>
-        </div>
-
-        <h1 className="text-3xl font-bold text-gray-900">Create Batch Request</h1>
         <p className="text-gray-600 mt-2">
-          Request access to multiple patient case notes in a single batch (up to 10 case notes)
+          Request access to multiple patient case notes in a single batch (up to 20 case notes)
         </p>
       </div>
 
@@ -487,10 +474,10 @@ export const BatchRequestForm: React.FC<BatchRequestFormProps> = ({
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <Users className="h-5 w-5" />
-                  <span>Add Case Notes ({fields.length}/10)</span>
+                                      <span>Add Case Notes ({fields.length}/20)</span>
                 </CardTitle>
                 <CardDescription>
-                  Add patients whose case notes you need to request. You can add up to 10 case notes in this batch.
+                  Add patients whose case notes you need to request. You can add up to 20 case notes in this batch.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -524,9 +511,7 @@ export const BatchRequestForm: React.FC<BatchRequestFormProps> = ({
                               onRequestHandover={handleRequestHandover}
                             />
                           </FormControl>
-                          <FormDescription>
-                            Search by Medical Record Number (MRN), NRIC, or patient name
-                          </FormDescription>
+
                           <FormMessage />
                         </FormItem>
                       )}
@@ -534,7 +519,7 @@ export const BatchRequestForm: React.FC<BatchRequestFormProps> = ({
                   </div>
                 ))}
 
-                {fields.length < 10 && (
+                {fields.length < 20 && (
                   <Button
                     type="button"
                     variant="outline"
@@ -781,7 +766,7 @@ export const BatchRequestForm: React.FC<BatchRequestFormProps> = ({
                                 <h5 className="font-medium">{index + 1}. {patient.name}</h5>
                                 <div className="text-sm text-gray-600 space-y-1 mt-1">
                                   <p>MRN: {patient.mrn}</p>
-                                  <p>NRIC/IC: {patient.nationality_id || 'Not available'}</p>
+                                  <p>NRIC/PASSPORT: {patient.nationality_id || 'Not available'}</p>
                                 </div>
                               </div>
                               {patient.has_medical_alerts && (

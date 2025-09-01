@@ -20,8 +20,8 @@ import {
   Package,
   RefreshCw,
   ArrowRightLeft,
-  UserCheck,
-  XCircle
+  XCircle,
+  MessageSquare
 } from 'lucide-react';
 // import { format, isToday, isYesterday, parseISO } from 'date-fns';
 
@@ -53,6 +53,7 @@ interface ApprovedCaseNote {
   doctor?: {
     name: string;
   };
+  approval_remarks?: string;
 }
 
 interface GroupedCaseNotes {
@@ -80,15 +81,18 @@ const VerifyCaseNotesPage: React.FC = () => {
   const [verificationNotes, setVerificationNotes] = useState('');
   const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set());
   const [handoverLoading, setHandoverLoading] = useState(true);
-  const [handoversNeedingVerification, setHandoversNeedingVerification] = useState<GroupedHandovers>({});
-  const [handoversNeedingAcknowledgement, setHandoversNeedingAcknowledgement] = useState<GroupedHandovers>({});
+    const [handoversNeedingVerification, setHandoversNeedingVerification] = useState<GroupedHandovers>({});
   const [selectedHandoversForVerification, setSelectedHandoversForVerification] = useState<Set<number>>(new Set());
-  const [selectedHandoversForAcknowledgement, setSelectedHandoversForAcknowledgement] = useState<Set<number>>(new Set());
   const [handoverVerificationNotes, setHandoverVerificationNotes] = useState('');
-  const [handoverAcknowledgementNotes, setHandoverAcknowledgementNotes] = useState('');
   const [handoverSubmitting, setHandoverSubmitting] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
   const [rejecting, setRejecting] = useState(false);
+
+  // Handover request verification state
+  const [handoverRequestsPendingVerification, setHandoverRequestsPendingVerification] = useState<any[]>([]);
+  const [selectedHandoverRequests, setSelectedHandoverRequests] = useState<Set<number>>(new Set());
+  const [handoverRequestVerificationNotes, setHandoverRequestVerificationNotes] = useState('');
+  const [handoverRequestSubmitting, setHandoverRequestSubmitting] = useState(false);
 
 
   // Check permissions
@@ -164,31 +168,17 @@ const VerifyCaseNotesPage: React.FC = () => {
   };
 
   // Load handovers that need acknowledgement by the receiving CA
-  const loadHandoversNeedingAcknowledgement = async () => {
+
+
+  // Load handover requests pending verification by the requesting CA
+  const loadHandoverRequestsPendingVerification = async () => {
     try {
-      setHandoverLoading(true);
-      const response = await handoverApi.getHandoversNeedingAcknowledgement();
-
-      console.log('Handovers needing acknowledgement response:', response);
-
-      if (response.success) {
-        setHandoversNeedingAcknowledgement(response.handovers || {});
-      } else {
-        toast({
-          title: 'Error',
-          description: response.message || 'Failed to load handovers needing acknowledgement',
-          variant: 'destructive',
-        });
+      const response = await requestsApi.getHandoverRequestsPendingVerification();
+      if (response && response.success) {
+        setHandoverRequestsPendingVerification((response as any).handover_requests || []);
       }
     } catch (error) {
-      console.error('Error loading handovers needing acknowledgement:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load handovers needing acknowledgement',
-        variant: 'destructive',
-      });
-    } finally {
-      setHandoverLoading(false);
+      console.error('Error loading handover requests pending verification:', error);
     }
   };
 
@@ -203,15 +193,75 @@ const VerifyCaseNotesPage: React.FC = () => {
     setSelectedHandoversForVerification(newSelected);
   };
 
-  // Handle handover acknowledgement selection
-  const handleHandoverAcknowledgementSelection = (handoverId: number, checked: boolean) => {
-    const newSelected = new Set(selectedHandoversForAcknowledgement);
+
+
+
+  // Handle handover request verification selection
+  const handleHandoverRequestSelection = (handoverRequestId: number, checked: boolean) => {
+    const newSelected = new Set(selectedHandoverRequests);
     if (checked) {
-      newSelected.add(handoverId);
+      newSelected.add(handoverRequestId);
     } else {
-      newSelected.delete(handoverId);
+      newSelected.delete(handoverRequestId);
     }
-    setSelectedHandoversForAcknowledgement(newSelected);
+    setSelectedHandoverRequests(newSelected);
+  };
+
+  // Submit handover request verification
+  const handleHandoverRequestVerification = async (action: 'approve' | 'reject') => {
+    if (selectedHandoverRequests.size === 0) {
+      toast({
+        title: 'No Selection',
+        description: 'Please select at least one handover request to verify.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      setHandoverRequestSubmitting(true);
+
+      const verificationPromises = Array.from(selectedHandoverRequests).map(handoverRequestId =>
+        requestsApi.verifyHandoverRequest(handoverRequestId, {
+          action: action,
+          verification_notes: handoverRequestVerificationNotes.trim() || undefined
+        })
+      );
+
+      const results = await Promise.all(verificationPromises);
+      const successCount = results.filter(r => r.success).length;
+      const failureCount = results.length - successCount;
+
+      if (successCount > 0) {
+        toast({
+          title: 'Success',
+          description: `Successfully ${action}ed ${successCount} handover request(s)${failureCount > 0 ? `, ${failureCount} failed` : ''}`,
+          variant: 'default',
+        });
+
+        // Clear selections and reload data
+        setSelectedHandoverRequests(new Set());
+        setHandoverRequestVerificationNotes('');
+        await loadHandoverRequestsPendingVerification();
+      }
+
+      if (failureCount > 0) {
+        toast({
+          title: 'Verification Failed',
+          description: `${failureCount} handover request(s) failed to ${action}. Please try again.`,
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Error verifying handover requests:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to verify handover requests',
+        variant: 'destructive',
+      });
+    } finally {
+      setHandoverRequestSubmitting(false);
+    }
   };
 
   // Submit handover receipt verification
@@ -270,67 +320,13 @@ const VerifyCaseNotesPage: React.FC = () => {
     }
   };
 
-  // Submit handover acknowledgement
-  const handleHandoverAcknowledgement = async () => {
-    if (selectedHandoversForAcknowledgement.size === 0) {
-      toast({
-        title: 'No Selection',
-        description: 'Please select at least one handover to acknowledge.',
-        variant: 'destructive',
-      });
-      return;
-    }
 
-    try {
-      setHandoverSubmitting(true);
-
-      const acknowledgementPromises = Array.from(selectedHandoversForAcknowledgement).map(handoverId =>
-        handoverApi.verifyHandoverReceived(handoverId, {
-          verification_notes: handoverAcknowledgementNotes.trim() || undefined
-        })
-      );
-
-      const results = await Promise.all(acknowledgementPromises);
-      const successCount = results.filter(r => r.success).length;
-      const failureCount = results.length - successCount;
-
-      if (successCount > 0) {
-        toast({
-          title: 'Success',
-          description: `Successfully acknowledged ${successCount} handover(s)${failureCount > 0 ? `, ${failureCount} failed` : ''}`,
-          variant: 'default',
-        });
-
-        // Clear selections and reload data
-        setSelectedHandoversForAcknowledgement(new Set());
-        setHandoverAcknowledgementNotes('');
-        await loadHandoversNeedingAcknowledgement();
-      }
-
-      if (failureCount > 0) {
-        toast({
-          title: 'Acknowledgement Failed',
-          description: `${failureCount} handover(s) failed to acknowledge. Please try again.`,
-          variant: 'destructive',
-        });
-      }
-    } catch (error) {
-      console.error('Error acknowledging handovers:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to acknowledge handovers',
-        variant: 'destructive',
-      });
-    } finally {
-      setHandoverSubmitting(false);
-    }
-  };
 
   useEffect(() => {
     if (hasRole('CA')) {
       loadApprovedCaseNotes();
       loadHandoversNeedingVerification();
-      loadHandoversNeedingAcknowledgement();
+      loadHandoverRequestsPendingVerification();
     }
   }, [hasRole]);
 
@@ -562,18 +558,19 @@ const VerifyCaseNotesPage: React.FC = () => {
 
       {/* Tabs for different verification types */}
       <Tabs defaultValue="case-notes" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="case-notes" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
             Verify Case Notes
           </TabsTrigger>
-          <TabsTrigger value="handover-acknowledgement" className="flex items-center gap-2">
-            <UserCheck className="h-4 w-4" />
-            Verify Handover Case Notes
-          </TabsTrigger>
+
           <TabsTrigger value="handover-verification" className="flex items-center gap-2">
             <ArrowRightLeft className="h-4 w-4" />
             Verify Requested Case Notes
+          </TabsTrigger>
+          <TabsTrigger value="handover-request-verification" className="flex items-center gap-2">
+            <MessageSquare className="h-4 w-4" />
+            Verify Handover Requests
           </TabsTrigger>
         </TabsList>
 
@@ -863,6 +860,23 @@ const VerifyCaseNotesPage: React.FC = () => {
                                   hour12: true
                                 })}</div>
                               </div>
+
+                              {/* Display MR Staff approval remarks if available */}
+                              {caseNote.approval_remarks && (
+                                <div className="col-span-full mt-2 p-2 bg-blue-50 border border-blue-200 rounded-md">
+                                  <div className="flex items-start gap-2">
+                                    <MessageSquare className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                                    <div className="flex-1">
+                                      <div className="text-xs font-medium text-blue-800 mb-1">
+                                        MR Staff Approval Notes:
+                                      </div>
+                                      <div className="text-xs text-blue-700">
+                                        {caseNote.approval_remarks}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           ))}
                         </div>
@@ -875,197 +889,13 @@ const VerifyCaseNotesPage: React.FC = () => {
           )}
         </TabsContent>
 
-        {/* Tab 2: Verify Handover Case Notes (Acknowledgement) */}
-        <TabsContent value="handover-acknowledgement" className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">Verify Handover Case Notes</h2>
-              <p className="text-gray-600 mt-1">
-                Acknowledge receipt of case notes handed over to you
-              </p>
-            </div>
-            <Button
-              variant="outline"
-              onClick={loadHandoversNeedingAcknowledgement}
-              disabled={handoverLoading}
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${handoverLoading ? 'animate-spin' : ''}`} />
-              Refresh
-            </Button>
-          </div>
 
-          {/* Acknowledgement Form */}
-          {selectedHandoversForAcknowledgement.size > 0 && (
-            <Card className="border-blue-200 bg-blue-50">
-              <CardHeader>
-                <CardTitle className="text-blue-800">
-                  <UserCheck className="h-5 w-5 inline mr-2" />
-                  Acknowledge {selectedHandoversForAcknowledgement.size} Handover(s)
-                </CardTitle>
-                <CardDescription>
-                  Confirm that you have received these case notes
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="acknowledgement-notes">Acknowledgement Notes (Optional)</Label>
-                  <Textarea
-                    id="acknowledgement-notes"
-                    placeholder="Add any notes about the acknowledgement..."
-                    value={handoverAcknowledgementNotes}
-                    onChange={(e) => setHandoverAcknowledgementNotes(e.target.value)}
-                    className="mt-1"
-                    rows={3}
-                  />
-                </div>
 
-                <div className="flex gap-2">
-                  <Button
-                    onClick={handleHandoverAcknowledgement}
-                    disabled={handoverSubmitting}
-                    className="bg-blue-600 hover:bg-blue-700"
-                  >
-                    {handoverSubmitting ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <UserCheck className="h-4 w-4 mr-2" />
-                    )}
-                    Acknowledge Received
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setSelectedHandoversForAcknowledgement(new Set());
-                      setHandoverAcknowledgementNotes('');
-                    }}
-                    disabled={handoverSubmitting}
-                  >
-                    Clear Selection
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Handovers Needing Acknowledgement */}
-          {handoverLoading ? (
-            <Card>
-              <CardContent className="p-8">
-                <div className="flex items-center justify-center">
-                  <Loader2 className="h-8 w-8 animate-spin mr-3" />
-                  <span>Loading handovers needing acknowledgement...</span>
-                </div>
-              </CardContent>
-            </Card>
-          ) : Object.keys(handoversNeedingAcknowledgement).length === 0 ? (
-            <Card>
-              <CardContent className="p-8">
-                <div className="text-center text-gray-500">
-                  <UserCheck className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                  <h3 className="text-lg font-medium mb-2">No Handovers Needing Acknowledgement</h3>
-                  <p>You don't have any case notes waiting for acknowledgement.</p>
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-4">
-              {Object.entries(handoversNeedingAcknowledgement).map(([date, handovers]) => {
-                console.log('Processing handovers for date:', date, handovers);
-                return (
-                  <Card key={date}>
-                    <CardHeader>
-                      <CardTitle className="text-lg">
-                        <Calendar className="h-5 w-5 inline mr-2" />
-                        {formatDateDisplay(date)}
-                      </CardTitle>
-                      <CardDescription>
-                        {handovers.length} handover(s) on this date
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        {handovers
-                          .filter((handover: HandoverCaseNote) => {
-                            console.log('Handover data:', handover);
-                            return handover.caseNoteRequest && handover.handedOverBy;
-                          })
-                          .map((handover: HandoverCaseNote) => (
-                          <div
-                            key={handover.id}
-                            className={`flex items-center space-x-3 p-3 rounded-lg border ${
-                              selectedHandoversForAcknowledgement.has(handover.id)
-                                ? 'border-blue-500 bg-blue-50'
-                                : 'border-gray-200 hover:bg-gray-50'
-                            }`}
-                          >
-                            <Checkbox
-                              id={`handover-ack-${handover.id}`}
-                              checked={selectedHandoversForAcknowledgement.has(handover.id)}
-                              onCheckedChange={(checked) =>
-                                handleHandoverAcknowledgementSelection(handover.id, checked as boolean)
-                              }
-                            />
-
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <Label
-                                  htmlFor={`handover-ack-${handover.id}`}
-                                  className="font-medium cursor-pointer"
-                                >
-                                  {handover.caseNoteRequest?.patient?.name || 'Unknown Patient'}
-                                </Label>
-                                <Badge variant="outline" className="text-xs">
-                                  MRN: {handover.caseNoteRequest?.patient?.mrn || 'N/A'}
-                                </Badge>
-                                {getPriorityBadge(handover.caseNoteRequest?.priority || 'normal')}
-                              </div>
-
-                              <div className="text-sm text-gray-600">
-                                <div>Request: {handover.caseNoteRequest?.request_number || 'N/A'}</div>
-                                <div>Purpose: {handover.caseNoteRequest?.purpose || 'N/A'}</div>
-                                <div>Department: {handover.caseNoteRequest?.department?.name || 'Unknown Department'}</div>
-                                <div>From: {handover.handedOverBy?.name || 'Unknown User'}</div>
-                                {handover.handoverDoctor && (
-                                  <div>Doctor: {handover.handoverDoctor.name}</div>
-                                )}
-                              </div>
-
-                              {handover.handover_reason && (
-                                <div className="text-xs text-gray-500 mt-1 p-2 bg-gray-100 rounded">
-                                  <strong>Reason:</strong> {handover.handover_reason}
-                                </div>
-                              )}
-                            </div>
-
-                            <div className="text-xs text-gray-500">
-                              <div>Handed over at</div>
-                              <div>{new Date(handover.created_at).toLocaleTimeString('en-US', {
-                                hour: 'numeric',
-                                minute: '2-digit',
-                                hour12: true
-                              })}</div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
-        </TabsContent>
 
         {/* Tab 3: Verify Requested Case Notes (Receipt Verification) */}
         <TabsContent value="handover-verification" className="space-y-6">
           <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">Verify Requested Case Notes</h2>
-              <p className="text-gray-600 mt-1">
-                Verify receipt of case notes you requested for handover
-              </p>
-            </div>
+
             <Button
               variant="outline"
               onClick={loadHandoversNeedingVerification}
@@ -1244,6 +1074,192 @@ const VerifyCaseNotesPage: React.FC = () => {
                 </Card>
               ))}
             </div>
+          )}
+        </TabsContent>
+
+        {/* Tab 4: Verify Handover Requests */}
+        <TabsContent value="handover-request-verification" className="space-y-6">
+          {/* Summary Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center">
+                  <div className="p-2 rounded-lg bg-purple-500 text-white mr-3">
+                    <MessageSquare className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Pending Verification</p>
+                    <p className="text-2xl font-bold">{handoverRequestsPendingVerification.length}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center">
+                  <div className="p-2 rounded-lg bg-blue-500 text-white mr-3">
+                    <CheckCircle2 className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Selected</p>
+                    <p className="text-2xl font-bold">{selectedHandoverRequests.size}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Handover Request Verification Form */}
+          {selectedHandoverRequests.size > 0 && (
+            <Card className="border-purple-200 bg-purple-50">
+              <CardHeader>
+                <CardTitle className="text-purple-800">
+                  <MessageSquare className="h-5 w-5 inline mr-2" />
+                  Handover Request Verification ({selectedHandoverRequests.size} selected)
+                </CardTitle>
+                <CardDescription>
+                  Verify or reject the approved handover requests
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Verification Notes */}
+                <div>
+                  <Label htmlFor="handover-request-verification-notes">Verification Notes (Optional)</Label>
+                  <Textarea
+                    id="handover-request-verification-notes"
+                    placeholder="Add any notes about the verification..."
+                    value={handoverRequestVerificationNotes}
+                    onChange={(e) => setHandoverRequestVerificationNotes(e.target.value)}
+                    className="mt-1"
+                    rows={3}
+                  />
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-3">
+                  <Button
+                    onClick={() => handleHandoverRequestVerification('approve')}
+                    disabled={handoverRequestSubmitting}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    {handoverRequestSubmitting ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                    )}
+                    Approve Selected ({selectedHandoverRequests.size})
+                  </Button>
+
+                  <Button
+                    onClick={() => handleHandoverRequestVerification('reject')}
+                    disabled={handoverRequestSubmitting}
+                    variant="destructive"
+                  >
+                    {handoverRequestSubmitting ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <XCircle className="h-4 w-4 mr-2" />
+                    )}
+                    Reject Selected ({selectedHandoverRequests.size})
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Handover Requests List */}
+          {handoverRequestsPendingVerification.length > 0 ? (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">Handover Requests Pending Verification</h3>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={loadHandoverRequestsPendingVerification}
+                  disabled={handoverRequestSubmitting}
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Refresh
+                </Button>
+              </div>
+
+              {handoverRequestsPendingVerification.map((handoverRequest: any) => (
+                <Card key={handoverRequest.id} className="border-purple-200">
+                  <CardContent className="p-4">
+                    <div className="flex items-center space-x-3">
+                      <Checkbox
+                        id={`handover-request-${handoverRequest.id}`}
+                        checked={selectedHandoverRequests.has(handoverRequest.id)}
+                        onCheckedChange={(checked) =>
+                          handleHandoverRequestSelection(handoverRequest.id, checked as boolean)
+                        }
+                      />
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Label
+                            htmlFor={`handover-request-${handoverRequest.id}`}
+                            className="font-medium cursor-pointer"
+                          >
+                            {handoverRequest.caseNote?.patient?.name || 'Unknown Patient'}
+                          </Label>
+                          <Badge variant="outline" className="text-xs">
+                            MRN: {handoverRequest.caseNote?.patient?.mrn || 'N/A'}
+                          </Badge>
+                          <Badge variant="outline" className="text-xs bg-purple-100 text-purple-800">
+                            {handoverRequest.priority}
+                          </Badge>
+                        </div>
+
+                        <div className="text-sm text-gray-600">
+                          <div>Request: {handoverRequest.caseNote?.request_number || 'N/A'}</div>
+                          <div>Purpose: {handoverRequest.caseNote?.purpose || 'N/A'}</div>
+                          <div>Department: {handoverRequest.department?.name || 'Unknown Department'}</div>
+                          <div>Current Holder: {handoverRequest.currentHolder?.name || 'Unknown User'}</div>
+                          {handoverRequest.doctor && (
+                            <div>Doctor: {handoverRequest.doctor.name}</div>
+                          )}
+                        </div>
+
+                        {handoverRequest.reason && (
+                          <div className="text-xs text-gray-500 mt-1 p-2 bg-gray-100 rounded">
+                            <strong>Reason:</strong> {handoverRequest.reason}
+                          </div>
+                        )}
+
+                        {handoverRequest.response_notes && (
+                          <div className="text-xs text-blue-600 mt-1 p-2 bg-blue-100 rounded">
+                            <strong>Response:</strong> {handoverRequest.response_notes}
+                          </div>
+                        )}
+
+                        <div className="text-xs text-gray-500 mt-1">
+                          Approved on {new Date(handoverRequest.responded_at).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                            hour: 'numeric',
+                            minute: '2-digit',
+                            hour12: true
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">No Handover Requests Pending Verification</h3>
+                <p className="text-gray-600">
+                  All your handover requests have been processed or are still pending approval.
+                </p>
+              </CardContent>
+            </Card>
           )}
         </TabsContent>
       </Tabs>

@@ -10,6 +10,9 @@ const apiClient = axios.create({
   },
 });
 
+console.log('🔧 API Client initialized with baseURL:', '/api');
+console.log('🔧 Vite proxy target:', 'http://10.2.10.178:8000');
+
 // Request interceptor to add auth token
 apiClient.interceptors.request.use(
   (config) => {

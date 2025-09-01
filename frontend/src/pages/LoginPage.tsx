@@ -1,20 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Eye, EyeOff, Shield, User, UserCheck } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { authApi } from '@/api/auth';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  password: z.string().min(1, 'Password is required'),
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
@@ -29,7 +30,67 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [userPreview, setUserPreview] = useState<UserPreview | null>(null);
+  const errorRef = useRef<string | null>(null);
+  const hasRestoredError = useRef(false);
   const { login } = useAuth();
+
+  // Debug logging
+  useEffect(() => {
+    console.log('🔍 LoginPage: Error state changed to:', error);
+    errorRef.current = error;
+  }, [error]);
+
+  useEffect(() => {
+    console.log('🔍 LoginPage: Component mounted/rendered');
+  });
+
+  // Robust error management that persists through re-renders
+  const setErrorWithPersistence = (errorMessage: string | null) => {
+    console.log('🔍 LoginPage: Setting persistent error to:', errorMessage);
+
+    // Set in both state and ref for maximum persistence
+    setError(errorMessage);
+    errorRef.current = errorMessage;
+
+    // Persist to localStorage for page reload persistence
+    if (errorMessage) {
+      localStorage.setItem('login_error', errorMessage);
+      localStorage.setItem('login_error_timestamp', Date.now().toString());
+    } else {
+      localStorage.removeItem('login_error');
+      localStorage.removeItem('login_error_timestamp');
+    }
+  };
+
+  // Clear error only when explicitly needed
+  const clearError = () => {
+    console.log('🔍 LoginPage: Explicitly clearing error');
+    setErrorWithPersistence(null);
+  };
+
+  // Restore error from localStorage on component mount (only once)
+  useEffect(() => {
+    if (!hasRestoredError.current) {
+      const savedError = localStorage.getItem('login_error');
+      const errorTimestamp = localStorage.getItem('login_error_timestamp');
+
+      if (savedError && errorTimestamp) {
+        const errorAge = Date.now() - parseInt(errorTimestamp);
+        // Only restore errors that are less than 1 hour old
+        if (errorAge < 3600000) {
+          console.log('🔍 LoginPage: Restoring recent error from localStorage:', savedError);
+          setError(savedError);
+          errorRef.current = savedError;
+        } else {
+          // Clear old errors
+          localStorage.removeItem('login_error');
+          localStorage.removeItem('login_error_timestamp');
+          console.log('🔍 LoginPage: Cleared old error from localStorage');
+        }
+        hasRestoredError.current = true;
+      }
+    }
+  }, []);
 
   const {
     register,
@@ -72,12 +133,18 @@ export default function LoginPage() {
   }, [watchEmail, errors.email]);
 
   const onSubmit = async (data: LoginFormData) => {
+    console.log('🔍 LoginPage: Form submitted, current error:', errorRef.current);
     setLoading(true);
-    setError(null);
-    clearErrors();
+
+    // IMPORTANT: Don't clear the login error here - let it persist
+    // Only clear form validation errors
+    clearErrors('email');
+    clearErrors('password');
 
     try {
+      // Call AuthContext.login directly - it will handle the API call and token storage
       const response = await login(data);
+      console.log('🔍 LoginPage: AuthContext login response:', response);
 
       if (!response.success) {
         if (response.errors) {
@@ -89,14 +156,33 @@ export default function LoginPage() {
             });
           });
         } else {
-          setError(response.message || 'Login failed');
+          // Clean, concise error messages
+          let errorMessage = response.message || 'Login failed';
+
+          if (response.message?.includes('Invalid credentials')) {
+            errorMessage = 'Invalid email or password';
+          } else if (response.message?.includes('Account is deactivated')) {
+            errorMessage = 'Account is deactivated';
+          } else if (response.message?.includes('Too many attempts')) {
+            errorMessage = 'Too many login attempts';
+          } else if (response.message?.includes('Email not verified')) {
+            errorMessage = 'Email not verified';
+          }
+
+          setErrorWithPersistence(errorMessage);
         }
+      } else {
+        // SUCCESS: Clear error and proceed with login
+        console.log('🔍 LoginPage: Login successful, clearing error');
+        setErrorWithPersistence(null);
+        // Login is already handled by AuthContext.login
       }
-      // If successful, the AuthContext will handle the state update and redirect
     } catch (error) {
-      setError('An unexpected error occurred. Please try again.');
+      console.error('🔍 LoginPage: Login error:', error);
+      setErrorWithPersistence('An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
+      console.log('🔍 LoginPage: Form submission completed, final error:', errorRef.current);
     }
   };
 
@@ -104,7 +190,7 @@ export default function LoginPage() {
     switch (role) {
       case 'CA':
         return <User className="h-4 w-4" />;
-      case 'MR_STAFF':
+      case 'MR STAFF':
         return <UserCheck className="h-4 w-4" />;
       case 'ADMIN':
         return <Shield className="h-4 w-4" />;
@@ -117,7 +203,7 @@ export default function LoginPage() {
     switch (role) {
       case 'CA':
         return 'Clinic Assistant';
-      case 'MR_STAFF':
+      case 'MR STAFF':
         return 'Medical Records Staff';
       case 'ADMIN':
         return 'Administrator';
@@ -130,7 +216,7 @@ export default function LoginPage() {
     switch (role) {
       case 'CA':
         return 'secondary';
-      case 'MR_STAFF':
+      case 'MR STAFF':
         return 'default';
       case 'ADMIN':
         return 'destructive';
@@ -139,14 +225,27 @@ export default function LoginPage() {
     }
   };
 
+  // Enhanced error display that shows from multiple sources
+  const getDisplayError = () => {
+    return error || errorRef.current || localStorage.getItem('login_error');
+  };
+
+  // Check if we should show an error
+  const shouldShowError = () => {
+    const displayError = getDisplayError();
+    return displayError && displayError.trim().length > 0;
+  };
+
   return (
     <div className="min-h-screen bg-canvas flex items-center justify-center px-4">
       <div className="max-w-md w-full space-y-8">
         {/* Header */}
         <div className="text-center">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">CNRS</h1>
-          <h2 className="text-xl font-semibold text-gray-700 mb-2">Case Note Request System</h2>
-          <p className="text-gray-600">Secure access for healthcare professionals</p>
+          {/* <div className="flex justify-center mb-4">
+            <img src="/cnrs.logo.png" alt="CNRS Logo" className="h-16 w-auto" />
+          </div> */}
+          <h2 className="text-xl font-semibold text-gray-700 mb-2">CASE NOTE REQUEST SYSTEM</h2>
+          <p className="text-gray-600">From request to record . Tracked every step</p>
         </div>
 
         {/* Login Card */}
@@ -173,7 +272,7 @@ export default function LoginPage() {
                 {errors.email && (
                   <p className="text-sm text-red-600">{errors.email.message}</p>
                 )}
-                
+
                 {/* User Preview */}
                 {userPreview && (
                   <div className="flex items-center gap-2 p-2 bg-gray-50 rounded-md border">
@@ -220,12 +319,30 @@ export default function LoginPage() {
                 )}
               </div>
 
-              {/* Error Alert */}
-              {error && (
-                <Alert variant="destructive">
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
+              {/* Enhanced Error Alert - Minimalist Design */}
+              {shouldShowError() && (
+                <div className="flex items-center gap-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <div className="flex-shrink-0 w-2 h-2 bg-red-500 rounded-full"></div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-red-700 leading-tight">
+                      {getDisplayError()?.split('\n\n')[0]}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={clearError}
+                    className="flex-shrink-0 text-red-400 hover:text-red-600 transition-colors"
+                    aria-label="Clear error"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
               )}
+
+              {/* Remove the separate clear error button since it's now integrated */}
+
 
               {/* Submit Button */}
               <Button
@@ -274,7 +391,18 @@ export default function LoginPage() {
 
         {/* Footer */}
         <div className="text-center text-sm text-gray-500">
-          <p>© 2025 Case Note Request System. All rights reserved.</p>
+          <p>
+            © 2025 CNRS. All rights reserved.{' '}
+            <a
+              href="https://github.com/RenNanase"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-pink-600 hover:text-pink-800 hover:underline transition-colors"
+            >
+              RN
+
+            </a>
+          </p>
         </div>
       </div>
     </div>

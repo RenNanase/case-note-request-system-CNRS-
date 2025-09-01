@@ -162,16 +162,7 @@ export default function PatientSearch({
     }
   };
 
-  // Format patient age display
-  const formatAge = (age: number | null | undefined) => {
-    return age && age > 0 ? `${age} years old` : 'Age unknown';
-  };
 
-  // Format patient sex display
-  const formatSex = (sex: string | null | undefined) => {
-    if (!sex || sex === 'N/A') return '';
-    return sex === 'M' ? 'Male' : sex === 'F' ? 'Female' : sex;
-  };
 
   return (
     <div ref={searchRef} className={cn("relative", className)}>
@@ -210,25 +201,26 @@ export default function PatientSearch({
 
       {/* Selected Patient Display */}
       {selectedPatient && (
-        <Card className="mt-2 border-green-200 bg-green-50">
+        <Card className="mt-2 border-pink-200 bg-pink-50">
           <CardContent className="p-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <Avatar className="h-10 w-10">
-                  <AvatarFallback className="bg-green-100 text-green-700">
+                  <AvatarFallback className="bg-pink-100 text-pink-700">
                     <User className="h-5 w-5" />
                   </AvatarFallback>
                 </Avatar>
                 <div>
                   <div className="flex items-center space-x-2">
-                    <h3 className="font-medium text-green-900">{selectedPatient.name}</h3>
-                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                    <h3 className="font-medium text-pink-900">{selectedPatient.name}</h3>
+                    <CheckCircle2 className="h-4 w-4 text-pink-600" />
                   </div>
-                  <div className="flex items-center space-x-4 text-sm text-green-700">
-                    <span>MRN: {selectedPatient.mrn}</span>
-                    <span>{formatAge(selectedPatient.age)}</span>
-                    <span>{formatSex(selectedPatient.sex)}</span>
-                  </div>
+                    <div className="flex items-center space-x-4 text-sm text-pink-700">
+                        <span>MRN: {selectedPatient.mrn}</span>
+                    </div>
+                    <div className="flex items-center space-x-4 text-sm text-pink-700">
+                        <span>NRIC/PASSPORT: {selectedPatient.nric}</span>
+                    </div>
                   {selectedPatient.has_medical_alerts && (
                     <Badge variant="destructive" className="mt-1">
                       <AlertCircle className="h-3 w-3 mr-1" />
@@ -243,7 +235,7 @@ export default function PatientSearch({
                 size="sm"
                 onClick={handleClear}
                 disabled={disabled}
-                className="text-green-600 hover:text-green-800"
+                className="text-pink-600 hover:text-pink-800"
               >
                 Change
               </Button>
@@ -337,12 +329,6 @@ export default function PatientSearch({
                             )}
                             {patient.nationality_id && (
                               <span>IC: {patient.nationality_id}</span>
-                            )}
-                            {patient.age && patient.age > 0 && (
-                              <span>{formatAge(patient.age)}</span>
-                            )}
-                            {formatSex(patient.sex) && (
-                              <span>{formatSex(patient.sex)}</span>
                             )}
                           </div>
                           {patient.phone && (

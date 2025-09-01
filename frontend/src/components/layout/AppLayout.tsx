@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, useLocation, Link } from 'react-router-dom';
 import {
   Home,
@@ -6,10 +6,8 @@ import {
   Users,
   Settings,
   BarChart3,
-  Shield,
   Layers,
   CheckSquare,
-  ClipboardList,
   Menu,
   X,
   LogOut,
@@ -17,7 +15,9 @@ import {
   ChevronRight,
   Clock,
   ArrowRight,
-  User
+  User,
+  RotateCcw,
+  Package
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -32,6 +32,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
+import PasswordChangeDialog from '@/components/PasswordChangeDialog';
 
 // Navigation item interface
 interface NavItem {
@@ -46,11 +47,14 @@ interface NavItem {
 // Breadcrumb mapping
 const breadcrumbMap: Record<string, string> = {
   '/dashboard': 'Dashboard',
-  '/requests': 'Case Note Requests',
+  '/my-requests': 'My Case Notes',
   '/requests/search': 'Search Requests',
-  '/batch-requests': 'Batch Requests',
+//   '/individual-requests': 'Request Case Notes',
+  '/batch-requests': 'Batch Case Notes',
   '/verify-case-notes': 'Verify Case Notes',
+  '/return-case-notes': 'Return Case Notes',
   '/mrs-case-note-requests': 'MR Staff Case Note Requests',
+  '/mrs-returned-case-notes': 'Returned Case Notes',
   '/case-note-timeline': 'Case Note Timeline',
   '/admin/patients': 'Patient Management',
   '/admin/doctors': 'Doctor Management',
@@ -62,8 +66,16 @@ const breadcrumbMap: Record<string, string> = {
 
 export default function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showPasswordChangeDialog, setShowPasswordChangeDialog] = useState(false);
   const { user, logout, hasRole, hasPermission } = useAuth();
   const location = useLocation();
+
+  // Check if user needs to change password
+  useEffect(() => {
+    if (user?.needs_password_change) {
+      setShowPasswordChangeDialog(true);
+    }
+  }, [user?.needs_password_change]);
 
   // Define navigation items based on roles and permissions
   const navigationItems: NavItem[] = [
@@ -73,12 +85,7 @@ export default function AppLayout() {
       icon: Home,
       roles: ['CA', 'MR_STAFF', 'ADMIN']
     },
-    {
-      name: 'Case Note Requests',
-      href: '/requests',
-      icon: FileText,
-      roles: ['CA', 'MR_STAFF', 'ADMIN']
-    },
+
     {
       name: 'MR Staff Case Note Requests',
       href: '/mrs-case-note-requests',
@@ -92,15 +99,39 @@ export default function AppLayout() {
       roles: ['MR_STAFF']
     },
     {
-      name: 'Batch Requests',
+      name: 'Returned Case Notes',
+      href: '/mrs-returned-case-notes',
+      icon: RotateCcw,
+      roles: ['MR_STAFF']
+    },
+    {
+      name: 'My Case Notes',
+      href: '/my-requests',
+      icon: FileText,
+      roles: ['CA']
+    },
+    // {
+    //   name: 'Request Case Notes',
+    //   href: '/individual-requests',
+    //   icon: FileText,
+    //   roles: ['CA']
+    // },
+    {
+      name: 'Request Case Notes',
       href: '/batch-requests',
-      icon: ClipboardList,
+      icon: Package,
       roles: ['CA']
     },
     {
       name: 'Verify Case Notes',
       href: '/verify-case-notes',
       icon: CheckSquare,
+      roles: ['CA']
+    },
+    {
+      name: 'Return Case Notes',
+      href: '/return-case-notes',
+      icon: RotateCcw,
       roles: ['CA']
     },
     {
@@ -193,11 +224,10 @@ export default function AppLayout() {
         <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200">
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <Shield className="h-8 w-8 text-blue-600" />
+              <img src="/cnrs.logo.png" alt="CNRS Logo" className="h-8 w-auto" />
             </div>
             <div className="ml-2">
-              <h1 className="text-lg font-bold text-gray-900">CNRS</h1>
-              <p className="text-xs text-gray-500">Case Note System</p>
+              <p className="text-xs text-gray-500">Case Note Request System</p>
             </div>
           </div>
           <Button
@@ -365,6 +395,10 @@ export default function AppLayout() {
           </div>
         </main>
       </div>
+      <PasswordChangeDialog
+        open={showPasswordChangeDialog}
+        onOpenChange={setShowPasswordChangeDialog}
+      />
     </div>
   );
 }

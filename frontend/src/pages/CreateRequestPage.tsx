@@ -805,7 +805,6 @@ export default function CreateRequestPage() {
                             <div className="text-sm text-gray-600 space-y-1 mt-1">
                               <p>MRN: {selectedPatient.mrn}</p>
                               <p>NRIC: {selectedPatient.nric}</p>
-                              <p>{selectedPatient.age} years old, {selectedPatient.sex === 'M' ? 'Male' : 'Female'}</p>
                             </div>
                           </div>
                           {selectedPatient.has_medical_alerts && (

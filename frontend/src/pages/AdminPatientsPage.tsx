@@ -3,10 +3,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Upload, 
-  Users, 
-  UserCheck, 
+import {
+  Upload,
+  Users,
+  UserCheck,
   FileSpreadsheet,
   AlertCircle,
   Activity
@@ -14,6 +14,7 @@ import {
 import PatientImportComponent from '@/components/admin/PatientImportComponent';
 import PatientListComponent from '@/components/admin/PatientListComponent';
 import PatientStatsComponent from '@/components/admin/PatientStatsComponent';
+import ImportProgressComponent from '@/components/admin/ImportProgressComponent';
 
 interface PatientStats {
   total_patients: number;
@@ -184,10 +185,14 @@ export default function AdminPatientsPage() {
 
       {/* Main Content Tabs */}
       <Tabs defaultValue="import" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="import" className="flex items-center">
             <Upload className="h-4 w-4 mr-2" />
             Import Patients
+          </TabsTrigger>
+          <TabsTrigger value="progress" className="flex items-center">
+            <Activity className="h-4 w-4 mr-2" />
+            Import Progress
           </TabsTrigger>
           <TabsTrigger value="list" className="flex items-center">
             <Users className="h-4 w-4 mr-2" />
@@ -201,6 +206,10 @@ export default function AdminPatientsPage() {
 
         <TabsContent value="import">
           <PatientImportComponent onImportComplete={handleImportComplete} />
+        </TabsContent>
+
+        <TabsContent value="progress">
+          <ImportProgressComponent onRefresh={handleImportComplete} />
         </TabsContent>
 
         <TabsContent value="list">

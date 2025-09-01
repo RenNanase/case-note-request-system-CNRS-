@@ -116,10 +116,32 @@ const MRStaffCaseNoteRequestsPage: React.FC = () => {
         const groupedByCA = new Map<number, CARequestGroup>();
 
         requests.forEach((request: RequestType) => {
-          // Skip requests without required data or non-pending requests
-          if (!request.patient || !request.requested_by || request.status !== 'pending') {
+          // Skip requests without required data
+          if (!request.patient || !request.requested_by) {
+            console.log('Skipping request due to missing data:', {
+              id: request.id,
+              hasPatient: !!request.patient,
+              hasRequestedBy: !!request.requested_by
+            });
             return;
           }
+
+          // Include both regular pending requests AND returned case notes (which have status 'pending' but also rejection_reason)
+          if (request.status !== 'pending') {
+            console.log('Skipping request due to non-pending status:', {
+              id: request.id,
+              status: request.status,
+              rejection_reason: (request as any).rejection_reason
+            });
+            return;
+          }
+
+          console.log('Processing request:', {
+            id: request.id,
+            status: request.status,
+            rejection_reason: (request as any).rejection_reason,
+            isReturned: !!(request as any).rejection_reason
+          });
 
           const caId = request.requested_by.id;
           const caName = request.requested_by.name;
@@ -163,8 +185,23 @@ const MRStaffCaseNoteRequestsPage: React.FC = () => {
             } : undefined,
             batch_id: (request as any).batch_id,
             batch_number: (request as any).batch_number,
-            requested_by: request.requested_by
+            requested_by: request.requested_by,
+            // Include rejection information
+            rejection_reason: (request as any).rejection_reason,
+            rejected_at: (request as any).rejected_at,
+            rejected_by_user_id: (request as any).rejected_by_user_id,
+            rejected_by: (request as any).rejected_by
           };
+
+          // Debug: Log rejection info if present
+          if ((request as any).rejection_reason) {
+            console.log('Found request with rejection:', {
+              id: request.id,
+              rejection_reason: (request as any).rejection_reason,
+              rejected_by: (request as any).rejected_by,
+              transformed: transformedRequest.rejection_reason
+            });
+          }
 
           group.requests.push(transformedRequest);
           group.total_requests++;

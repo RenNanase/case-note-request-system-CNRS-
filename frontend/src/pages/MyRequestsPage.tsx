@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  ArrowLeft,
   FileText,
   Clock,
   CheckCircle,
@@ -21,10 +20,40 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/AuthContext';
 import { requestsApi } from '@/api/requests';
-import type { CaseNoteRequest } from '@/types/requests';
+import { HandoverRequestModal } from '@/components/modals/HandoverRequestModal';
+import type { CaseNoteRequest, Patient } from '@/types/requests';
 
 // Status badge component
-const getStatusBadge = (status: string) => {
+const getStatusBadge = (status: string, displayStatus?: string, isWaitingForApproval?: boolean, isIndividualRequest?: boolean, isCompletedAndHandedOver?: boolean) => {
+  // If there's a custom display status (like "Waiting for Approval"), use it
+  if (displayStatus && isWaitingForApproval) {
+    if (isIndividualRequest) {
+      return (
+        <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200">
+          <Clock className="h-3 w-3" />
+          <span>WAITING FOR MR APPROVAL</span>
+        </Badge>
+      );
+    } else {
+      return (
+        <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-200">
+          <Clock className="h-3 w-3" />
+          <span>WAITING FOR APPROVAL</span>
+        </Badge>
+      );
+    }
+  }
+
+  // Special styling for completed and handed over case notes
+  if (isCompletedAndHandedOver) {
+    return (
+      <Badge variant="outline" className="bg-pink-100 text-pink-800 border-pink-200">
+        <CheckCircle className="h-3 w-3" />
+        <span>COMPLETED</span>
+      </Badge>
+    );
+  }
+
   const statusColors = {
     'pending': { icon: Clock, className: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
     'approved': { icon: CheckCircle, className: 'bg-green-100 text-green-800 border-green-200' },
@@ -45,46 +74,102 @@ const getStatusBadge = (status: string) => {
 };
 
 // Involvement type badge
-const getInvolvementBadge = (requestedBy: number, currentPIC: number, userId: number) => {
-  if (requestedBy === userId && currentPIC === userId) {
+const getInvolvementBadge = (requestedBy: number, currentPIC: number, userId: number, isIndividualRequest?: boolean, status?: string) => {
+  // Debug logging
+  console.log('Involvement Badge Debug:', {
+    requestedBy,
+    currentPIC,
+    userId,
+    isCreator: requestedBy === userId,
+    isCurrentPIC: currentPIC === userId,
+    currentPICIsNull: currentPIC === null || currentPIC === 0,
+    isIndividualRequest,
+    status
+  });
+
+  // Handle individual requests (waiting for MR approval)
+  if (isIndividualRequest) {
     return (
       <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200">
         <FileText className="h-3 w-3 mr-1" />
-        Created & Assigned
+        Requested by Me
       </Badge>
     );
-  } else if (requestedBy === userId && currentPIC !== userId) {
+  }
+
+  // Handle completed and handed over case notes
+  if (status === 'completed' && requestedBy === userId && currentPIC !== userId) {
     return (
-      <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-200">
+      <Badge variant="outline" className="bg-pink-100 text-pink-800 border-pink-200">
         <ArrowUpRight className="h-3 w-3 mr-1" />
-        Handed Over
+        Returned & Completed
       </Badge>
     );
-  } else if (requestedBy !== userId && currentPIC === userId) {
-    return (
-      <Badge variant="outline" className="bg-purple-100 text-purple-800 border-purple-200">
-        <Users className="h-3 w-3 mr-1" />
-        Assigned to Me
-      </Badge>
-    );
-  } else {
-    return (
-      <Badge variant="outline" className="bg-gray-100 text-gray-800 border-gray-200">
-        <User className="h-3 w-3 mr-1" />
-        Previously Involved
-      </Badge>
-    );
+  }
+
+  // User created the case note
+  if (requestedBy === userId) {
+    if (currentPIC === userId) {
+      // User created it and still owns it
+      return (
+        <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200">
+          <FileText className="h-3 w-3 mr-1" />
+        Requested & Verified
+        </Badge>
+      );
+    } else if (currentPIC === null || currentPIC === 0) {
+      // User created it but it's not assigned to anyone (e.g., completed case notes)
+      return (
+        <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200">
+          <FileText className="h-3 w-3 mr-1" />
+          Created
+        </Badge>
+      );
+    } else {
+      // User created it but it's assigned to someone else (handed over)
+      return (
+        <Badge variant="outline" className="bg-pink-100 text-pink-800 border-pink-200">
+          <ArrowUpRight className="h-3 w-3 mr-1" />
+          Handed Over
+        </Badge>
+      );
+    }
+  }
+  // User didn't create the case note
+  else {
+    if (currentPIC === userId) {
+      // User didn't create it but currently owns it (assigned via handover)
+      return (
+        <Badge variant="outline" className="bg-purple-100 text-purple-800 border-purple-200">
+          <Users className="h-3 w-3 mr-1" />
+          Handed Over to Me
+        </Badge>
+      );
+    } else {
+      // User was previously involved but no longer owns it
+      return (
+        <Badge variant="outline" className="bg-gray-100 text-gray-800 border-gray-200">
+          <User className="h-3 w-3 mr-1" />
+          Previously Involved
+        </Badge>
+      );
+    }
   }
 };
 
 export default function MyRequestsPage() {
   const { user } = useAuth();
   const [requests, setRequests] = useState<CaseNoteRequest[]>([]);
+  const [individualRequests, setIndividualRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [involvementFilter, setInvolvementFilter] = useState<string>('all');
+
+  // Handover request modal state
+  const [showHandoverModal, setShowHandoverModal] = useState(false);
+  const [selectedPatientForHandover, setSelectedPatientForHandover] = useState<Patient | null>(null);
 
   useEffect(() => {
     const loadRequests = async () => {
@@ -103,10 +188,21 @@ export default function MyRequestsPage() {
           include_all_involvement: true // This will return all requests where user is involved
         });
 
+        // Get individual requests that are waiting for MR staff approval
+        const individualResponse = await requestsApi.getIndividualRequests({
+          per_page: 1000
+        });
+
         if (response.success) {
           setRequests(response.requests.data);
         } else {
           setError('Failed to load requests');
+        }
+
+        if (individualResponse && individualResponse.success) {
+          // Handle paginated response - extract the data array
+          const individualData = individualResponse.data?.data || individualResponse.data || [];
+          setIndividualRequests(individualData);
         }
       } catch (error: any) {
         console.error('Error loading requests:', error);
@@ -119,42 +215,80 @@ export default function MyRequestsPage() {
     loadRequests();
   }, [user]);
 
+  // Combine regular requests and individual requests
+  const allRequests = [
+    ...requests,
+    ...individualRequests.map((indRequest: any) => ({
+      ...indRequest,
+      // Add individual request specific fields
+      is_individual_request: true,
+      display_status: 'Waiting for MR Approval',
+      is_waiting_for_approval: true,
+      // Map fields to match CaseNoteRequest structure
+      patient: indRequest.patient,
+      department: indRequest.department,
+      doctor: indRequest.doctor,
+      location: indRequest.location,
+      requested_by_user_id: user?.id, // Individual requests are created by the current user
+      current_pic_user_id: null, // Individual requests don't have a current PIC
+    }))
+  ];
+
   // Filter requests based on search and filters
-  const filteredRequests = requests.filter(request => {
+  const filteredRequests = allRequests.filter((request: any) => {
     // Search filter
-    const matchesSearch = searchTerm === '' ||
+    const matchesSearch = !searchTerm ||
       request.patient?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       request.patient?.mrn?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       request.request_number?.toLowerCase().includes(searchTerm.toLowerCase());
 
     // Status filter
-    const matchesStatus = statusFilter === 'all' || request.status === statusFilter;
+    let matchesStatus = true;
+    if (statusFilter !== 'all') {
+      if (statusFilter === 'waiting_for_approval') {
+        matchesStatus = request.is_waiting_for_approval === true;
+      } else if (statusFilter === 'waiting_for_mr_approval') {
+        matchesStatus = request.is_individual_request === true;
+      } else {
+        matchesStatus = request.status === statusFilter;
+      }
+    }
 
     // Involvement filter
-    const isCreator = request.requested_by_user_id === user?.id;
-    const isCurrentPIC = request.current_pic_user_id === user?.id;
-
     let matchesInvolvement = true;
-    if (involvementFilter === 'created') {
-      matchesInvolvement = isCreator;
-    } else if (involvementFilter === 'assigned') {
-      matchesInvolvement = isCurrentPIC && !isCreator;
-    } else if (involvementFilter === 'handed_over') {
-      matchesInvolvement = isCreator && !isCurrentPIC;
-    } else if (involvementFilter === 'current') {
-      matchesInvolvement = isCurrentPIC;
+    if (involvementFilter !== 'all') {
+      const isCreator = request.requested_by_user_id === user?.id;
+      const isCurrentPIC = request.current_pic_user_id === user?.id;
+      const isIndividualRequest = request.is_individual_request === true;
+
+      switch (involvementFilter) {
+        case 'created':
+          matchesInvolvement = isCreator || isIndividualRequest;
+          break;
+        case 'assigned':
+          matchesInvolvement = isCurrentPIC && !isCreator && !isIndividualRequest;
+          break;
+        case 'handed_over':
+          matchesInvolvement = isCreator && !isCurrentPIC && !isIndividualRequest;
+          break;
+        case 'current':
+          matchesInvolvement = isCurrentPIC || isIndividualRequest;
+          break;
+      }
     }
 
     return matchesSearch && matchesStatus && matchesInvolvement;
   });
 
-  // Get stats for the filtered requests
-  const stats = {
-    total: filteredRequests.length,
-    created: filteredRequests.filter(r => r.requested_by_user_id === user?.id).length,
-    assigned: filteredRequests.filter(r => r.current_pic_user_id === user?.id && r.requested_by_user_id !== user?.id).length,
-    handedOver: filteredRequests.filter(r => r.requested_by_user_id === user?.id && r.current_pic_user_id !== user?.id).length,
-    current: filteredRequests.filter(r => r.current_pic_user_id === user?.id).length,
+
+
+
+
+  const handleHandoverRequestSuccess = () => {
+    setShowHandoverModal(false);
+    setSelectedPatientForHandover(null);
+    // Refresh the requests list
+    window.location.reload();
   };
 
   if (!user) {
@@ -174,82 +308,16 @@ export default function MyRequestsPage() {
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center space-x-2 mb-2">
-            <Link to="/dashboard">
-              <Button variant="ghost" size="sm">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Dashboard
-              </Button>
-            </Link>
+
           </div>
-          <h1 className="text-3xl font-bold text-gray-900">My Case Note Requests</h1>
+          <h1 className="text-3xl font-bold text-gray-900">My Case Notes</h1>
           <p className="text-gray-600 mt-2">
-            Track all case notes you've been involved with - created, assigned, or handed over
+            Track all case notes you've been involved with - created, assigned, handed over, or individual requests waiting for MR approval
           </p>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total</p>
-                <p className="text-2xl font-bold text-blue-600">{stats.total}</p>
-              </div>
-              <FileText className="h-8 w-8 text-blue-400" />
-            </div>
-          </CardContent>
-        </Card>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Created</p>
-                <p className="text-2xl font-bold text-green-600">{stats.created}</p>
-              </div>
-              <FileText className="h-8 w-8 text-green-400" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Assigned to Me</p>
-                <p className="text-2xl font-bold text-purple-600">{stats.assigned}</p>
-              </div>
-              <Users className="h-8 w-8 text-purple-400" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Handed Over</p>
-                <p className="text-2xl font-bold text-orange-600">{stats.handedOver}</p>
-              </div>
-              <ArrowUpRight className="h-8 w-8 text-orange-400" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Currently Mine</p>
-                <p className="text-2xl font-bold text-indigo-600">{stats.current}</p>
-              </div>
-              <User className="h-8 w-8 text-indigo-400" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
 
       {/* Filters */}
       <Card>
@@ -287,6 +355,8 @@ export default function MyRequestsPage() {
                   <SelectItem value="in_progress">In Progress</SelectItem>
                   <SelectItem value="completed">Completed</SelectItem>
                   <SelectItem value="rejected">Rejected</SelectItem>
+                  <SelectItem value="waiting_for_approval">Waiting for Approval</SelectItem>
+                  <SelectItem value="waiting_for_mr_approval">Waiting for MR Approval</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -315,8 +385,15 @@ export default function MyRequestsPage() {
         <CardHeader>
           <CardTitle>Case Note Requests</CardTitle>
           <CardDescription>
-            Showing {filteredRequests.length} of {requests.length} requests
+            Showing {filteredRequests.length} of {allRequests.length} requests
           </CardDescription>
+          <div className="flex items-center space-x-4 mt-2 text-sm text-gray-600">
+            <div className="flex items-center space-x-2">
+
+              <span className="text-xs text-pink-600 bg-pink-100 px-1 py-0.5 rounded">✓</span>
+              <span>Returned & Completed (no longer active)</span>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -366,8 +443,19 @@ export default function MyRequestsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredRequests.map((request) => (
-                    <tr key={request.id} className="border-b hover:bg-gray-50">
+                  {filteredRequests.map((request) => {
+                    // Determine if the case note is completed and handed over (no longer active)
+                    const isCompletedAndHandedOver = request.status === 'completed' &&
+                      request.requested_by_user_id === user?.id &&
+                      request.current_pic_user_id !== user?.id;
+
+                    // Apply pink background for completed and handed over case notes
+                    const rowClassName = isCompletedAndHandedOver
+                      ? "border-b hover:bg-pink-50 bg-pink-25"
+                      : "border-b hover:bg-gray-50";
+
+                    return (
+                      <tr key={request.id} className={rowClassName}>
                       <td className="py-3 px-4">
                         <div className="flex items-center space-x-2">
                           <Calendar className="h-4 w-4 text-gray-400" />
@@ -378,7 +466,14 @@ export default function MyRequestsPage() {
                       </td>
                       <td className="py-3 px-4">
                         <div>
-                          <p className="font-medium text-gray-900">{request.patient?.name || 'N/A'}</p>
+                          <div className="flex items-center space-x-2">
+                            <p className="font-medium text-gray-900">{request.patient?.name || 'N/A'}</p>
+                            {isCompletedAndHandedOver && (
+                              <span className="text-xs text-pink-600 bg-pink-100 px-1 py-0.5 rounded" title="Completed and handed over - no longer active">
+                                ✓
+                              </span>
+                            )}
+                          </div>
                           <p className="text-sm text-gray-500">#{request.request_number}</p>
                         </div>
                       </td>
@@ -386,31 +481,46 @@ export default function MyRequestsPage() {
                         <span className="text-sm text-gray-600">{request.patient?.mrn || 'N/A'}</span>
                       </td>
                       <td className="py-3 px-4">
-                        {getStatusBadge(request.status)}
+                        {getStatusBadge(request.status, request.display_status, request.is_waiting_for_approval, request.is_individual_request, isCompletedAndHandedOver)}
                       </td>
                       <td className="py-3 px-4">
                         {getInvolvementBadge(
                           request.requested_by_user_id,
                           request.current_pic_user_id || 0,
-                          user?.id || 0
+                          user?.id || 0,
+                          request.is_individual_request,
+                          request.status
                         )}
                       </td>
                       <td className="py-3 px-4">
-                        <Link to={`/requests/${request.id}`}>
-                          <Button variant="outline" size="sm">
-                            <FileText className="h-4 w-4 mr-2" />
-                            View Details
-                          </Button>
-                        </Link>
+                        <div className="flex space-x-2">
+                          <Link to={`/requests/${request.id}`}>
+                            <Button variant="outline" size="sm">
+                              <FileText className="h-4 w-4 mr-2" />
+                              View Details
+                            </Button>
+                          </Link>
+
+
+                        </div>
                       </td>
                     </tr>
-                  ))}
+                  );
+                })}
                 </tbody>
               </table>
             </div>
           )}
         </CardContent>
       </Card>
+
+      {/* Handover Request Modal */}
+      <HandoverRequestModal
+        patient={selectedPatientForHandover}
+        isOpen={showHandoverModal}
+        onClose={() => setShowHandoverModal(false)}
+        onSuccess={handleHandoverRequestSuccess}
+      />
     </div>
   );
 }

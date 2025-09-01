@@ -267,9 +267,22 @@ class CaseNoteTimelineController extends Controller
         switch ($event->type) {
             case 'created':
                 $doctorName = $metadata['doctor_name'] ?? null;
+                $departmentName = $metadata['department_name'] ?? null;
+                $locationName = $metadata['location_name'] ?? null;
+                $purpose = $metadata['purpose'] ?? null;
+                
                 $description = 'Case note request created';
                 if ($doctorName) {
                     $description .= " for {$doctorName}";
+                }
+                if ($departmentName) {
+                    $description .= " | Department: {$departmentName}";
+                }
+                if ($locationName && $locationName !== 'No specific location') {
+                    $description .= " | Location: {$locationName}";
+                }
+                if ($purpose) {
+                    $description .= " | Purpose: {$purpose}";
                 }
                 return $description;
 
@@ -288,16 +301,35 @@ class CaseNoteTimelineController extends Controller
                 $to = $metadata['current_holder_name'] ?? 'Unknown';
                 $reason = $metadata['reason'] ?? $event->reason ?? '';
                 $doctorName = $metadata['doctor_name'] ?? null;
+                $departmentName = $metadata['department_name'] ?? null;
+                $locationName = $metadata['location_name'] ?? null;
+                
                 $description = "Handover requested from {$from} to {$to}";
                 if ($doctorName) {
                     $description .= " for {$doctorName}";
+                }
+                if ($departmentName) {
+                    $description .= " | Department: {$departmentName}";
+                }
+                if ($locationName && $locationName !== 'No specific location') {
+                    $description .= " | Location: {$locationName}";
                 }
                 return $description . ($reason ? " - {$reason}" : '');
 
             case 'handover_approved':
                 $approver = $metadata['approved_by_name'] ?? $event->actor->name ?? 'Unknown';
                 $notes = $metadata['notes'] ?? $event->reason ?? '';
-                return "Handover approved by {$approver}" . ($notes ? " - {$notes}" : '');
+                $newDoctorName = $metadata['new_doctor_name'] ?? null;
+                $newDepartmentName = $metadata['new_department_name'] ?? null;
+
+                $description = "Handover approved by {$approver}";
+                if ($newDoctorName) {
+                    $description .= " - New doctor: {$newDoctorName}";
+                }
+                if ($newDepartmentName) {
+                    $description .= " - New department: {$newDepartmentName}";
+                }
+                return $description . ($notes ? " - {$notes}" : '');
 
             case 'handover_rejected':
                 $rejecter = $metadata['rejected_by_name'] ?? $event->actor->name ?? 'Unknown';
@@ -344,7 +376,20 @@ class CaseNoteTimelineController extends Controller
             case 'handover_verified':
                 $verifiedBy = $metadata['verified_by_user_name'] ?? $event->actor->name ?? 'Unknown';
                 $verificationNotes = $metadata['verification_notes'] ?? '';
+                $doctorName = $metadata['doctor_name'] ?? null;
+                $departmentName = $metadata['department_name'] ?? null;
+                $locationName = $metadata['location_name'] ?? null;
+                
                 $description = "Handover verified by {$verifiedBy}";
+                if ($doctorName) {
+                    $description .= " for {$doctorName}";
+                }
+                if ($departmentName) {
+                    $description .= " | Department: {$departmentName}";
+                }
+                if ($locationName && $locationName !== 'No specific location') {
+                    $description .= " | Location: {$locationName}";
+                }
                 return $description . ($verificationNotes ? " - {$verificationNotes}" : '');
 
             case 'handover_receipt_verified':
@@ -358,6 +403,30 @@ class CaseNoteTimelineController extends Controller
                 $rejectionReason = $metadata['rejection_reason'] ?? '';
                 $description = "Case note rejected as not received by {$rejectedBy}";
                 return $description . ($rejectionReason ? " - {$rejectionReason}" : '');
+
+            case 'returned_verified':
+                $verifiedBy = $metadata['verified_by_user_name'] ?? $event->actor->name ?? 'Unknown';
+                $verificationNotes = $metadata['verification_notes'] ?? '';
+                $description = "Returned case note verified by {$verifiedBy} - marked as Complete";
+                return $description . ($verificationNotes ? " - {$verificationNotes}" : '');
+
+            case 'returned_rejected':
+                $rejectedBy = $metadata['rejected_by_user_name'] ?? $event->actor->name ?? 'Unknown';
+                $rejectionReason = $metadata['rejection_reason'] ?? '';
+                $description = "Returned case note rejected by {$rejectedBy}";
+                return $description . ($rejectionReason ? " - {$rejectionReason}" : '');
+
+            case 'handover_data_fixed':
+                $newDoctorName = $metadata['new_doctor_name'] ?? null;
+                $newDepartmentName = $metadata['new_department_name'] ?? null;
+                $description = "Handover data updated retroactively";
+                if ($newDoctorName) {
+                    $description .= " - New doctor: {$newDoctorName}";
+                }
+                if ($newDepartmentName) {
+                    $description .= " - New department: {$newDepartmentName}";
+                }
+                return $description;
 
             default:
                 return $event->reason ?? 'Event occurred';
@@ -386,8 +455,12 @@ class CaseNoteTimelineController extends Controller
             'location' => ['location_name'],
             'doctor' => ['doctor_name', 'doctor_id'],
             'handover_doctor' => ['handover_doctor_name', 'handover_doctor_id'],
+            'new_doctor' => ['new_doctor_name', 'new_doctor_id'],
+            'new_department' => ['new_department_name', 'new_department_id'],
+            'new_location' => ['new_location_name', 'new_location_id'],
             'verification' => ['verification_notes', 'receipt_verification_notes', 'verified_by_user_name'],
-            'rejection' => ['rejection_reason', 'rejected_by_user_name', 'rejected_at']
+            'rejection' => ['rejection_reason', 'rejected_by_user_name', 'rejected_at'],
+            'return_verification' => ['verification_notes', 'verified_by_user_name', 'verified_at']
         ];
 
         foreach ($metadata as $key => $value) {

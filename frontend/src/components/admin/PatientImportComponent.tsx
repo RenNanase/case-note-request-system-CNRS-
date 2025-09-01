@@ -1,17 +1,16 @@
 import { useState, useRef, useCallback } from 'react';
+import { adminPatientsApi } from '@/api/requests';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
-import { 
-  Upload, 
-  Download, 
-  FileSpreadsheet, 
-  CheckCircle2, 
-  AlertCircle, 
+import {
+  Upload,
+  FileSpreadsheet,
+  CheckCircle2,
+  AlertCircle,
   X,
-  FileDown,
   Info
 } from 'lucide-react';
 
@@ -73,9 +72,9 @@ export default function PatientImportComponent({ onImportComplete }: PatientImpo
       'application/vnd.ms-excel', // .xls
       'text/csv' // .csv
     ];
-    return validTypes.includes(file.type) || 
-           file.name.endsWith('.xlsx') || 
-           file.name.endsWith('.xls') || 
+    return validTypes.includes(file.type) ||
+           file.name.endsWith('.xlsx') ||
+           file.name.endsWith('.xls') ||
            file.name.endsWith('.csv');
   };
 
@@ -98,22 +97,22 @@ export default function PatientImportComponent({ onImportComplete }: PatientImpo
     setResult(null);
 
     try {
-      const formData = new FormData();
-      formData.append('excel_file', file);
-
-      const response = await fetch('/api/admin/patients/import-excel', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('cnrs_token')}`,
-        },
-        body: formData,
-      });
-
-      const data = await response.json();
-      setResult(data);
-
-      if (data.success) {
+      const response = await adminPatientsApi.importExcel(file);
+      if (response.success) {
+        setResult({
+          success: true,
+          message: response.message || 'Import completed successfully',
+          statistics: response.data?.statistics,
+          failures: response.data?.failures,
+          errors: response.data?.errors
+        });
         onImportComplete();
+      } else {
+        setResult({
+          success: false,
+          message: response.message || 'Import failed',
+          errors: response.errors ? Object.values(response.errors).flat() : []
+        });
       }
     } catch (error) {
       setResult({
@@ -125,24 +124,7 @@ export default function PatientImportComponent({ onImportComplete }: PatientImpo
     }
   };
 
-  const downloadTemplate = async () => {
-    try {
-      const response = await fetch('/api/admin/patients/import-template', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('cnrs_token')}`,
-        },
-      });
 
-      const data = await response.json();
-      if (data.success) {
-        // For now, we'll show the template info
-        // In a real implementation, this would download an actual file
-        alert(`Template Structure:\n\nRequired Columns: ${data.template.required_columns.join(', ')}\nOptional Columns: ${data.template.optional_columns.join(', ')}\n\nSample Data:\n${data.template.sample_data.map((row: any[]) => row.join(', ')).join('\n')}`);
-      }
-    } catch (error) {
-      console.error('Failed to download template:', error);
-    }
-  };
 
   const resetImport = () => {
     setFile(null);
@@ -154,33 +136,7 @@ export default function PatientImportComponent({ onImportComplete }: PatientImpo
 
   return (
     <div className="space-y-6">
-      {/* Template Download */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <FileDown className="h-5 w-5 mr-2" />
-            Import Template
-          </CardTitle>
-          <CardDescription>
-            Download the Excel template with sample data and required column format
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
-            <div className="flex items-center">
-              <FileSpreadsheet className="h-8 w-8 text-blue-600 mr-3" />
-              <div>
-                <h4 className="font-medium text-gray-900">Patient Import Template</h4>
-                <p className="text-sm text-gray-600">Excel template with required columns: Name, MRN, Nationality_ID</p>
-              </div>
-            </div>
-            <Button onClick={downloadTemplate} variant="outline">
-              <Download className="h-4 w-4 mr-2" />
-              Download Template
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+
 
       {/* File Upload */}
       <Card>
@@ -217,8 +173,8 @@ export default function PatientImportComponent({ onImportComplete }: PatientImpo
                     {(file.size / 1024 / 1024).toFixed(2)} MB • Ready to import
                   </p>
                 </div>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
                   onClick={resetImport}
                   className="mt-2"
@@ -234,9 +190,9 @@ export default function PatientImportComponent({ onImportComplete }: PatientImpo
                   <p className="text-lg font-medium text-gray-900">
                     Drop your Excel file here, or click to browse
                   </p>
-                  <p className="text-sm text-gray-600">
-                    Supports .xlsx, .xls, and .csv files (max 10MB)
-                  </p>
+                                     <p className="text-sm text-gray-600">
+                     Supports .xlsx, .xls, and .csv files (max 100MB)
+                   </p>
                 </div>
                 <Button
                   variant="outline"
@@ -388,12 +344,7 @@ export default function PatientImportComponent({ onImportComplete }: PatientImpo
             <ul className="list-disc list-inside space-y-1">
               <li><strong>Name:</strong> Patient full name (required)</li>
               <li><strong>MRN:</strong> Medical Record Number - must be unique (required)</li>
-            </ul>
-          </div>
-          <div className="space-y-2">
-            <h4 className="font-medium text-gray-900">Optional Columns:</h4>
-            <ul className="list-disc list-inside space-y-1">
-              <li><strong>Nationality_ID:</strong> Patient nationality identification number</li>
+              <li><strong>Nationality_ID:</strong> Patient nric/passport number</li>
             </ul>
           </div>
           <div className="space-y-2">
@@ -402,7 +353,8 @@ export default function PatientImportComponent({ onImportComplete }: PatientImpo
               <li>Duplicate MRNs will be skipped and not imported</li>
               <li>Missing required fields will cause rows to be skipped</li>
               <li>Default values will be set for missing optional fields</li>
-              <li>Maximum file size: 10MB</li>
+              <li>Maximum file size: 100MB</li>
+              <li>Import patient data using queries from the database in SQLYog</li>
             </ul>
           </div>
         </CardContent>

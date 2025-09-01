@@ -58,8 +58,8 @@ class CaseNoteVerificationController extends Controller
                         'mrn' => $caseNote->patient->mrn,
                         'nationality_id' => $caseNote->patient->nationality_id,
                     ],
-                    'batch_id' => $caseNote->batch_id,
-                    'batch_number' => $caseNote->batch?->batch_number,
+                    'batch_id' => null, // Individual requests don't have batch_id
+                    'batch_number' => null, // Individual requests don't have batch numbers
                     'approved_at' => $caseNote->approved_at->toISOString(),
                     'approved_by' => $caseNote->approvedBy ? [
                         'name' => $caseNote->approvedBy->name,
@@ -172,27 +172,8 @@ class CaseNoteVerificationController extends Controller
                 $verifiedCount++;
             }
 
-            // Update batch verification status if case notes belong to batches
-            $batchIds = $caseNotes->where('batch_id', '!=', null)->pluck('batch_id')->unique();
-
-            foreach ($batchIds as $batchId) {
-                $batch = \App\Models\BatchRequest::find($batchId);
-                if ($batch) {
-                    $totalApproved = $batch->requests()->where('status', 'approved')->count();
-                    $totalReceived = $batch->requests()
-                        ->where('status', 'approved')
-                        ->where('is_received', true)
-                        ->count();
-
-                    $batch->update([
-                        'approved_count' => $totalApproved,
-                        'received_count' => $totalReceived,
-                        'is_verified' => ($totalReceived === $totalApproved),
-                        'verified_at' => ($totalReceived === $totalApproved) ? now() : null,
-                        'verified_by_user_id' => ($totalReceived === $totalApproved) ? $user->id : null,
-                    ]);
-                }
-            }
+            // Individual requests don't have batch relationships anymore
+            // No batch verification status to update
 
             DB::commit();
 
@@ -202,7 +183,6 @@ class CaseNoteVerificationController extends Controller
                 'verified_count' => $verifiedCount,
                 'already_verified_count' => $alreadyVerified,
                 'verification_notes' => $verificationNotes,
-                'affected_batches' => $batchIds->toArray(),
             ]);
 
             $message = "Successfully verified receipt of {$verifiedCount} case note(s).";

@@ -13,23 +13,43 @@ use Maatwebsite\Excel\Concerns\SkipsFailures;
 use Maatwebsite\Excel\Concerns\SkipsOnFailure;
 use Maatwebsite\Excel\Concerns\WithBatchInserts;
 use Maatwebsite\Excel\Concerns\WithChunkReading;
+use Maatwebsite\Excel\Concerns\WithEvents;
+use Maatwebsite\Excel\Events\BeforeImport;
+use Maatwebsite\Excel\Events\AfterImport;
 use Illuminate\Validation\Rule;
 use Throwable;
 
-class PatientsImport implements 
-    ToModel, 
-    WithHeadingRow, 
-    WithValidation, 
-    SkipsOnError, 
+class PatientsImport implements
+    ToModel,
+    WithHeadingRow,
+    WithValidation,
+    SkipsOnError,
     SkipsOnFailure,
     WithBatchInserts,
-    WithChunkReading
+    WithChunkReading,
+    WithEvents
 {
     use Importable, SkipsErrors, SkipsFailures;
 
     private $importedCount = 0;
     private $skippedCount = 0;
     private $duplicateCount = 0;
+    private $errorCount = 0;
+    private $processedRows = 0;
+    private $importProgress = null;
+    private $batchSize = 1000;
+    private $startTime = null;
+
+
+    /**
+     * Set import progress tracking
+     */
+    public function setImportProgress($importProgress)
+    {
+        $this->importProgress = $importProgress;
+        $this->startTime = now();
+        return $this;
+    }
 
     /**
      * @param array $row
@@ -42,9 +62,13 @@ class PatientsImport implements
         $mrn = $this->getValue($row, ['mrn', 'medical_record_number']);
         $nationalityId = $this->getValue($row, ['nationality_id', 'nationalityid', 'nationality']);
 
+        // Track processed rows
+        $this->processedRows++;
+
         // Skip if essential data is missing
         if (empty($name) || empty($mrn)) {
             $this->skippedCount++;
+            $this->updateProgress();
             return null;
         }
 
@@ -56,10 +80,12 @@ class PatientsImport implements
                 $existingPatient->update(['nationality_id' => $nationalityId]);
             }
             $this->duplicateCount++;
+            $this->updateProgress();
             return null;
         }
 
         $this->importedCount++;
+        $this->updateProgress();
 
         return new Patient([
             'name' => $name,
@@ -70,6 +96,22 @@ class PatientsImport implements
             'date_of_birth' => now()->subYears(30), // Default age
             'sex' => 'O', // Other/Unknown
         ]);
+    }
+
+    /**
+     * Update progress tracking
+     */
+    private function updateProgress()
+    {
+        if ($this->importProgress) {
+            $this->importProgress->updateProgress(
+                $this->processedRows,
+                $this->importedCount,
+                $this->skippedCount,
+                $this->duplicateCount,
+                $this->errorCount
+            );
+        }
     }
 
     /**
@@ -120,7 +162,18 @@ class PatientsImport implements
      */
     public function onError(Throwable $error)
     {
+        $this->errorCount++;
         $this->skippedCount++;
+
+        if ($this->importProgress) {
+            $this->importProgress->addError($error->getMessage(), [
+                'row' => $this->processedRows,
+                'file' => 'patients_import',
+                'trace' => $error->getTraceAsString()
+            ]);
+        }
+
+        $this->updateProgress();
     }
 
     /**
@@ -132,7 +185,27 @@ class PatientsImport implements
             'imported' => $this->importedCount,
             'skipped' => $this->skippedCount,
             'duplicates' => $this->duplicateCount,
-            'total_processed' => $this->importedCount + $this->skippedCount + $this->duplicateCount,
+            'errors' => $this->errorCount,
+            'total_processed' => $this->processedRows,
+        ];
+    }
+
+    /**
+     * Called when import starts
+     */
+    public function registerEvents(): array
+    {
+        return [
+            BeforeImport::class => function(BeforeImport $event) {
+                if ($this->importProgress) {
+                    $this->importProgress->markAsStarted();
+                }
+            },
+            AfterImport::class => function(AfterImport $event) {
+                if ($this->importProgress) {
+                    $this->importProgress->markAsCompleted();
+                }
+            },
         ];
     }
 
@@ -141,7 +214,7 @@ class PatientsImport implements
      */
     public function batchSize(): int
     {
-        return 100;
+        return 1000; // Increased from 100 for better performance with large datasets
     }
 
     /**
@@ -149,6 +222,6 @@ class PatientsImport implements
      */
     public function chunkSize(): int
     {
-        return 100;
+        return 1000; // Increased from 100 for better performance with large datasets
     }
 }

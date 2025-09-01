@@ -13,93 +13,134 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use App\Models\User; // Added this import for User model
+use App\Models\HandoverRequest; // Added this import for HandoverRequest model
 
 class BatchRequestController extends Controller
 {
+    /**
+     * Test endpoint to debug batch request loading
+     */
+    public function test(HttpRequest $request): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+
+            Log::info('Testing batch request loading for user:', [
+                'user_id' => $user->id,
+                'user_roles' => $user->getRoleNames('api')
+            ]);
+
+            // Test 1: Basic BatchRequest model
+            $basicCount = BatchRequest::count();
+            Log::info('Basic BatchRequest count:', ['count' => $basicCount]);
+
+            // Test 2: Simple query without relationships
+            $simpleQuery = BatchRequest::select('id', 'batch_number', 'status', 'requested_by_user_id');
+            if ($user->hasRole('CA', 'api')) {
+                $simpleQuery->where('requested_by_user_id', $user->id);
+            }
+            $simpleResults = $simpleQuery->get();
+
+            Log::info('Simple query results:', [
+                'count' => $simpleResults->count(),
+                'results' => $simpleResults->toArray()
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'basic_count' => $basicCount,
+                'simple_results' => $simpleResults,
+                'user_info' => [
+                    'id' => $user->id,
+                    'roles' => $user->getRoleNames('api')
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error in test method:', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Test failed: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
     /**
      * Get user's batch requests
      */
     public function index(HttpRequest $request): JsonResponse
     {
-        $user = Auth::user();
-        $query = BatchRequest::with([
-            'requestedBy',
-            'processedBy',
-            'verifiedBy',
-            'requests' => function($query) {
-                $query->with(['patient', 'receivedBy']);
-            }
-        ]);
+        try {
+            $user = Auth::user();
 
-        if ($user->hasRole('CA', 'api')) {
-            // CA users can only see their own batch requests
-            $query->where('requested_by_user_id', $user->id);
+            Log::info('Loading batch requests for user:', [
+                'user_id' => $user->id,
+                'user_roles' => $user->getRoleNames('api')
+            ]);
+
+            // Simplified query - just get basic batch requests without complex relationships
+            $query = BatchRequest::select('id', 'batch_number', 'status', 'requested_by_user_id', 'created_at', 'batch_notes');
+
+            if ($user->hasRole('CA', 'api')) {
+                // CA users can only see their own batch requests
+                $query->where('requested_by_user_id', $user->id);
+            }
+            // MR Staff and Admin can see all batch requests
+
+            $batchRequests = $query->orderBy('created_at', 'desc')->get();
+
+            Log::info('Basic batch requests loaded:', [
+                'count' => $batchRequests->count(),
+                'batch_ids' => $batchRequests->pluck('id')->toArray()
+            ]);
+
+            // For now, just return basic data without complex processing
+            $simpleResults = $batchRequests->map(function($batch) {
+                return [
+                    'id' => $batch->id,
+                    'batch_number' => $batch->batch_number,
+                    'status' => $batch->status,
+                    'requested_by_user_id' => $batch->requested_by_user_id,
+                    'created_at' => $batch->created_at,
+                    'batch_notes' => $batch->batch_notes,
+                    'requests_count' => 0, // Placeholder
+                    'approved_count' => 0, // Placeholder
+                    'rejected_count' => 0, // Placeholder
+                    'pending_count' => 0,  // Placeholder
+                    'received_count' => 0, // Placeholder
+                    'is_verified' => false, // Placeholder
+                    'requests' => [], // Placeholder
+                    'has_more_pending' => false // Placeholder
+                ];
+            });
+
+            Log::info('Batch requests loaded successfully for user:', [
+                'user_id' => $user->id,
+                'user_role' => $user->getRoleNames('api'),
+                'batch_count' => $batchRequests->count(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'batch_requests' => $simpleResults,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error loading batch requests:', [
+                'user_id' => $user->id ?? 'unknown',
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error loading batch requests: ' . $e->getMessage()
+            ], 500);
         }
-        // MR Staff and Admin can see all batch requests
-
-        $batchRequests = $query->orderBy('created_at', 'desc')->get();
-
-        // Add request counts to each batch
-        foreach ($batchRequests as $batch) {
-            $requests = $batch->requests; // Use already loaded relationship
-
-            // Filter out approved case notes - only show pending ones in batch requests
-            $pendingRequests = $requests->where('status', Request::STATUS_PENDING);
-
-            // Only show the latest 3 pending case notes to avoid overwhelming the UI
-            $latestPendingRequests = $pendingRequests->sortByDesc('created_at')->take(3);
-
-            // Add availability information to each case note
-            foreach ($latestPendingRequests as $request) {
-                // Check if there's a current PIC
-                $hasCurrentPIC = !is_null($request->current_pic_user_id);
-
-                // Check if there are any pending handover requests for this case note
-                $pendingHandoverRequests = \App\Models\HandoverRequest::where('case_note_id', $request->id)
-                    ->where('status', 'pending')
-                    ->count();
-
-                // A case note is available if it's not currently held by anyone AND has no pending handover requests
-                $request->is_available = !$hasCurrentPIC && $pendingHandoverRequests === 0;
-
-                // If not available, get the current holder information
-                if (!$request->is_available && $request->current_pic_user_id) {
-                    $request->current_holder = User::find($request->current_pic_user_id);
-                }
-
-                // Add handover status information
-                $request->handover_status = $pendingHandoverRequests > 0 ? 'requested' : 'none';
-            }
-
-            $batch->requests_count = $pendingRequests->count(); // Total pending count
-            $batch->approved_count = $requests->where('status', Request::STATUS_APPROVED)->count();
-            $batch->rejected_count = $requests->where('status', Request::STATUS_REJECTED)->count();
-            $batch->pending_count = $pendingRequests->count();
-
-            // Add verification counts
-            $approvedRequests = $requests->where('status', Request::STATUS_APPROVED);
-            $batch->received_count = $approvedRequests->where('is_received', true)->count();
-
-            // Update batch verification status based on individual receipts
-            if ($batch->approved_count > 0) {
-                $batch->is_verified = ($batch->received_count === $batch->approved_count);
-            }
-
-            // Only include latest pending requests in the batch display
-            $batch->requests = $latestPendingRequests;
-            $batch->has_more_pending = $pendingRequests->count() > 3;
-        }
-
-        Log::info('Batch requests loaded for user:', [
-            'user_id' => $user->id,
-            'user_role' => $user->getRoleNames('api'),
-            'batch_count' => $batchRequests->count(),
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'batch_requests' => $batchRequests,
-        ]);
     }
 
     /**
@@ -118,15 +159,14 @@ class BatchRequestController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'case_notes' => 'required|array|min:1|max:10',
+            'case_notes' => 'required|array|min:1|max:20',
             'case_notes.*.patient_id' => 'required|exists:patients,id',
-            'case_notes.*.department_id' => 'required|exists:departments,id',
-            'case_notes.*.doctor_id' => 'nullable|exists:doctors,id',
-            'case_notes.*.location_id' => 'nullable|exists:locations,id',
-            'case_notes.*.priority' => 'required|in:low,normal,high,urgent',
-            'case_notes.*.purpose' => 'required|string|max:1000',
-            'case_notes.*.needed_date' => 'required|date|after_or_equal:today',
-            'case_notes.*.remarks' => 'nullable|string|max:1000',
+            'department_id' => 'required|exists:departments,id',
+            'doctor_id' => 'nullable|exists:doctors,id',
+            'location_id' => 'nullable|exists:locations,id',
+            'priority' => 'required|in:low,normal,high,urgent',
+            'purpose' => 'required|string|max:1000',
+            'needed_date' => 'required|date|after_or_equal:today',
             'batch_notes' => 'nullable|string|max:1000',
         ]);
 
@@ -157,12 +197,12 @@ class BatchRequestController extends Controller
                     'request_number' => Request::generateRequestNumber(),
                     'patient_id' => $caseNoteData['patient_id'],
                     'requested_by_user_id' => $user->id,
-                    'department_id' => $caseNoteData['department_id'],
-                    'doctor_id' => $caseNoteData['doctor_id'] ?? null,
-                    'location_id' => $caseNoteData['location_id'] ?? null,
-                    'priority' => $caseNoteData['priority'],
-                    'purpose' => $caseNoteData['purpose'],
-                    'needed_date' => $caseNoteData['needed_date'],
+                    'department_id' => $request->department_id,
+                    'doctor_id' => $request->doctor_id ?? null,
+                    'location_id' => $request->location_id ?? null,
+                    'priority' => $request->priority,
+                    'purpose' => $request->purpose,
+                    'needed_date' => $request->needed_date,
                     'remarks' => $caseNoteData['remarks'] ?? null,
                     'status' => Request::STATUS_PENDING,
                     'current_pic_user_id' => $user->id,
@@ -211,11 +251,14 @@ class BatchRequestController extends Controller
                 'user_id' => $user->id,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
+                'request_data' => $request->all(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'Error creating batch request'
+                'message' => 'Error creating batch request: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -450,10 +493,36 @@ class BatchRequestController extends Controller
                 $validatedData['verification_notes'] ?? null
             );
 
-            // Create timeline events for each approved request
+            // Update individual case note status to mark them as received
             $approvedRequests = $batchRequest->requests()->where('status', 'approved')->get();
 
+            Log::info('Updating case notes after verification:', [
+                'batch_id' => $batchRequest->id,
+                'approved_requests_count' => $approvedRequests->count(),
+                'received_count' => $receivedCount,
+                'user_id' => $user->id
+            ]);
+
             foreach ($approvedRequests as $caseNoteRequest) {
+                // Update the case note to mark it as received
+                $caseNoteRequest->update([
+                    'is_received' => true,
+                    'received_at' => now(),
+                    'received_by_user_id' => $user->id,
+                    'status' => Request::STATUS_COMPLETED, // Mark as completed since it's received
+                ]);
+
+                Log::info('Case note updated after verification:', [
+                    'case_note_id' => $caseNoteRequest->id,
+                    'request_number' => $caseNoteRequest->request_number,
+                    'old_status' => 'approved',
+                    'new_status' => Request::STATUS_COMPLETED,
+                    'is_received' => true,
+                    'received_by_user_id' => $user->id,
+                    'current_pic_user_id' => $caseNoteRequest->current_pic_user_id
+                ]);
+
+                // Create timeline event for case note verification
                 $caseNoteRequest->events()->create([
                     'type' => \App\Models\RequestEvent::TYPE_VERIFIED_RECEIVED,
                     'actor_user_id' => $user->id,

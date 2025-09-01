@@ -45,6 +45,19 @@ export const authApi = {
     }
   },
 
+  // Change password
+  async changePassword(data: { current_password: string; new_password: string }): Promise<{ success: boolean; message: string }> {
+    try {
+      const response = await apiClient.post('/auth/change-password', data);
+      return response.data;
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to change password',
+      };
+    }
+  },
+
   // Check if email exists (for better UX)
   async checkEmail(email: string): Promise<CheckEmailResponse> {
     try {

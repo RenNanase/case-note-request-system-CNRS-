@@ -6,10 +6,13 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use App\Models\Patient;
+use App\Models\ImportProgress;
 use App\Imports\PatientsImport;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 use Exception;
 
 class AdminPatientController extends Controller
@@ -21,7 +24,7 @@ class AdminPatientController extends Controller
     {
         // Validate the uploaded file
         $validator = Validator::make($request->all(), [
-            'excel_file' => 'required|file|mimes:xlsx,xls,csv|max:10240', // Max 10MB
+            'excel_file' => 'required|file|mimes:xlsx,xls,csv|max:102400', // Max 100MB for large imports
         ]);
 
         if ($validator->fails()) {
@@ -34,13 +37,40 @@ class AdminPatientController extends Controller
 
         try {
             $file = $request->file('excel_file');
-            
-            // Create import instance
+            $user = Auth::user();
+
+            // Count total rows in the file
+            $totalRows = 0;
+            $handle = fopen($file->getPathname(), 'r');
+            while (fgets($handle) !== false) {
+                $totalRows++;
+            }
+            fclose($handle);
+
+            // Subtract 1 for header row
+            $totalRows = max(0, $totalRows - 1);
+
+            // Create import progress record
+            $importProgress = ImportProgress::create([
+                'import_type' => ImportProgress::TYPE_PATIENTS,
+                'file_name' => $file->getClientOriginalName(),
+                'total_rows' => $totalRows,
+                'status' => ImportProgress::STATUS_PENDING,
+                'requested_by_user_id' => $user->id,
+                'metadata' => [
+                    'file_size' => $file->getSize(),
+                    'file_type' => $file->getClientMimeType(),
+                    'uploaded_at' => now()->toISOString(),
+                ],
+            ]);
+
+            // Create import instance with progress tracking
             $import = new PatientsImport();
-            
+            $import->setImportProgress($importProgress);
+
             // Process the import
             Excel::import($import, $file);
-            
+
             // Get import statistics
             $stats = $import->getImportStats();
             $failures = $import->failures();
@@ -74,9 +104,106 @@ class AdminPatientController extends Controller
             return response()->json($response, 200);
 
         } catch (Exception $e) {
+            // Mark import as failed
+            if (isset($importProgress)) {
+                $importProgress->markAsFailed($e->getMessage());
+            }
+
+            Log::error('Patient import failed', [
+                'error' => $e->getMessage(),
+                'file' => $file->getClientOriginalName(),
+                'user_id' => $user->id,
+            ]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Import failed: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Get import progress for ongoing imports
+     */
+    public function getImportProgress(): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+            
+            $activeImports = ImportProgress::byType(ImportProgress::TYPE_PATIENTS)
+                ->active()
+                ->where('requested_by_user_id', $user->id)
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            $recentImports = ImportProgress::byType(ImportProgress::TYPE_PATIENTS)
+                ->recent(30)
+                ->where('requested_by_user_id', $user->id)
+                ->orderBy('created_at', 'desc')
+                ->take(10)
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'active_imports' => $activeImports,
+                'recent_imports' => $recentImports,
+            ]);
+
+        } catch (Exception $e) {
+            Log::error('Failed to get import progress', [
+                'error' => $e->getMessage(),
+                'user_id' => Auth::id(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to get import progress: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Cancel an ongoing import
+     */
+    public function cancelImport($id): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+            
+            $importProgress = ImportProgress::where('id', $id)
+                ->where('requested_by_user_id', $user->id)
+                ->whereIn('status', [ImportProgress::STATUS_PENDING, ImportProgress::STATUS_PROCESSING])
+                ->first();
+
+            if (!$importProgress) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Import not found or cannot be cancelled',
+                ], 404);
+            }
+
+            $importProgress->cancel();
+
+            Log::info('Patient import cancelled', [
+                'import_id' => $id,
+                'user_id' => $user->id,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Import cancelled successfully',
+            ]);
+
+        } catch (Exception $e) {
+            Log::error('Failed to cancel import', [
+                'error' => $e->getMessage(),
+                'import_id' => $id,
+                'user_id' => Auth::id(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to cancel import: ' . $e->getMessage(),
             ], 500);
         }
     }
@@ -101,7 +228,7 @@ class AdminPatientController extends Controller
         // Sort options
         $sortBy = $request->get('sort_by', 'created_at');
         $sortOrder = $request->get('sort_order', 'desc');
-        
+
         if (in_array($sortBy, ['name', 'mrn', 'created_at', 'updated_at'])) {
             $query->orderBy($sortBy, $sortOrder);
         }

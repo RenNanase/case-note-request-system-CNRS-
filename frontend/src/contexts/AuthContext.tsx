@@ -72,19 +72,34 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const login = async (credentials: LoginCredentials): Promise<AuthResponse> => {
     try {
+
+        console.log('🔐 AuthContext: Starting login process...');
       const response = await authApi.login(credentials);
+      console.log('🔐 AuthContext: API response received:', response);
 
       if (response.success && response.user && response.access_token) {
+        console.log('🔐 AuthContext: Login successful, setting user and token...');
         setUser(response.user);
         setToken(response.access_token);
 
         // Persist to localStorage
         localStorage.setItem('cnrs_token', response.access_token);
         localStorage.setItem('cnrs_user', JSON.stringify(response.user));
+
+        console.log('🔐 AuthContext: User and token stored successfully:', {
+          userId: response.user.id,
+          userName: response.user.name,
+          tokenPreview: response.access_token.substring(0, 20) + '...',
+          localStorageToken: localStorage.getItem('cnrs_token') ? 'stored' : 'missing',
+          localStorageUser: localStorage.getItem('cnrs_user') ? 'stored' : 'missing'
+        });
+      } else {
+        console.log('🔐 AuthContext: Login failed or incomplete response:', response);
       }
 
       return response;
     } catch (error) {
+      console.error('🔐 AuthContext: Login error:', error);
       return {
         success: false,
         message: 'Login failed. Please try again.',
@@ -108,6 +123,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
+  const refreshUser = async () => {
+    try {
+      const response = await authApi.me();
+      if (response.success && response.user) {
+        setUser(response.user);
+        localStorage.setItem('cnrs_user', JSON.stringify(response.user));
+        return response.user;
+      }
+    } catch (error) {
+      console.error('Error refreshing user data:', error);
+    }
+    return null;
+  };
+
   const isAuthenticated = !!user && !!token;
 
   const hasRole = (role: string): boolean => {
@@ -124,6 +153,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     loading,
     login,
     logout,
+    refreshUser,
     isAuthenticated,
     hasRole,
     hasPermission,

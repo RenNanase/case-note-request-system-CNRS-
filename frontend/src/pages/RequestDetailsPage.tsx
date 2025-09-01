@@ -18,8 +18,7 @@ import {
   Edit,
   Trash2,
   Download,
-  Printer,
-  ArrowRight
+  Printer
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -525,12 +524,6 @@ export default function RequestDetailsPage() {
                         <label className="text-sm font-medium text-gray-500">NRIC</label>
                         <p className="text-gray-900">{request.patient.nric || 'N/A'}</p>
                       </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-500">Age/Sex</label>
-                        <p className="text-gray-900">
-                          {request.patient.age || 'N/A'} / {request.patient.sex || 'N/A'}
-                        </p>
-                      </div>
                     </div>
 
                     {request.patient.has_medical_alerts && (
@@ -716,15 +709,39 @@ export default function RequestDetailsPage() {
               {timeline.length > 0 ? (
                 <div className="space-y-4">
                   {timeline.map((event, index) => {
-                    // Get event color based on type
+                    // Get event color based on type with enhanced color coding
                     const getEventColor = (type: string) => {
                       switch (type) {
-                        case 'created': return 'bg-blue-500';
+                        // Request-related events (purple)
+                        case 'created': return 'bg-purple-500';
+                        case 'handover_requested': return 'bg-purple-500';
+                        case 'submitted': return 'bg-purple-500';
+
+                        // Approved/Verified events (green)
                         case 'approved': return 'bg-green-500';
-                        case 'rejected': return 'bg-red-500';
-                        case 'handed_over': return 'bg-orange-500';
+                        case 'handover_approved': return 'bg-green-500';
+                        case 'handover_verified': return 'bg-green-500';
+                        case 'handover_receipt_verified': return 'bg-green-500';
+                        case 'returned_verified': return 'bg-green-500';
+                        case 'received': return 'bg-green-500';
+                        case 'acknowledged': return 'bg-green-500';
                         case 'completed': return 'bg-emerald-500';
-                        case 'in_progress': return 'bg-purple-500';
+
+                        // Rejected events (red)
+                        case 'rejected': return 'bg-red-500';
+                        case 'handover_rejected': return 'bg-red-500';
+                        case 'rejected_not_received': return 'bg-red-500';
+                        case 'returned_rejected': return 'bg-red-500';
+
+                        // Transfer/Handover events (orange)
+                        case 'handed_over': return 'bg-orange-500';
+                        case 'status_changed': return 'bg-orange-500';
+
+                        // Progress events (blue)
+                        case 'in_progress': return 'bg-blue-500';
+                        case 'updated': return 'bg-blue-500';
+
+                        // Default
                         default: return 'bg-gray-500';
                       }
                     };
@@ -740,94 +757,99 @@ export default function RequestDetailsPage() {
 
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-gray-900">
-                            {event.type_label}
+                            {event.description}
                           </p>
-                          <p className="text-sm text-gray-600">{event.description}</p>
                           <p className="text-xs text-gray-500 mt-1">
                             {formatRelativeTime(event.occurred_at)}
                           </p>
 
-                          {/* Reason display */}
-                          {event.reason && (
-                            <p className="text-sm text-gray-700 bg-gray-50 p-2 rounded-lg mt-2">
-                              <span className="font-medium">Reason:</span> {event.reason}
-                            </p>
-                          )}
-
-                          {/* Enhanced metadata display for handover events */}
-                          {event.type === 'handed_over' && event.metadata && (
-                            <div className="mt-2 bg-orange-50 border border-orange-200 rounded-lg p-3">
-                              <h4 className="text-sm font-medium text-orange-900 mb-2 flex items-center">
-                                <ArrowRight className="h-4 w-4 mr-1" />
-                                Handover Details
-                              </h4>
-
-                                                            {/* Full detailed view for ALL users - MR Staff and Admin need complete information */}
+                          {/* Enhanced metadata display with color-coded borders */}
+                          {event.metadata && Object.keys(event.metadata).length > 0 && (
+                            <div className={`mt-2 p-3 rounded-lg border-2 ${
+                              event.type.includes('rejected') || event.type.includes('rejected_not_received') || event.type.includes('returned_rejected')
+                                ? 'bg-red-50 border-red-200'
+                                : event.type.includes('approved') || event.type.includes('verified') || event.type.includes('received') || event.type.includes('completed')
+                                ? 'bg-green-50 border-green-200'
+                                : event.type.includes('requested') || event.type.includes('created') || event.type.includes('submitted')
+                                ? 'bg-purple-50 border-purple-200'
+                                : 'bg-gray-50 border-gray-200'
+                            }`}>
                               <div className="space-y-2">
+                                {/* Comments and Notes with color-coded borders */}
+                                {(event.metadata.notes || event.metadata.reason || event.metadata.verification_notes ||
+                                  event.metadata.completion_notes || event.metadata.approval_remarks ||
+                                  event.metadata.rejection_reason || event.metadata.handover_reason) && (
+                                  <div className={`bg-white p-2 rounded border-l-4 ${
+                                    event.type.includes('rejected') || event.type.includes('rejected_not_received') || event.type.includes('returned_rejected')
+                                      ? 'border-red-400'
+                                      : event.type.includes('approved') || event.type.includes('verified') || event.type.includes('received') || event.type.includes('completed')
+                                      ? 'border-green-400'
+                                      : event.type.includes('requested') || event.type.includes('created') || event.type.includes('submitted')
+                                      ? 'border-purple-400'
+                                      : 'border-blue-400'
+                                  }`}>
+                                    <span className="text-xs font-medium text-gray-600 block mb-1">Comments:</span>
+                                    <p className="text-sm text-gray-700">
+                                      {event.metadata.notes || event.metadata.reason || event.metadata.verification_notes ||
+                                       event.metadata.completion_notes || event.metadata.approval_remarks ||
+                                       event.metadata.rejection_reason || event.metadata.handover_reason}
+                                    </p>
+                                  </div>
+                                )}
+
+                                {/* Doctor Information */}
+                                {(event.metadata.doctor_name || event.metadata.handover_doctor_name || event.metadata.new_doctor_name) && (
+                                  <div className="bg-white p-2 rounded border-l-2 border-green-300">
+                                    <span className="text-xs font-medium text-gray-600 block mb-1">Doctor:</span>
+                                    <p className="text-sm text-gray-700">
+                                      {event.metadata.doctor_name || event.metadata.handover_doctor_name || event.metadata.new_doctor_name}
+                                    </p>
+                                  </div>
+                                )}
+
+                                {/* Department Information */}
+                                {(event.metadata.department_name || event.metadata.new_department_name) && (
+                                  <div className="bg-white p-2 rounded border-l-2 border-purple-300">
+                                    <span className="text-xs font-medium text-gray-600 block mb-1">Department:</span>
+                                    <p className="text-sm text-gray-700">
+                                      {event.metadata.department_name || event.metadata.new_department_name}
+                                    </p>
+                                  </div>
+                                )}
+
+                                {/* Location Information */}
+                                {event.metadata.location_name && event.metadata.location_name !== 'No specific location' && (
+                                  <div className="bg-white p-2 rounded border-l-2 border-orange-300">
+                                    <span className="text-xs font-medium text-gray-600 block mb-1">Location:</span>
+                                    <p className="text-sm text-gray-700">{event.metadata.location_name}</p>
+                                  </div>
+                                )}
+
                                 {/* Transfer Information */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                  {event.metadata.handed_over_from_user_name && (
-                                    <div className="bg-white rounded p-2 border border-orange-100">
-                                      <span className="text-xs text-gray-600 block">From:</span>
-                                      <p className="font-medium text-gray-900 text-sm">{event.metadata.handed_over_from_user_name}</p>
-                                    </div>
-                                  )}
-                                  {event.metadata.handed_over_to_user_name && (
-                                    <div className="bg-white rounded p-2 border border-orange-100">
-                                      <span className="text-xs text-gray-600 block">To:</span>
-                                      <p className="font-medium text-gray-900 text-sm">{event.metadata.handed_over_to_user_name}</p>
-                                    </div>
-                                  )}
-                                </div>
-
-                                {/* Department and Location */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                  {event.metadata.department_name && (
-                                    <div className="bg-white rounded p-2 border border-orange-100">
-                                      <span className="text-xs text-gray-600 block">Department:</span>
-                                      <p className="font-medium text-gray-900 text-sm">{event.metadata.department_name}</p>
-                                    </div>
-                                  )}
-                                  {event.metadata.location_name && (
-                                    <div className="bg-white rounded p-2 border border-orange-100">
-                                      <span className="text-xs text-gray-600 block">Location:</span>
-                                      <p className="font-medium text-gray-900 text-sm">{event.metadata.location_name}</p>
-                                    </div>
-                                  )}
-                                </div>
-
-                                {/* Handover Reason */}
-                                {event.metadata.handover_reason && (
-                                  <div className="bg-white rounded p-2 border border-orange-100">
-                                    <span className="text-xs text-gray-600 block">Handover Reason:</span>
-                                    <p className="font-medium text-gray-900 text-sm">{event.metadata.handover_reason}</p>
+                                {(event.metadata.from_user || event.metadata.to_user ||
+                                  event.metadata.handed_over_from_user_name || event.metadata.handed_over_to_user_name) && (
+                                  <div className="bg-white p-2 rounded border-l-2 border-indigo-300">
+                                    <span className="text-xs font-medium text-gray-600 block mb-1">Transfer:</span>
+                                    <p className="text-sm text-gray-700">
+                                      {event.metadata.from_user || event.metadata.handed_over_from_user_name} → {event.metadata.to_user || event.metadata.handed_over_to_user_name}
+                                    </p>
                                   </div>
                                 )}
 
-                                {/* Additional Notes */}
-                                {event.metadata.additional_notes && (
-                                  <div className="bg-white rounded p-2 border border-orange-100">
-                                    <span className="text-xs text-gray-600 block">Additional Notes:</span>
-                                    <p className="font-medium text-gray-900 text-sm">{event.metadata.additional_notes}</p>
-                                  </div>
-                                )}
-
-                                {/* Status */}
-                                {event.metadata.handover_status && (
-                                  <div className="bg-white rounded p-2 border border-orange-100">
-                                    <span className="text-xs text-gray-600 block">Status:</span>
-                                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                                      event.metadata.handover_status === 'pending'
-                                        ? 'bg-yellow-100 text-yellow-800'
-                                        : 'bg-green-100 text-green-800'
-                                    }`}>
-                                      {event.metadata.handover_status.charAt(0).toUpperCase() + event.metadata.handover_status.slice(1)}
-                                    </span>
+                                {/* Status Changes */}
+                                {(event.metadata.old_status || event.metadata.new_status) && (
+                                  <div className="bg-white p-2 rounded border-l-2 border-yellow-300">
+                                    <span className="text-xs font-medium text-gray-600 block mb-1">Status Change:</span>
+                                    <p className="text-sm text-gray-700">
+                                      {event.metadata.old_status} → {event.metadata.new_status}
+                                    </p>
                                   </div>
                                 )}
                               </div>
                             </div>
                           )}
+
+
 
 
                         </div>
