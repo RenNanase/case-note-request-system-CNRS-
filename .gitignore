@@ -22,3 +22,22 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Frontend build artifacts
+/public/frontend/assets/*.js
+/public/frontend/assets/*.css
+/public/frontend/.vite/
+/public/frontend/build/
+/frontend/dist/
+/frontend/public/build/
+
+# Development and test files
+/public/apache-info.php
+/public/test-*.html
+/public/test-*.php
+test-*.html
+test-*.php
+
+# Temporary files
+*.backup
+.rnd

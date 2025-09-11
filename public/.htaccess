@@ -18,8 +18,52 @@
     RewriteCond %{REQUEST_URI} (.+)/$
     RewriteRule ^ %1 [L,R=301]
 
-    # Send Requests To Front Controller...
+    # Skip Laravel for build directory - serve directly
+    RewriteCond %{REQUEST_URI} ^/build/
+    RewriteRule ^(.*)$ - [L]
+    
+    # Handle Front Controller...
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
+</IfModule>
+
+# Prevent directory listing
+Options -Indexes
+
+# Set default character set
+AddDefaultCharset UTF-8
+
+# Enable CORS
+<IfModule mod_headers.c>
+    Header set Access-Control-Allow-Origin "*"
+    Header set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+    Header set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
+</IfModule>
+
+# Force correct MIME types for assets
+<IfModule mod_mime.c>
+    AddType application/javascript .js
+    AddType text/css .css
+    AddType application/json .json
+    AddType image/png .png
+    AddType image/jpeg .jpg .jpeg
+    AddType image/svg+xml .svg
+    AddType font/woff .woff
+    AddType font/woff2 .woff2
+</IfModule>
+
+# Ensure build assets are served with correct MIME types
+<FilesMatch "\.(js|css|json|png|jpg|jpeg|svg|woff|woff2)$">
+    <IfModule mod_headers.c>
+        Header unset Content-Type
+    </IfModule>
+</FilesMatch>
+
+# PHP settings
+<IfModule mod_php.c>
+    php_value upload_max_filesize 64M
+    php_value post_max_size 64M
+    php_value max_execution_time 300
+    php_value max_input_time 300
 </IfModule>

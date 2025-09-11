@@ -62,7 +62,7 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 // Main App content with routing
 function AppContent() {
   return (
-    <Router>
+    <Router basename="/CNRS">
       <Routes>
         {/* Public routes */}
         <Route path="/login" element={

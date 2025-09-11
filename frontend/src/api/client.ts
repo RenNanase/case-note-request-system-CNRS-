@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Create axios instance with base configuration
 const apiClient = axios.create({
-  baseURL: '/api', // Use /api prefix for all API routes - works with Vite proxy
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://10.2.10.178/CNRS/public/api', // Use environment variable or fallback
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -10,8 +10,8 @@ const apiClient = axios.create({
   },
 });
 
-console.log('🔧 API Client initialized with baseURL:', '/api');
-console.log('🔧 Vite proxy target:', 'http://10.2.10.178:8000');
+console.log('🔧 API Client initialized with baseURL:', import.meta.env.VITE_API_BASE_URL || 'http://10.2.10.178/CNRS/public/api');
+console.log('🔧 Network server target:', 'http://10.2.10.178/CNRS');
 
 // Request interceptor to add auth token
 apiClient.interceptors.request.use(
@@ -65,7 +65,7 @@ apiClient.interceptors.response.use(
       // Clear stored token and redirect to login
       localStorage.removeItem('cnrs_token');
       localStorage.removeItem('cnrs_user');
-      window.location.href = '/';
+      window.location.href = '/CNRS/login';
     }
 
     return Promise.reject(error);

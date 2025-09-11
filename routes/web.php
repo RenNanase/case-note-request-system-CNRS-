@@ -1,103 +1,81 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\File;
 
+// Root route - serve the React app (let frontend handle routing)
 Route::get('/', function () {
-    $indexPath = public_path('frontend/index.html');
-
-    if (file_exists($indexPath)) {
-        return response(File::get($indexPath), 200)
-            ->header('Content-Type', 'text/html');
+    $frontendPath = public_path('index.html');
+    
+    if (!file_exists($frontendPath)) {
+        abort(500, 'Frontend file not found: ' . $frontendPath);
     }
-
-    return view('welcome');
+    
+    return response()->file($frontendPath);
 });
 
-// Serve frontend assets
-Route::get('/frontend/assets/{file}', function ($file) {
-    $path = public_path("frontend/assets/{$file}");
+// Login route - serve the React app
+Route::get('/login', function () {
+    $frontendPath = public_path('index.html');
     
-    if (!file_exists($path)) {
-        abort(404);
+    if (!file_exists($frontendPath)) {
+        abort(500, 'Frontend file not found: ' . $frontendPath);
     }
     
-    $extension = pathinfo($path, PATHINFO_EXTENSION);
-    $mimeType = match($extension) {
-        'css' => 'text/css',
-        'js' => 'application/javascript',
-        'svg' => 'image/svg+xml',
-        'png' => 'image/png',
-        'jpg', 'jpeg' => 'image/jpeg',
-        default => 'application/octet-stream'
-    };
-    
-    return response(File::get($path), 200)
-        ->header('Content-Type', $mimeType);
-})->where('file', '.*');
-
-// Serve frontend root files
-Route::get('/frontend/{file}', function ($file) {
-    $path = public_path("frontend/{$file}");
-    
-    if (!file_exists($path)) {
-        abort(404);
-    }
-    
-    $extension = pathinfo($path, PATHINFO_EXTENSION);
-    $mimeType = match($extension) {
-        'svg' => 'image/svg+xml',
-        'ico' => 'image/x-icon',
-        default => 'application/octet-stream'
-    };
-    
-    return response(File::get($path), 200)
-        ->header('Content-Type', $mimeType);
-})->where('file', '[^/]+');
-
-// Serve assets directly from /assets/ path (for Vite builds)
-Route::get('/assets/{file}', function ($file) {
-    $path = public_path("frontend/assets/{$file}");
-    
-    if (!file_exists($path)) {
-        abort(404);
-    }
-    
-    $extension = pathinfo($path, PATHINFO_EXTENSION);
-    $mimeType = match($extension) {
-        'css' => 'text/css',
-        'js' => 'application/javascript',
-        'svg' => 'image/svg+xml',
-        'png' => 'image/png',
-        'jpg', 'jpeg' => 'image/jpeg',
-        default => 'application/octet-stream'
-    };
-    
-    return response(File::get($path), 200)
-        ->header('Content-Type', $mimeType);
-})->where('file', '.*');
-
-// Serve vite.svg from frontend directory
-Route::get('/vite.svg', function () {
-    $path = public_path('frontend/vite.svg');
-    
-    if (!file_exists($path)) {
-        abort(404);
-    }
-    
-    return response(File::get($path), 200)
-        ->header('Content-Type', 'image/svg+xml');
+    return response()->file($frontendPath);
 });
 
-// Handle client-side routing for React Router
-// This should be last to catch all non-API, non-frontend routes
-Route::fallback(function () {
-    $indexPath = public_path('frontend/index.html');
+// Debug route to test file serving
+Route::get('/debug', function () {
+    $frontendPath = public_path('frontend/index.html');
+    $exists = file_exists($frontendPath);
 
-    if (file_exists($indexPath)) {
-        return response(File::get($indexPath), 200)
-            ->header('Content-Type', 'text/html');
+    return response()->json([
+        'frontend_path' => $frontendPath,
+        'file_exists' => $exists,
+        'public_path' => public_path(),
+        'base_path' => base_path(),
+        'current_path' => request()->path(),
+        'full_url' => request()->fullUrl(),
+        'message' => 'Debug information'
+    ]);
+});
+
+// Test route to serve a simple HTML file
+Route::get('/test', function () {
+    return response()->file(public_path('test.php'));
+});
+
+// Note: API routes are handled in routes/api.php
+
+// Frontend route - serve the React app for ALL other routes (excluding API)
+Route::get('/{any?}', function ($any = null) {
+    // Skip API routes completely - let Laravel handle them via api.php
+    if (str_starts_with($any, 'api/') || $any === 'api') {
+        abort(404);
     }
 
-    abort(404);
-});
+    // Skip debug and test routes
+    if (in_array($any, ['debug', 'test'])) {
+        abort(404);
+    }
+
+    // Skip asset files completely - let Apache handle them
+    if (str_starts_with($any, 'build/') || 
+        str_starts_with($any, 'assets.php')) {
+        abort(404);
+    }
+
+    // Skip if it's a file that exists (let Apache serve it)
+    if (file_exists(public_path($any))) {
+        abort(404);
+    }
+
+    // Serve React app for everything else
+    $frontendPath = public_path('index.html');
+
+    if (!file_exists($frontendPath)) {
+        abort(500, 'Frontend file not found: ' . $frontendPath);
+    }
+
+    return response()->file($frontendPath);
+})->where('any', '.*');

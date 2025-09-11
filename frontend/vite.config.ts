@@ -2,26 +2,47 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 
-// https://vite.dev/config/
+
 export default defineConfig({
-  plugins: [react()],
+    base: '/CNRS/build/', // Base path for network server subdirectory
+    plugins: [react()],
   resolve: {
     alias: {
       '@': path.resolve('./src'),
     },
   },
-  build: {
-    chunkSizeWarningLimit: 600,
-  },
-  server: {
-    host: '0.0.0.0', // Bind to all interfaces for network access
-    port: 3000,
-    proxy: {
-      '/api': {
-        target: 'http://10.2.10.178:8000', // Laravel backend (network accessible)
-        changeOrigin: true,
-        secure: false,
-      },
+
+    server: {
+        host: '0.0.0.0',
+        port: 5174,
+        strictPort: true,
+        hmr: {
+            host: '10.2.10.178',
+            protocol: 'ws',
+            port: 5174,
+        },
+        cors: {
+            origin: ['http://10.2.10.178', 'http://10.2.10.178:5174'],
+            methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+            allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+            credentials: true
+        }
     },
-  },
-})
+    build: {
+        outDir: '../public/build',
+        assetsDir: 'assets',
+        manifest: true,
+        rollupOptions: {
+            output: {
+                manualChunks: undefined,
+                assetFileNames: 'assets/[name]-[hash][extname]',
+                chunkFileNames: 'assets/[name]-[hash].js',
+                entryFileNames: 'assets/[name]-[hash].js',
+            },
+        },
+        minify: 'esbuild',
+        sourcemap: false,
+        cssCodeSplit: true,
+        emptyOutDir: true,
+    },
+});

@@ -1,0 +1,14 @@
+# CRNS Frontend Assets - .htaccess
+# This file ensures proper MIME types for frontend assets and handles React Router
+
+# Enable rewrite engine for React Router support
+RewriteEngine On
+
+# Handle React Router - redirect all non-asset requests to index.html
+# Skip if the request is for an actual file or directory
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.html [QSA,L]
+
+# Ensure files are served directly
+Options -Indexes
