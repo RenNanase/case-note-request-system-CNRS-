@@ -23,8 +23,18 @@ import { useAuth } from '@/contexts/AuthContext';
 import { requestsApi } from '@/api/requests';
 import type { DashboardStats, CaseNoteRequest } from '@/types/requests';
 
-// Status badge colors function
-const getStatusBadge = (status: string) => {
+// Status badge component
+const getStatusBadge = (status: string, isRejectedReturn?: boolean) => {
+  // Check for rejected return status first
+  if (isRejectedReturn) {
+    return (
+      <Badge variant="outline" className="bg-red-100 text-red-800 border-red-200">
+        <XCircle className="h-3 w-3" />
+        <span>REJECTED RETURN</span>
+      </Badge>
+    );
+  }
+
   const statusColors = {
     'pending': { icon: Clock, className: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
     'approved': { icon: CheckCircle, className: 'bg-green-100 text-green-800 border-green-200' },
@@ -34,9 +44,9 @@ const getStatusBadge = (status: string) => {
   };
 
   const config = statusColors[status as keyof typeof statusColors] || statusColors.pending;
-    const Icon = config.icon;
+  const Icon = config.icon;
 
-    return (
+  return (
     <Badge variant="outline" className={`flex items-center space-x-1 ${config.className}`}>
       <Icon className="h-3 w-3" />
       <span>{status.replace('_', ' ').toUpperCase()}</span>
@@ -55,100 +65,222 @@ function CADashboard({ user, stats, loading, loadingProgress, executionTime, cac
         cached={cached}
       />
 
+      {/* Banner notification for pending verifications */}
+      {stats && stats.pending_verifications > 0 && (
+        <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6">
+          <div className="flex items-center space-x-3">
+            <div className="flex-shrink-0">
+              <AlertTriangle className="h-6 w-6 text-orange-600" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-sm font-medium text-orange-800">
+                You have case notes pending verification
+              </h3>
+              <p className="text-sm text-orange-700 mt-1">
+                {stats.pending_verifications} case note{stats.pending_verifications > 1 ? 's' : ''} need{stats.pending_verifications === 1 ? 's' : ''} to be verified as received.
+              </p>
+            </div>
+            <div className="flex-shrink-0">
+              <Link to="/verify-case-notes">
+                <Button variant="outline" size="sm" className="border-orange-300 text-orange-700 hover:bg-orange-100">
+                  Verify Now
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Debug logging for rejected returns */}
+      {console.log('Dashboard stats for rejected returns:', {
+        stats: stats,
+        rejected_returns_count: stats?.rejected_returns_count,
+        hasStats: !!stats,
+        shouldShowBanner: stats && stats.rejected_returns_count > 0
+      })}
+
+      {/* Banner notification for rejected returns */}
+      {stats && stats.rejected_returns_count > 0 && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+          <div className="flex items-center space-x-3">
+            <div className="flex-shrink-0">
+              <AlertTriangle className="h-6 w-6 text-red-600" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-sm font-medium text-red-800">
+                You have rejected case notes that need to be re-returned
+              </h3>
+              <p className="text-sm text-red-700 mt-1">
+                {stats.rejected_returns_count} case note{stats.rejected_returns_count > 1 ? 's' : ''} {stats.rejected_returns_count === 1 ? 'was' : 'were'} rejected by MR staff and need{stats.rejected_returns_count === 1 ? 's' : ''} to be returned again.
+              </p>
+            </div>
+            <div className="flex-shrink-0">
+              <Link to="/return-case-notes">
+                <Button variant="outline" size="sm" className="border-red-300 text-red-700 hover:bg-red-100">
+                  Re-return Now
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Banner notification for pending handover verifications */}
+      {stats && stats.pending_handover_verifications > 0 && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+          <div className="flex items-center space-x-3">
+            <div className="flex-shrink-0">
+              <AlertTriangle className="h-6 w-6 text-red-600" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-sm font-medium text-red-800">
+                You have case notes pending handover verification
+              </h3>
+              <p className="text-sm text-red-700 mt-1">
+                {stats.pending_handover_verifications} handover case note{stats.pending_handover_verifications > 1 ? 's' : ''} request requires your approval or rejection.
+              </p>
+            </div>
+            <div className="flex-shrink-0">
+              <Link to="/handover-requests">
+                <Button variant="outline" size="sm" className="border-red-300 text-red-700 hover:bg-red-100">
+                  Review Now
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Banner notification for approved handovers pending verification */}
+      {stats && stats.approved_handovers_pending_verification > 0 && (
+        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-6">
+          <div className="flex items-center space-x-3">
+            <div className="flex-shrink-0">
+              <CheckCircle className="h-6 w-6 text-purple-600" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-sm font-medium text-purple-800">
+                You have approved handover case notes pending for verification
+              </h3>
+              <p className="text-sm text-purple-700 mt-1">
+                {stats.approved_handovers_pending_verification} case note{stats.approved_handovers_pending_verification > 1 ? 's' : ''} that you requested for handover {stats.approved_handovers_pending_verification === 1 ? 'has' : 'have'} been approved and {stats.approved_handovers_pending_verification === 1 ? 'needs' : 'need'} to be verified.
+              </p>
+            </div>
+            <div className="flex-shrink-0">
+              <Link to="/verify-case-notes">
+                <Button variant="outline" size="sm" className="border-purple-300 text-purple-700 hover:bg-purple-100">
+                  Verify Now
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* CA-specific welcome */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Hi, {user?.name || 'Clinic Assistant'}!</h1>
       </div>
 
-      {/* CA Stats Cards */}
+      {/* CA Stats Cards - Modern KPI Layout */}
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+        <div className="grid grid-cols-5 gap-4 overflow-x-auto hide-scrollbar">
           {[...Array(5)].map((_, index) => (
-            <Card key={index} className="animate-pulse">
-              <CardContent className="p-6 h-32">
+            <Card key={index} className="animate-pulse h-24 min-w-[200px] flex-shrink-0">
+              <CardContent className="p-4 h-full">
                 <div className="flex items-center justify-between h-full">
-                  <div className="space-y-3 flex-1">
-                    <Skeleton className="h-4 w-24 bg-gray-200" />
-                    <Skeleton className="h-8 w-20 bg-gray-200" />
+                  <div className="space-y-1 flex-1">
+                    <Skeleton className="h-3 w-20 bg-gray-200" />
+                    <Skeleton className="h-6 w-12 bg-gray-200" />
                   </div>
-                  <Skeleton className="h-8 w-8 rounded-full bg-gray-200" />
+                  <Skeleton className="h-8 w-8 rounded-lg bg-gray-200 ml-2" />
                 </div>
               </CardContent>
             </Card>
           ))}
         </div>
       ) : stats ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 animate-in fade-in duration-300">
+        <div className="grid grid-cols-5 gap-4 overflow-x-auto hide-scrollbar animate-in fade-in duration-300">
           {/* Total Requests Card */}
-          <Link to="/individual-requests">
-            <Card className="cursor-pointer hover:shadow-lg transition-shadow h-32">
-              <CardContent className="p-6 h-full flex flex-col justify-between">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">Total Requested</p>
-                    <p className="text-2xl font-bold text-blue-600">{stats.total_requests || 0}</p>
+          <Link to="/individual-requests" className="group">
+            <Card className="cursor-pointer h-28 bg-white border shadow-sm hover:shadow-md hover:border-purple-300 transition-all duration-200 group-hover:scale-105">
+              <CardContent className="p-6 h-full">
+                <div className="flex items-center justify-between h-full">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-gray-600 group-hover:text-purple-600 transition-colors">Total Requested</p>
+                    <p className="text-2xl font-bold text-gray-900">{stats.total_requests || 0}</p>
                   </div>
-                  <FileText className="h-8 w-8 text-blue-400" />
+                  <div className="p-3 bg-purple-50 rounded-lg group-hover:bg-purple-100 transition-colors">
+                    <FileText className="h-6 w-6 text-purple-600" />
+                  </div>
                 </div>
               </CardContent>
             </Card>
           </Link>
 
-          {/* Pending Verifications Card */}
-          <Link to="/individual-requests?status=approved&is_received=false">
-            <Card className="cursor-pointer hover:shadow-lg transition-shadow border-orange-200 bg-orange-50 h-32">
-              <CardContent className="p-6 h-full flex flex-col justify-between">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-orange-700">Pending Verifications</p>
-                    <p className="text-2xl font-bold text-orange-600">{stats.pending_verifications || 0}</p>
-                  </div>
-                  <AlertTriangle className="h-8 w-8 text-orange-400" />
+        {/* Pending Verifications Card */}
+        <Link to="/verify-case-notes" className="group">
+          <Card className="cursor-pointer h-28 bg-white border shadow-sm hover:shadow-md hover:border-orange-300 transition-all duration-200 group-hover:scale-105">
+            <CardContent className="p-6 h-full">
+              <div className="flex items-center justify-between h-full">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-gray-600 group-hover:text-orange-600 transition-colors">Pending Verifications</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.pending_verifications || 0}</p>
                 </div>
-              </CardContent>
-            </Card>
-          </Link>
+                <div className="p-3 bg-orange-50 rounded-lg group-hover:bg-orange-100 transition-colors">
+                  <AlertTriangle className="h-6 w-6 text-orange-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
 
           {/* Today's Requests Card */}
-          <Link to="/individual-requests">
-            <Card className="cursor-pointer hover:shadow-lg transition-shadow h-32">
-              <CardContent className="p-6 h-full flex flex-col justify-between">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">Today's Requests</p>
-                    <p className="text-2xl font-bold text-green-600">{stats.today_requests || 0}</p>
+          <Link to="/individual-requests" className="group">
+            <Card className="cursor-pointer h-28 bg-white border shadow-sm hover:shadow-md hover:border-green-300 transition-all duration-200 group-hover:scale-105">
+              <CardContent className="p-6 h-full">
+                <div className="flex items-center justify-between h-full">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-gray-600 group-hover:text-green-600 transition-colors">Today's Requests</p>
+                    <p className="text-2xl font-bold text-gray-900">{stats.today_requests || 0}</p>
                   </div>
-                  <Calendar className="h-8 w-8 text-green-400" />
+                  <div className="p-3 bg-green-50 rounded-lg group-hover:bg-green-100 transition-colors">
+                    <Calendar className="h-6 w-6 text-green-600" />
+                  </div>
                 </div>
               </CardContent>
             </Card>
           </Link>
 
-          {/* Incoming Handover Requests Card */}
-          <Link to="/handover-requests">
-            <Card className="cursor-pointer hover:shadow-lg transition-shadow border-purple-200 bg-purple-50 h-32">
-              <CardContent className="p-6 h-full flex flex-col justify-between">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-purple-700">Pending Handover Requests</p>
-                    <p className="text-2xl font-bold text-purple-600">{stats.total_handovers || 0}</p>
+          {/* Handover Requests Card */}
+          <Link to="/handover-requests" className="group">
+            <Card className="cursor-pointer h-28 bg-white border shadow-sm hover:shadow-md hover:border-purple-300 transition-all duration-200 group-hover:scale-105">
+              <CardContent className="p-6 h-full">
+                <div className="flex items-center justify-between h-full">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-gray-600 group-hover:text-purple-600 transition-colors">Handover Requests</p>
+                    <p className="text-2xl font-bold text-gray-900">{stats.total_handovers || 0}</p>
                   </div>
-                  <ArrowRightLeft className="h-8 w-8 text-purple-400" />
+                  <div className="p-3 bg-purple-50 rounded-lg group-hover:bg-purple-100 transition-colors">
+                    <ArrowRightLeft className="h-6 w-6 text-purple-600" />
+                  </div>
                 </div>
               </CardContent>
             </Card>
           </Link>
 
           {/* Active Case Notes Card */}
-          <Link to="/return-case-notes">
-            <Card className="cursor-pointer hover:shadow-lg transition-shadow border-pink-200 bg-pink-50 h-32">
-              <CardContent className="p-6 h-full flex flex-col justify-between">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-pink-700">Active </p>
-                    <p className="text-2xl font-bold text-pink-600">{stats.active_case_notes || 0}</p>
+          <Link to="/return-case-notes" className="group">
+            <Card className="cursor-pointer h-28 bg-white border shadow-sm hover:shadow-md hover:border-pink-300 transition-all duration-200 group-hover:scale-105">
+              <CardContent className="p-6 h-full">
+                <div className="flex items-center justify-between h-full">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-gray-600 group-hover:text-pink-600 transition-colors">Active Cases</p>
+                    <p className="text-2xl font-bold text-gray-900">{stats.active_case_notes || 0}</p>
                   </div>
-                  <FolderOpen className="h-8 w-8 text-pink-400" />
+                  <div className="p-3 bg-pink-50 rounded-lg group-hover:bg-pink-100 transition-colors">
+                    <FolderOpen className="h-6 w-6 text-pink-600" />
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -169,69 +301,77 @@ function MRStaffDashboard({ user, stats, recentRequests, loading }: any) {
         <p className="text-gray-600">Review pending requests and manage case note workflows</p>
       </div>
 
-      {/* MR Staff-specific stats */}
+      {/* MR Staff-specific stats - Modern KPI Layout */}
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-4 gap-4 overflow-x-auto hide-scrollbar">
           {[...Array(4)].map((_, index) => (
-            <Card key={index} className="animate-pulse">
-              <CardContent className="p-6 h-32">
+            <Card key={index} className="animate-pulse h-24 min-w-[220px] flex-shrink-0">
+              <CardContent className="p-4 h-full">
                 <div className="flex items-center justify-between h-full">
-                  <div className="space-y-3 flex-1">
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-8 w-20" />
+                  <div className="space-y-1 flex-1">
+                    <Skeleton className="h-3 w-20 bg-gray-200" />
+                    <Skeleton className="h-6 w-12 bg-gray-200" />
                   </div>
-                  <Skeleton className="h-8 w-8 rounded-full" />
+                  <Skeleton className="h-8 w-8 rounded-lg bg-gray-200 ml-2" />
                 </div>
               </CardContent>
             </Card>
           ))}
         </div>
       ) : stats ? (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 animate-in fade-in duration-300">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
+        <div className="grid grid-cols-4 gap-4 overflow-x-auto hide-scrollbar animate-in fade-in duration-300">
+          <Card className="h-28 bg-white border shadow-sm hover:shadow-md transition-all duration-200 hover:scale-105">
+            <CardContent className="p-6 h-full">
+              <div className="flex items-center justify-between h-full">
+                <div className="space-y-1">
                   <p className="text-sm font-medium text-gray-600">Total Requests</p>
                   <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
                 </div>
-                <FileText className="h-8 w-8 text-gray-400" />
+                <div className="p-3 bg-gray-50 rounded-lg">
+                  <FileText className="h-6 w-6 text-gray-600" />
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
+          <Card className="h-28 bg-white border shadow-sm hover:shadow-md hover:border-yellow-300 transition-all duration-200 hover:scale-105">
+            <CardContent className="p-6 h-full">
+              <div className="flex items-center justify-between h-full">
+                <div className="space-y-1">
                   <p className="text-sm font-medium text-gray-600">Pending</p>
-                  <p className="text-2xl font-bold text-yellow-600">{stats.pending}</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.pending}</p>
                 </div>
-                <Clock className="h-8 w-8 text-yellow-400" />
+                <div className="p-3 bg-yellow-50 rounded-lg">
+                  <Clock className="h-6 w-6 text-yellow-600" />
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Current Active(dummy)</p>
-                  <p className="text-2xl font-bold text-blue-600">{stats.approved + stats.in_progress}</p>
+          <Card className="h-28 bg-white border shadow-sm hover:shadow-md hover:border-purple-300 transition-all duration-200 hover:scale-105">
+            <CardContent className="p-6 h-full">
+              <div className="flex items-center justify-between h-full">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-gray-600">Active</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.approved + stats.in_progress}</p>
                 </div>
-                <Activity className="h-8 w-8 text-blue-400" />
+                <div className="p-3 bg-purple-50 rounded-lg">
+                  <Activity className="h-6 w-6 text-purple-600" />
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
+          <Card className="h-28 bg-white border shadow-sm hover:shadow-md hover:border-green-300 transition-all duration-200 hover:scale-105">
+            <CardContent className="p-6 h-full">
+              <div className="flex items-center justify-between h-full">
+                <div className="space-y-1">
                   <p className="text-sm font-medium text-gray-600">Completed</p>
-                  <p className="text-2xl font-bold text-green-600">{stats.completed}</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.completed}</p>
                 </div>
-                <CheckCircle className="h-8 w-8 text-green-400" />
+                <div className="p-3 bg-green-50 rounded-lg">
+                  <CheckCircle className="h-6 w-6 text-green-600" />
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -296,8 +436,8 @@ function MRStaffDashboard({ user, stats, recentRequests, loading }: any) {
                   {recentRequests.slice(0, 5).map((request: CaseNoteRequest) => (
                     <div key={request.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
                       <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                          <FileText className="h-5 w-5 text-blue-600" />
+                        <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                          <FileText className="h-5 w-5 text-purple-600" />
                         </div>
                         <div>
                           <h4 className="text-sm font-medium">{request.request_number}</h4>
@@ -312,7 +452,7 @@ function MRStaffDashboard({ user, stats, recentRequests, loading }: any) {
                         </div>
                       </div>
                       <div className="flex items-center space-x-2">
-                        {getStatusBadge(request.status)}
+                        {getStatusBadge(request.status, request.is_rejected_return)}
                         <Button asChild variant="ghost" size="sm">
                           <Link to={`/requests/${request.id}`}>Review</Link>
                         </Button>
@@ -339,69 +479,77 @@ function AdminDashboard({ user, stats, loading }: any) {
         <p className="text-gray-600">Full system access and administrative controls</p>
       </div>
 
-      {/* Admin-specific stats */}
+      {/* Admin-specific stats - Modern KPI Layout */}
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-4 gap-4 overflow-x-auto hide-scrollbar">
           {[...Array(4)].map((_, index) => (
-            <Card key={index} className="animate-pulse">
-              <CardContent className="p-6 h-32">
+            <Card key={index} className="animate-pulse h-24 min-w-[220px] flex-shrink-0">
+              <CardContent className="p-4 h-full">
                 <div className="flex items-center justify-between h-full">
-                  <div className="space-y-3 flex-1">
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-8 w-20" />
+                  <div className="space-y-1 flex-1">
+                    <Skeleton className="h-3 w-20 bg-gray-200" />
+                    <Skeleton className="h-6 w-12 bg-gray-200" />
                   </div>
-                  <Skeleton className="h-8 w-8 rounded-full" />
+                  <Skeleton className="h-8 w-8 rounded-lg bg-gray-200 ml-2" />
                 </div>
               </CardContent>
             </Card>
           ))}
         </div>
       ) : stats ? (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 animate-in fade-in duration-300">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
+        <div className="grid grid-cols-4 gap-4 overflow-x-auto hide-scrollbar animate-in fade-in duration-300">
+          <Card className="h-28 bg-white border shadow-sm hover:shadow-md hover:border-purple-300 transition-all duration-200 hover:scale-105">
+            <CardContent className="p-6 h-full">
+              <div className="flex items-center justify-between h-full">
+                <div className="space-y-1">
                   <p className="text-sm font-medium text-gray-600">Total Users</p>
-                  <p className="text-2xl font-bold text-purple-600">{stats.total_users || 0}</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.total_users || 0}</p>
                 </div>
-                <Users className="h-8 w-8 text-purple-400" />
+                <div className="p-3 bg-purple-50 rounded-lg">
+                  <Users className="h-6 w-6 text-purple-600" />
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
+          <Card className="h-28 bg-white border shadow-sm hover:shadow-md hover:border-gray-300 transition-all duration-200 hover:scale-105">
+            <CardContent className="p-6 h-full">
+              <div className="flex items-center justify-between h-full">
+                <div className="space-y-1">
                   <p className="text-sm font-medium text-gray-600">Total Requests</p>
                   <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
                 </div>
-                <FileText className="h-8 w-8 text-gray-400" />
+                <div className="p-3 bg-gray-50 rounded-lg">
+                  <FileText className="h-6 w-6 text-gray-600" />
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
+          <Card className="h-28 bg-white border shadow-sm hover:shadow-md hover:border-green-300 transition-all duration-200 hover:scale-105">
+            <CardContent className="p-6 h-full">
+              <div className="flex items-center justify-between h-full">
+                <div className="space-y-1">
                   <p className="text-sm font-medium text-gray-600">System Health</p>
-                  <p className="text-2xl font-bold text-green-600">Good</p>
+                  <p className="text-2xl font-bold text-gray-900">Good</p>
                 </div>
-                <Shield className="h-8 w-8 text-green-400" />
+                <div className="p-3 bg-green-50 rounded-lg">
+                  <Shield className="h-6 w-6 text-green-600" />
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
+          <Card className="h-28 bg-white border shadow-sm hover:shadow-md hover:border-purple-300 transition-all duration-200 hover:scale-105">
+            <CardContent className="p-6 h-full">
+              <div className="flex items-center justify-between h-full">
+                <div className="space-y-1">
                   <p className="text-sm font-medium text-gray-600">Active Sessions</p>
-                  <p className="text-2xl font-bold text-blue-600">{stats.active_sessions || 0}</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.active_sessions || 0}</p>
                 </div>
-                <Activity className="h-8 w-8 text-blue-400" />
+                <div className="p-3 bg-purple-50 rounded-lg">
+                  <Activity className="h-6 w-6 text-purple-600" />
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -419,6 +567,7 @@ export default function DashboardPage() {
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [executionTime, setExecutionTime] = useState<number | undefined>();
   const [cached, setCached] = useState<boolean | undefined>();
+  const [lastStatsUpdate, setLastStatsUpdate] = useState<number>(0);
 
   // Load dashboard data with progressive loading
   useEffect(() => {
@@ -437,8 +586,21 @@ export default function DashboardPage() {
           const dashboardStats = dashboardResponse.data;
           console.log('Dashboard stats loaded:', dashboardStats);
 
-          // Set stats immediately
+          // Debug: Log the dashboard stats to see if pending_handover_verifications is present
+          const timestamp = Date.now();
+          console.log('Dashboard stats received at:', new Date(timestamp).toISOString(), dashboardStats);
+          console.log('Pending handover verifications:', dashboardStats.pending_handover_verifications);
+          console.log('Last update was:', lastStatsUpdate ? new Date(lastStatsUpdate).toISOString() : 'never');
+          
+          // Ensure pending_handover_verifications is properly handled
+          if (dashboardStats.pending_handover_verifications === undefined || dashboardStats.pending_handover_verifications === null) {
+            console.warn('pending_handover_verifications is undefined/null, setting to 0');
+            dashboardStats.pending_handover_verifications = 0;
+          }
+          
+          // Set stats with timestamp tracking
           setStats(dashboardStats);
+          setLastStatsUpdate(timestamp);
 
           // Capture performance metrics
           if (dashboardResponse.execution_time_ms) {

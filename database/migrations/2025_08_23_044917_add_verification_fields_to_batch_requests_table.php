@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Schema\purpleprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('batch_requests', function (Blueprint $table) {
+        Schema::table('batch_requests', function (purpleprint $table) {
             // Verification tracking fields
             $table->boolean('is_verified')->default(false)->after('processing_notes');
             $table->integer('approved_count')->nullable()->after('is_verified');
@@ -30,7 +30,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('batch_requests', function (Blueprint $table) {
+        Schema::table('batch_requests', function (purpleprint $table) {
             $table->dropForeign(['verified_by_user_id']);
             $table->dropColumn([
                 'is_verified',

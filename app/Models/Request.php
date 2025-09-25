@@ -392,7 +392,9 @@ class Request extends Model
             'metadata' => [
                 'completed_by_name' => $user->name,
                 'old_status' => $this->getOriginal('status'),
-                'new_status' => 'completed'
+                'new_status' => 'completed',
+                'location_name' => 'Medical Record Department',
+                'completion_notes' => 'Case note completed and stored in Medical Record Department'
             ]
         ]);
 

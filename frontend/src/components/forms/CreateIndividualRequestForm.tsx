@@ -40,8 +40,7 @@ const createIndividualRequestSchema = z.object({
   department_id: z.number().min(1, 'Please select a department'),
   doctor_id: z.number().optional(),
   location_id: z.number().optional(),
-  priority: z.string().min(1, 'Please select a priority'),
-  purpose: z.string().min(10, 'Purpose must be at least 10 characters'),
+  purpose: z.string().optional(),
   needed_date: z.string().min(1, 'Please select when case notes are needed'),
   remarks: z.string().optional(),
 });
@@ -106,7 +105,6 @@ export const CreateIndividualRequestForm: React.FC<CreateIndividualRequestFormPr
       department_id: 0,
       doctor_id: undefined,
       location_id: undefined,
-      priority: '',
       purpose: '',
       needed_date: '',
       remarks: '',
@@ -214,7 +212,7 @@ export const CreateIndividualRequestForm: React.FC<CreateIndividualRequestFormPr
   const getPriorityBadge = (priority: string) => {
     const priorityConfig = {
       low: { variant: 'secondary', className: 'bg-gray-100 text-gray-800' },
-      normal: { variant: 'default', className: 'bg-blue-100 text-blue-800' },
+      normal: { variant: 'default', className: 'bg-purple-100 text-purple-800' },
       high: { variant: 'default', className: 'bg-orange-100 text-orange-800' },
       urgent: { variant: 'destructive', className: 'bg-red-100 text-red-800' },
     };
@@ -243,8 +241,6 @@ export const CreateIndividualRequestForm: React.FC<CreateIndividualRequestFormPr
       case 2:
         return (
           watchedValues.department_id > 0 &&
-          watchedValues.priority &&
-          watchedValues.purpose.length >= 10 &&
           watchedValues.needed_date
         );
       default:
@@ -287,7 +283,7 @@ export const CreateIndividualRequestForm: React.FC<CreateIndividualRequestFormPr
                     className={cn(
                       'w-10 h-10 rounded-full flex items-center justify-center border-2 transition-colors',
                       status === 'completed' && 'bg-green-500 border-green-500 text-white',
-                      status === 'current' && 'bg-blue-500 border-blue-500 text-white',
+                      status === 'current' && 'bg-purple-500 border-purple-500 text-white',
                       status === 'upcoming' && 'bg-gray-200 border-gray-300 text-gray-500'
                     )}
                   >
@@ -301,7 +297,7 @@ export const CreateIndividualRequestForm: React.FC<CreateIndividualRequestFormPr
                     <p className={cn(
                       'text-sm font-medium',
                       status === 'completed' && 'text-green-600',
-                      status === 'current' && 'text-blue-600',
+                      status === 'current' && 'text-purple-600',
                       status === 'upcoming' && 'text-gray-500'
                     )}>
                       {step.title}
@@ -460,34 +456,6 @@ export const CreateIndividualRequestForm: React.FC<CreateIndividualRequestFormPr
 
                   <FormField
                     control={form.control}
-                    name="priority"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Priority *</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select priority" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {priorities.map((priority) => (
-                              <SelectItem key={priority.value} value={priority.value}>
-                                <div className="flex items-center gap-2">
-                                  {getPriorityBadge(priority.value)}
-                                  <span>{priority.label}</span>
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
                     name="needed_date"
                     render={({ field }) => (
                       <FormItem>
@@ -513,16 +481,16 @@ export const CreateIndividualRequestForm: React.FC<CreateIndividualRequestFormPr
                   name="purpose"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Purpose *</FormLabel>
+                      <FormLabel>Purpose</FormLabel>
                       <FormControl>
                         <Textarea
-                          placeholder="Describe why you need these case notes..."
+                          placeholder="Optional: Describe why you need these case notes..."
                           className="min-h-[100px]"
                           {...field}
                         />
                       </FormControl>
                       <FormDescription>
-                        Provide a clear description of why you need these case notes
+                        Optional: Provide additional context about why these case notes are needed
                       </FormDescription>
                       <FormMessage />
                     </FormItem>

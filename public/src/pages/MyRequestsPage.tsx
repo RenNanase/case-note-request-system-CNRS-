@@ -29,7 +29,7 @@ const getStatusBadge = (status: string, displayStatus?: string, isWaitingForAppr
   if (displayStatus && isWaitingForApproval) {
     if (isIndividualRequest) {
       return (
-        <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200">
+        <Badge variant="outline" className="bg-purple-100 text-purple-800 border-purple-200">
           <Clock className="h-3 w-3" />
           <span>WAITING FOR MR APPROVAL</span>
         </Badge>
@@ -90,7 +90,7 @@ const getInvolvementBadge = (requestedBy: number, currentPIC: number, userId: nu
   // Handle individual requests (waiting for MR approval)
   if (isIndividualRequest) {
     return (
-      <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200">
+      <Badge variant="outline" className="bg-purple-100 text-purple-800 border-purple-200">
         <FileText className="h-3 w-3 mr-1" />
         Requested by Me
       </Badge>
@@ -112,7 +112,7 @@ const getInvolvementBadge = (requestedBy: number, currentPIC: number, userId: nu
     if (currentPIC === userId) {
       // User created it and still owns it
       return (
-        <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200">
+        <Badge variant="outline" className="bg-purple-100 text-purple-800 border-purple-200">
           <FileText className="h-3 w-3 mr-1" />
         Requested & Verified
         </Badge>

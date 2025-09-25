@@ -20,7 +20,8 @@ import {
   Calendar,
   Clock,
   CheckCircle,
-  XCircle
+  XCircle,
+  Download
 } from 'lucide-react';
 
 interface CaseNoteRequest {
@@ -85,6 +86,7 @@ const MRStaffCaseNoteRequestsPage: React.FC = () => {
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
   const [approvalAction, setApprovalAction] = useState<'approve' | 'reject'>('approve');
   const [approvalNotes, setApprovalNotes] = useState('');
+  const [pdfLoading, setPdfLoading] = useState(false);
 
   // Check permissions
   useEffect(() => {
@@ -337,6 +339,57 @@ const MRStaffCaseNoteRequestsPage: React.FC = () => {
     }
   };
 
+  // Handle PDF download
+  const handlePdfDownload = async () => {
+    if (!selectedCA) return;
+
+    try {
+      setPdfLoading(true);
+
+      // Get selected request IDs, or all pending requests if none selected
+      const requestIds = selectedRequests.length > 0
+        ? selectedRequests
+        : selectedCA.requests
+            .filter(r => r.status === 'pending')
+            .map(r => r.id);
+
+      // Generate PDF
+      const pdfBlob = await requestsApi.generateCaseNoteListPdf(selectedCA.ca_id, requestIds);
+
+      // Create download link
+      const url = window.URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = url;
+
+      // Generate filename
+      const safeName = selectedCA.ca_name.replace(/[^a-zA-Z0-9_-]/g, '_');
+      const date = new Date().toISOString().split('T')[0];
+      const filename = `Case_Notes_${safeName}_${date}.pdf`;
+
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        title: 'PDF Downloaded',
+        description: `Case note list for ${selectedCA.ca_name} has been downloaded successfully.`,
+        variant: 'default',
+      });
+
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+      toast({
+        title: 'Download Failed',
+        description: 'Failed to generate PDF. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setPdfLoading(false);
+    }
+  };
+
   // Refresh data for a specific CA group
   const refreshCAGroupData = async (caId: number) => {
     try {
@@ -422,7 +475,7 @@ const MRStaffCaseNoteRequestsPage: React.FC = () => {
       },
       normal: {
         variant: 'outline' as const,
-        className: 'border-blue-300 text-blue-700 bg-blue-50 text-xs'
+        className: 'border-purple-300 text-purple-700 bg-purple-50 text-xs'
       },
       high: {
         variant: 'outline' as const,
@@ -462,7 +515,7 @@ const MRStaffCaseNoteRequestsPage: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Pending & Returned Case Note Requests</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Request of The Day </h1>
           <p className="text-gray-600 mt-1">
             Review and approve pending case note requests from Clinic Assistants. Returned case notes (in red) were rejected by CAs during verification.
           </p>
@@ -523,11 +576,11 @@ const MRStaffCaseNoteRequestsPage: React.FC = () => {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                      <User className="h-5 w-5 text-blue-600" />
+                    <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                      <User className="h-5 w-5 text-purple-600" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-medium text-gray-900 cursor-pointer hover:text-blue-600 transition-colors"
+                      <h3 className="text-lg font-medium text-gray-900 cursor-pointer hover:text-purple-600 transition-colors"
                           onClick={() => handleCASelection(caGroup)}>
                         {caGroup.ca_name}
                       </h3>
@@ -554,9 +607,9 @@ const MRStaffCaseNoteRequestsPage: React.FC = () => {
                       variant="default"
                       size="sm"
                       onClick={() => handleCASelection(caGroup)}
-                      className="bg-blue-600 hover:bg-blue-700"
+                      className="bg-purple-600 hover:bg-purple-700"
                     >
-                      Review
+                      Verify
                     </Button>
                   </div>
                 </div>
@@ -574,6 +627,21 @@ const MRStaffCaseNoteRequestsPage: React.FC = () => {
             <DialogDescription>
               Review and approve pending case note requests from this Clinic Assistant. Returned case notes (in red) were rejected during verification.
             </DialogDescription>
+            <div className="flex justify-end mt-4">
+              <Button
+                variant="secondary"
+                onClick={handlePdfDownload}
+                disabled={pdfLoading}
+                className="flex items-center space-x-2"
+              >
+                {pdfLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4" />
+                )}
+                <span>{pdfLoading ? 'Generating...' : 'Download PDF'}</span>
+              </Button>
+            </div>
           </DialogHeader>
 
           <div className="space-y-4">
@@ -682,46 +750,43 @@ const MRStaffCaseNoteRequestsPage: React.FC = () => {
           </div>
 
           <DialogFooter className="flex justify-between">
-              <div className="text-sm text-gray-500">
-                {selectedRequests.length > 0 && (
-                  <span>{selectedRequests.length} case note(s) selected</span>
-                )}
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setSelectedCA(null)}
-                >
-                  Close
-                </Button>
-                {selectedRequests.length > 0 && (
-                  <>
-                    <Button
-                      variant="default"
-                      onClick={() => {
-                        setApprovalAction('approve');
-                        setShowApprovalDialog(true);
-                      }}
-                      className="flex items-center space-x-2"
-                    >
-                      <CheckCircle className="h-4 w-4" />
-                      <span>Approve Selected</span>
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      onClick={() => {
-                        setApprovalAction('reject');
-                        setShowApprovalDialog(true);
-                      }}
-                      className="flex items-center space-x-2"
-                    >
-                      <XCircle className="h-4 w-4" />
-                      <span>Reject Selected</span>
-                    </Button>
-                  </>
-                )}
-              </div>
-            </DialogFooter>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setSelectedCA(null)}
+              >
+                Close
+              </Button>
+            </div>
+            <div className="flex gap-2">
+              {selectedRequests.length > 0 && (
+                <>
+                  <Button
+                    variant="default"
+                    onClick={() => {
+                      setApprovalAction('approve');
+                      setShowApprovalDialog(true);
+                    }}
+                    className="flex items-center space-x-2"
+                  >
+                    <CheckCircle className="h-4 w-4" />
+                    <span>Approve Selected</span>
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={() => {
+                      setApprovalAction('reject');
+                      setShowApprovalDialog(true);
+                    }}
+                    className="flex items-center space-x-2"
+                  >
+                    <XCircle className="h-4 w-4" />
+                    <span>Reject Selected</span>
+                  </Button>
+                </>
+              )}
+            </div>
+          </DialogFooter>
           </DialogContent>
         </Dialog>
 
@@ -812,29 +877,29 @@ const MRStaffCaseNoteRequestsPage: React.FC = () => {
               {/* Confirmation Message */}
               <div className={`p-3 rounded-lg ${
                 approvalAction === 'approve'
-                  ? 'bg-blue-50 border border-blue-200'
+                  ? 'bg-purple-50 border border-purple-200'
                   : 'bg-orange-50 border border-orange-200'
               }`}>
                 <div className="flex items-start space-x-2">
                   <div className={`p-1 rounded ${
                     approvalAction === 'approve'
-                      ? 'bg-blue-100'
+                      ? 'bg-purple-100'
                       : 'bg-orange-100'
                   }`}>
                     {approvalAction === 'approve' ? (
-                      <CheckCircle className="h-4 w-4 text-blue-600" />
+                      <CheckCircle className="h-4 w-4 text-purple-600" />
                     ) : (
                       <XCircle className="h-4 w-4 text-orange-600" />
                     )}
                   </div>
                   <div className="text-sm">
                     <p className={`font-medium ${
-                      approvalAction === 'approve' ? 'text-blue-800' : 'text-orange-800'
+                      approvalAction === 'approve' ? 'text-purple-800' : 'text-orange-800'
                     }`}>
                       {approvalAction === 'approve' ? 'Ready to Approve' : 'Ready to Reject'}
                     </p>
                     <p className={`text-xs ${
-                      approvalAction === 'approve' ? 'text-blue-600' : 'text-orange-600'
+                      approvalAction === 'approve' ? 'text-purple-600' : 'text-orange-600'
                     }`}>
                       {selectedRequests.length} case note(s) will be {approvalAction === 'approve' ? 'approved' : 'rejected'}.
                     </p>

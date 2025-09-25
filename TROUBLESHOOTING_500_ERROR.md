@@ -124,7 +124,7 @@ readfile(__DIR__ . '/' . $file);
 
 ### Test 2: Asset Access
 - [ ] `/crns/frontend/assets/index-CPfXTIc0.js` loads with `application/javascript` MIME type
-- [ ] `/crns/frontend/assets/index-ARMcF9ci.css` loads with `text/css` MIME type
+- [ ] `/crns/frontend/assets/index-CbxKHTRT.css` loads with `text/css` MIME type
 
 ### Test 3: Frontend Application
 - [ ] `/crns/frontend/` loads the React application

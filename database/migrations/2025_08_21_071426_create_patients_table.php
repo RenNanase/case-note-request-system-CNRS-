@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Schema\purpleprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('patients', function (Blueprint $table) {
+        Schema::create('patients', function (purpleprint $table) {
             $table->id();
             $table->string('mrn', 20)->unique()->comment('Medical Record Number - unique identifier');
             $table->string('nric', 20)->nullable()->comment('National Registration Identity Card');

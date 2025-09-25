@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Schema\purpleprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('request_sequences', function (Blueprint $table) {
+        Schema::create('request_sequences', function (purpleprint $table) {
             $table->id();
             $table->string('date_key', 8)->unique()->comment('Date in YYYYMMDD format');
             $table->unsignedInteger('current_sequence')->default(0)->comment('Current sequence number for the date');

@@ -42,8 +42,7 @@ const createRequestSchema = z.object({
   department_id: z.number().min(1, 'Please select a department'),
   doctor_id: z.number().optional(),
   location_id: z.number().optional(),
-  priority: z.string().min(1, 'Please select a priority'),
-  purpose: z.string().min(10, 'Purpose must be at least 10 characters'),
+  purpose: z.string().optional(),
   needed_date: z.string().min(1, 'Please select when case notes are needed'),
   remarks: z.string().optional(),
 });
@@ -68,7 +67,7 @@ const STEPS = [
     id: 'details',
     title: 'Request Details',
     icon: FileText,
-    description: 'Specify priority, purpose, and additional information'
+    description: 'Specify purpose and additional information'
   },
   {
     id: 'review',
@@ -127,7 +126,6 @@ export default function CreateRequestPage() {
       department_id: 0,
       doctor_id: undefined,
       location_id: undefined,
-      priority: undefined,
       purpose: '',
       needed_date: undefined,
       remarks: '',
@@ -138,7 +136,7 @@ export default function CreateRequestPage() {
   const selectedDepartmentId = watch('department_id');
 
   // Watch the form values we need for validation
-  const watchedValues = watch(['priority', 'purpose', 'needed_date']);
+  const watchedValues = watch(['purpose', 'needed_date']);
 
   // Debug form state
   useEffect(() => {
@@ -261,14 +259,12 @@ export default function CreateRequestPage() {
         console.log('Step 1 validation:', { departmentId, deptValid });
         return deptValid;
       case 2: // Details step
-        const [priority, purpose, needed_date] = watchedValues;
-        const priorityValid = priority && priority !== '';
-        const purposeValid = purpose && purpose.trim().length >= 10;
+        const [purpose, needed_date] = watchedValues;
+        const purposeValid = true; // Purpose is now optional
         const dateValid = needed_date && needed_date !== '';
-        const detailsValid = priorityValid && purposeValid && dateValid;
+        const detailsValid = purposeValid && dateValid;
         console.log('Step 2 validation:', {
-          priority, priorityValid,
-          purpose, purposeLength: purpose?.length, purposeValid,
+          purpose, purposeLength: purpose?.length || 0, purposeValid,
           needed_date, dateValid,
           detailsValid,
           watchedValues
@@ -298,7 +294,6 @@ export default function CreateRequestPage() {
       department_id: 0,
       doctor_id: undefined,
       location_id: undefined,
-      priority: undefined,
       purpose: '',
       needed_date: undefined,
       remarks: '',
@@ -401,36 +396,6 @@ export default function CreateRequestPage() {
     }
   };
 
-  // Get priority badge with proper styling
-  const getPriorityBadge = (priority: string) => {
-    const config = {
-      low: {
-        variant: 'outline' as const,
-        className: 'border-gray-300 text-gray-700 bg-gray-50'
-      },
-      normal: {
-        variant: 'outline' as const,
-        className: 'border-blue-300 text-blue-700 bg-blue-50'
-      },
-      high: {
-        variant: 'outline' as const,
-        className: 'border-orange-300 text-orange-700 bg-orange-50'
-      },
-      urgent: {
-        variant: 'outline' as const,
-        className: 'border-red-300 text-red-700 bg-red-50'
-      },
-    };
-
-    const configItem = config[priority.toLowerCase() as keyof typeof config] || config.normal;
-
-    return (
-      <Badge variant={configItem.variant} className={`ml-2 ${configItem.className}`}>
-        {priorities.find(p => p.value === priority)?.label}
-      </Badge>
-    );
-  };
-
   // Format date for display
   const formatDate = (dateString: string) => {
     try {
@@ -479,19 +444,19 @@ export default function CreateRequestPage() {
                   <div className="flex flex-col items-center">
                     <div className={cn(
                       "w-12 h-12 rounded-full border-2 flex items-center justify-center transition-colors",
-                      isActive ? "border-blue-600 bg-blue-50" :
+                      isActive ? "border-purple-600 bg-purple-50" :
                       isCompleted ? "border-green-600 bg-green-50" : "border-gray-300 bg-gray-50"
                     )}>
                       <Icon className={cn(
                         "h-5 w-5",
-                        isActive ? "text-blue-600" :
+                        isActive ? "text-purple-600" :
                         isCompleted ? "text-green-600" : "text-gray-400"
                       )} />
                     </div>
                     <div className="mt-2 text-center">
                       <p className={cn(
                         "text-sm font-medium",
-                        isActive ? "text-blue-600" :
+                        isActive ? "text-purple-600" :
                         isCompleted ? "text-green-600" : "text-gray-500"
                       )}>
                         {step.title}
@@ -663,42 +628,10 @@ export default function CreateRequestPage() {
                   <span>Request Details</span>
                 </CardTitle>
                 <CardDescription>
-                  Specify the priority, purpose, and when you need the case notes
+                  Specify the purpose and when you need the case notes
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                                <FormField
-                  control={form.control}
-                  name="priority"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Priority *</FormLabel>
-                      <Select
-                        onValueChange={(value) => {
-                          console.log('Priority selected:', value);
-                          setValue('priority', value);
-                          console.log('Priority setValue called, new form values:', getValues());
-                        }}
-                        value={field.value || ''}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select priority level" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {priorities.map((priority) => (
-                            <SelectItem key={priority.value} value={priority.value}>
-                              {priority.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
                 <FormField
                   control={form.control}
                   name="needed_date"
@@ -730,10 +663,10 @@ export default function CreateRequestPage() {
                   name="purpose"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Purpose / Reason *</FormLabel>
+                      <FormLabel>Purpose / Reason</FormLabel>
                       <FormControl>
                         <Textarea
-                          placeholder="Please describe why you need access to these case notes..."
+                          placeholder="Optional: Describe why you need access to these case notes..."
                           className="resize-none"
                           rows={4}
                           value={field.value || ''}
@@ -745,7 +678,7 @@ export default function CreateRequestPage() {
                         />
                       </FormControl>
                       <FormDescription>
-                        Provide a clear explanation of why you need the case notes (minimum 10 characters)
+                        Optional: Provide additional context about why these case notes are needed
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -848,7 +781,9 @@ export default function CreateRequestPage() {
                     <div className="bg-gray-50 rounded-lg p-4 space-y-3">
                       <div className="flex items-center justify-between">
                         <span className="font-medium">Priority:</span>
-                        {getPriorityBadge(getValues('priority'))}
+                        <Badge variant="outline" className="ml-2 border-purple-300 text-purple-700 bg-purple-50">
+                          Normal
+                        </Badge>
                       </div>
                       <div>
                         <span className="font-medium">Needed by:</span>

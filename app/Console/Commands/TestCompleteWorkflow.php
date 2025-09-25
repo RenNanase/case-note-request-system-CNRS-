@@ -69,7 +69,7 @@ class TestCompleteWorkflow extends Command
 
         // Check CA users and their current case notes
         $this->info("\n=== CA Users and Their Case Notes ===");
-        $caUsers = User::whereIn('email', ['ca@cnrs.test', 'ca2@cnrs.test'])->get();
+        $caUsers = User::whereIn('email', ['ca@cnrs.jmc', 'ca2@cnrs.jmc'])->get();
 
         foreach ($caUsers as $caUser) {
             $this->line("\n--- CA User: {$caUser->name} (ID: {$caUser->id}) ---");

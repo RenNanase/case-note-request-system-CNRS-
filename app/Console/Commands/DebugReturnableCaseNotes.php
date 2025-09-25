@@ -31,7 +31,7 @@ class DebugReturnableCaseNotes extends Command
 
         // Check all case notes for CA users
         $this->info("\n=== All Case Notes for CA Users ===");
-        $caUsers = User::whereIn('email', ['ca@cnrs.test', 'ca2@cnrs.test'])->get();
+        $caUsers = User::whereIn('email', ['ca@cnrs.jmc', 'ca2@cnrs.jmc'])->get();
 
         foreach ($caUsers as $caUser) {
             $this->line("\n--- CA User: {$caUser->name} (ID: {$caUser->id}) ---");

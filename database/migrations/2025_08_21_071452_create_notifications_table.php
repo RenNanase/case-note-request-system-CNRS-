@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Schema\purpleprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('notifications', function (Blueprint $table) {
+        Schema::create('notifications', function (purpleprint $table) {
             $table->id();
             $table->string('uuid')->unique()->comment('Unique notification identifier');
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade')->comment('User to notify');

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Eye, EyeOff, Shield, User, UserCheck } from 'lucide-react';
+import { Eye, EyeOff, Shield, User, UserCheck, ChevronDown, ChevronUp } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,8 +13,10 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { authApi } from '@/api/auth';
 
+
+
 const loginSchema = z.object({
-  email: z.string().email('Please enter a valid email address'),
+  username: z.string().min(1, 'Username is required'),
   password: z.string().min(1, 'Password is required'),
 });
 
@@ -30,6 +32,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [userPreview, setUserPreview] = useState<UserPreview | null>(null);
+  const [showDemo, setShowDemo] = useState(false);
   const errorRef = useRef<string | null>(null);
   const hasRestoredError = useRef(false);
   const { login } = useAuth();
@@ -103,14 +106,14 @@ export default function LoginPage() {
     resolver: zodResolver(loginSchema),
   });
 
-  const watchEmail = watch('email');
+  const watchUsername = watch('username');
 
-  // Check if email exists when user types
+  // Check if username exists when user types
   React.useEffect(() => {
-    const checkEmail = async () => {
-      if (watchEmail && watchEmail.includes('@') && !errors.email) {
+    const checkUsername = async () => {
+      if (watchUsername && watchUsername.length > 0 && !errors.username) {
         try {
-          const response = await authApi.checkEmail(watchEmail);
+          const response = await authApi.checkEmail(watchUsername);
           if (response.success && response.exists) {
             setUserPreview({
               name: response.user_name || 'User',
@@ -120,7 +123,7 @@ export default function LoginPage() {
             setUserPreview(null);
           }
         } catch (error) {
-          // Ignore errors for email checking
+          // Ignore errors for username checking
           setUserPreview(null);
         }
       } else {
@@ -128,9 +131,9 @@ export default function LoginPage() {
       }
     };
 
-    const debounceTimeout = setTimeout(checkEmail, 500);
+    const debounceTimeout = setTimeout(checkUsername, 500);
     return () => clearTimeout(debounceTimeout);
-  }, [watchEmail, errors.email]);
+  }, [watchUsername, errors.username]);
 
   const onSubmit = async (data: LoginFormData) => {
     console.log('🔍 LoginPage: Form submitted, current error:', errorRef.current);
@@ -138,7 +141,7 @@ export default function LoginPage() {
 
     // IMPORTANT: Don't clear the login error here - let it persist
     // Only clear form validation errors
-    clearErrors('email');
+    clearErrors('username');
     clearErrors('password');
 
     try {
@@ -160,7 +163,7 @@ export default function LoginPage() {
           let errorMessage = response.message || 'Login failed';
 
           if (response.message?.includes('Invalid credentials')) {
-            errorMessage = 'Invalid email or password';
+            errorMessage = 'Invalid username or password';
           } else if (response.message?.includes('Account is deactivated')) {
             errorMessage = 'Account is deactivated';
           } else if (response.message?.includes('Too many attempts')) {
@@ -236,41 +239,62 @@ export default function LoginPage() {
     return displayError && displayError.trim().length > 0;
   };
 
+  // Subtle honeycomb/hexagon SVG pattern with small cells and low-opacity lines
+  const honeycombSvg = encodeURIComponent(`
+    <svg xmlns='http://www.w3.org/2000/svg' width='24' height='21' viewBox='0 0 24 21'>
+      <g fill='none' stroke='rgba(0,0,0,0.08)' stroke-width='1'>
+        <path d='M6 1.5 l6 3.5 v7 l-6 3.5 l-6 -3.5 v-7 z'/>
+        <path d='M18 1.5 l6 3.5 v7 l-6 3.5 l-6 -3.5 v-7 z'/>
+        <path d='M12 10 l6 3.5 v7 l-6 3.5 l-6 -3.5 v-7 z'/>
+      </g>
+    </svg>
+  `);
+
   return (
-    <div className="min-h-screen bg-canvas flex items-center justify-center px-4">
-      <div className="max-w-md w-full space-y-8">
+    <div
+      className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden"
+      style={{
+        // Layer 1: soft white -> faint pink gradient for depth
+        // Layer 2: radial fade to reduce pattern intensity at center
+        // Layer 3: subtle honeycomb pattern
+        backgroundImage: `linear-gradient(180deg, rgba(255,255,255,1), rgba(255,192,203,0.08)), radial-gradient(circle at 50% 40%, rgba(255,255,255,0.9), rgba(255,255,255,0.6) 35%, transparent 60%), url("data:image/svg+xml,${honeycombSvg}")`,
+        backgroundSize: 'auto, 900px 900px, 24px 21px',
+        backgroundPosition: 'center, center, center',
+        backgroundRepeat: 'no-repeat, no-repeat, repeat',
+      }}
+    >
+      <div className="max-w-md w-full space-y-8 relative z-10">
         {/* Header */}
         <div className="text-center">
-          {/* <div className="flex justify-center mb-4">
-            <img src="/cnrs.logo.png" alt="CNRS Logo" className="h-16 w-auto" />
-          </div> */}
-          <h2 className="text-xl font-semibold text-gray-700 mb-2">CASE NOTE REQUEST SYSTEM</h2>
-          <p className="text-gray-600">From request to record . Tracked every step</p>
+          <h1 className="sr-only">CNRS Login</h1>
+          <h2 className="text-2xl md:text-3xl font-extrabold text-black tracking-wide">CASE NOTE REQUEST SYSTEM</h2>
+          <div className="mt-2 h-1 w-24 mx-auto rounded-full bg-pink-600/80"></div>
+          <p className="mt-2 text-gray-700">From request to record · Tracked every step</p>
         </div>
 
         {/* Login Card */}
-        <Card className="shadow-soft-lg border-0 bg-white/90 backdrop-blur-sm">
+        <Card className="shadow-xl border border-pink-100/40 bg-white/95 backdrop-blur-sm">
           <CardHeader className="space-y-1 pb-4">
-            <CardTitle className="text-2xl text-center">Sign In</CardTitle>
+            <CardTitle className="text-2xl text-center text-black">Sign In</CardTitle>
             <CardDescription className="text-center text-gray-600">
               Enter your credentials to access the system
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              {/* Email Field */}
+              {/* Username Field */}
               <div className="space-y-2">
-                <Label htmlFor="email">Email Address</Label>
+                <Label htmlFor="username" className="text-black">Username</Label>
                 <Input
-                  id="email"
-                  type="email"
-                  placeholder="Enter your email"
-                  {...register('email')}
-                  className="h-11"
+                  id="username"
+                  type="text"
+                  placeholder="Enter your username"
+                  {...register('username')}
+                  className="h-11 border-gray-300 focus-visible:ring-pink-600"
                   disabled={loading}
                 />
-                {errors.email && (
-                  <p className="text-sm text-red-600">{errors.email.message}</p>
+                {errors.username && (
+                  <p className="text-sm text-red-600">{errors.username.message}</p>
                 )}
 
                 {/* User Preview */}
@@ -289,23 +313,24 @@ export default function LoginPage() {
 
               {/* Password Field */}
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password" className="text-black">Password</Label>
                 <div className="relative">
                   <Input
                     id="password"
                     type={showPassword ? 'text' : 'password'}
                     placeholder="Enter your password"
                     {...register('password')}
-                    className="h-11 pr-10"
+                    className="h-11 pr-10 border-gray-300 focus-visible:ring-pink-600"
                     disabled={loading}
                   />
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                    className="absolute right-0 top-0 h-full px-3 hover:bg-transparent text-black"
                     onClick={() => setShowPassword(!showPassword)}
                     disabled={loading}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
                   >
                     {showPassword ? (
                       <EyeOff className="h-4 w-4" />
@@ -319,7 +344,7 @@ export default function LoginPage() {
                 )}
               </div>
 
-              {/* Enhanced Error Alert - Minimalist Design */}
+              {/* Error */}
               {shouldShowError() && (
                 <div className="flex items-center gap-3 p-3 bg-red-50 border border-red-200 rounded-lg">
                   <div className="flex-shrink-0 w-2 h-2 bg-red-500 rounded-full"></div>
@@ -341,13 +366,10 @@ export default function LoginPage() {
                 </div>
               )}
 
-              {/* Remove the separate clear error button since it's now integrated */}
-
-
-              {/* Submit Button */}
+              {/* Submit */}
               <Button
                 type="submit"
-                className="w-full h-11 bg-gray-900 hover:bg-gray-800 text-white"
+                className="w-full h-11 bg-pink-600 hover:bg-pink-700 text-white"
                 disabled={loading}
               >
                 {loading ? 'Signing in...' : 'Sign In'}
@@ -356,51 +378,62 @@ export default function LoginPage() {
           </CardContent>
         </Card>
 
-        {/* Demo Credentials */}
-        <Card className="shadow-soft border-0 bg-white/70 backdrop-blur-sm">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg">Demo Login Credentials</CardTitle>
-            <CardDescription>Use these credentials to test the system</CardDescription>
+        {/* Demo Credentials (collapsible) */}
+        {/* <Card className="shadow-lg border-0 bg-white/95 backdrop-blur-sm">
+          <CardHeader className="pb-0">
+            <button
+              type="button"
+              onClick={() => setShowDemo((s) => !s)}
+              className="w-full flex items-center justify-between text-left py-2"
+              aria-expanded={showDemo}
+            >
+              <div>
+                <CardTitle className="text-base text-black">Demo Login Credentials</CardTitle>
+                <CardDescription>Use these to test the system</CardDescription>
+              </div>
+              {showDemo ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </button>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="grid gap-2">
-              <div className="flex items-center justify-between p-2 rounded bg-gray-50 border">
-                <div className="flex items-center gap-2">
-                  <User className="h-4 w-4" />
-                  <span className="font-medium">CA</span>
+          {showDemo && (
+            <CardContent className="space-y-3 pt-3">
+              <div className="grid gap-2">
+                <div className="flex items-center justify-between p-2 rounded bg-gray-50 border">
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    <span className="font-medium">CA</span>
+                  </div>
+                  <div className="text-sm text-gray-600">ca / password</div>
                 </div>
-                <div className="text-sm text-gray-600">ca@cnrs.test / password</div>
-              </div>
-              <div className="flex items-center justify-between p-2 rounded bg-gray-50 border">
-                <div className="flex items-center gap-2">
-                  <UserCheck className="h-4 w-4" />
-                  <span className="font-medium">MR Staff</span>
+                <div className="flex items-center justify-between p-2 rounded bg-gray-50 border">
+                  <div className="flex items-center gap-2">
+                    <UserCheck className="h-4 w-4" />
+                    <span className="font-medium">MR Staff</span>
+                  </div>
+                  <div className="text-sm text-gray-600">mr / password</div>
                 </div>
-                <div className="text-sm text-gray-600">mr@cnrs.test / password</div>
-              </div>
-              <div className="flex items-center justify-between p-2 rounded bg-gray-50 border">
-                <div className="flex items-center gap-2">
-                  <Shield className="h-4 w-4" />
-                  <span className="font-medium">Admin</span>
+                <div className="flex items-center justify-between p-2 rounded bg-gray-50 border">
+                  <div className="flex items-center gap-2">
+                    <Shield className="h-4 w-4" />
+                    <span className="font-medium">Admin</span>
+                  </div>
+                  <div className="text-sm text-gray-600">admin / password</div>
                 </div>
-                <div className="text-sm text-gray-600">admin@cnrs.test / password</div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          )}
+        </Card> */}
 
         {/* Footer */}
         <div className="text-center text-sm text-gray-500">
           <p>
-            © 2025 CNRS. All rights reserved.{' '}
+            © 2025 CNRS. All rights reserved.{" "}
             <a
               href="https://github.com/RenNanase"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-pink-600 hover:text-pink-800 hover:underline transition-colors"
+              className="inline-flex items-center gap-1 text-pink-600 hover:text-pink-700 hover:underline transition-colors"
             >
-              RN
-
+              REN
             </a>
           </p>
         </div>

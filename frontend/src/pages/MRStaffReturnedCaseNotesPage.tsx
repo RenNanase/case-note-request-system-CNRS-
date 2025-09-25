@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/contexts/ToastContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { requestsApi } from '@/api/requests';
 import { Calendar, User, FileText, CheckCircle, XCircle, ArrowLeft } from 'lucide-react';
 
 interface ReturnedCaseNote {
@@ -59,53 +60,28 @@ const MRStaffReturnedCaseNotesPage: React.FC = () => {
     console.log('User roles:', user?.roles);
   }, [user]);
 
-
-
   useEffect(() => {
     loadReturnSubmissions();
   }, []);
 
-  const loadReturnSubmissions = async () => {
+  const loadReturnSubmissions = async (): Promise<CAReturnSubmission[]> => {
     try {
       setLoading(true);
-      console.log('Loading returned submissions...');
-      console.log('Auth token:', localStorage.getItem('cnrs_token') ? 'Present' : 'Missing');
-
-      const response = await fetch('/api/case-notes/returned-submissions', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('cnrs_token')}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      console.log('API Response status:', response.status);
-      console.log('API Response headers:', Object.fromEntries(response.headers.entries()));
-
-      if (response.ok) {
-        const data = await response.json();
-        console.log('API Response data:', data);
-
-        if (data.success) {
-          console.log('Setting return submissions:', data.submissions);
-          const newSubmissions = data.submissions || [];
-          setReturnSubmissions(newSubmissions);
-
-          // If we're currently viewing a submission that no longer exists, go back to list
-          if (selectedSubmission && !newSubmissions.find((s: CAReturnSubmission) => s.ca_user_id === selectedSubmission.ca_user_id)) {
-            setSelectedSubmission(null);
-          }
-        } else {
-          console.error('API Error:', data.message);
-          toast({
-            title: 'Error',
-            description: data.message || 'Failed to load returned case notes',
-            variant: 'destructive',
-          });
+      const data = await requestsApi.getReturnedSubmissions();
+      if (data.success) {
+        const newSubmissions = data.submissions || [];
+        setReturnSubmissions(newSubmissions);
+        if (selectedSubmission && !newSubmissions.find((s: CAReturnSubmission) => s.ca_user_id === selectedSubmission.ca_user_id)) {
+          setSelectedSubmission(null);
         }
+        return newSubmissions;
       } else {
-        const errorText = await response.text();
-        console.error('HTTP Error:', response.status, errorText);
-        throw new Error(`HTTP ${response.status}: ${errorText}`);
+        toast({
+          title: 'Error',
+          description: data.message || 'Failed to load returned case notes',
+          variant: 'destructive',
+        });
+        return [];
       }
     } catch (error) {
       console.error('Error loading returned case notes:', error);
@@ -114,6 +90,7 @@ const MRStaffReturnedCaseNotesPage: React.FC = () => {
         description: 'Failed to load returned case notes',
         variant: 'destructive',
       });
+      return [];
     } finally {
       setLoading(false);
     }
@@ -153,60 +130,35 @@ const MRStaffReturnedCaseNotesPage: React.FC = () => {
 
     try {
       setSubmitting(true);
-      const response = await fetch('/api/case-notes/verify-returned', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('cnrs_token')}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          case_note_ids: selectedCaseNotes,
-          verification_notes: verificationNotes,
-          action: 'verify'
-        }),
+      const data = await requestsApi.verifyReturnedCaseNotes({
+        case_note_ids: selectedCaseNotes,
+        action: 'verify',
+        verification_notes: verificationNotes
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          toast({
-            title: 'Success',
-            description: `Successfully verified ${selectedCaseNotes.length} case note(s)`,
-            variant: 'success',
-          });
-
-                    // Refresh the data and update the selected submission
-          await loadReturnSubmissions();
-
-          // Update the selected submission with fresh data
-          if (selectedSubmission) {
-            const updatedSubmission = returnSubmissions.find(s => s.ca_user_id === selectedSubmission.ca_user_id);
-            if (updatedSubmission && updatedSubmission.case_notes.length > 0) {
-              setSelectedSubmission(updatedSubmission);
-            } else {
-              // If no more case notes for this CA, go back to list
-              setSelectedSubmission(null);
-              toast({
-                title: 'Info',
-                description: 'All case notes for this CA have been processed. Returning to main list.',
-                variant: 'default',
-              });
-            }
+      if (data.success) {
+        toast({
+          title: 'Success',
+          description: `Successfully verified ${selectedCaseNotes.length} case note(s)`,
+          variant: 'success',
+        });
+        const fresh = await loadReturnSubmissions();
+        if (selectedSubmission) {
+          const updated = fresh.find(s => s.ca_user_id === selectedSubmission.ca_user_id);
+          if (updated && updated.case_notes.length > 0) {
+            setSelectedSubmission(updated);
+          } else {
+            setSelectedSubmission(null);
           }
-
-          // Reset form
-          setSelectedCaseNotes([]);
-          setVerificationNotes('');
-        } else {
-          toast({
-            title: 'Error',
-            description: data.message || 'Failed to verify case notes',
-            variant: 'destructive',
-          });
         }
+        setSelectedCaseNotes([]);
+        setVerificationNotes('');
       } else {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to verify case notes');
+        toast({
+          title: 'Error',
+          description: data.message || 'Failed to verify case notes',
+          variant: 'destructive',
+        });
       }
     } catch (error) {
       console.error('Error verifying case notes:', error);
@@ -241,60 +193,35 @@ const MRStaffReturnedCaseNotesPage: React.FC = () => {
 
     try {
       setSubmitting(true);
-      const response = await fetch('/api/case-notes/verify-returned', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('cnrs_token')}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          case_note_ids: selectedCaseNotes,
-          rejection_reason: rejectionReason,
-          action: 'reject'
-        }),
+      const data = await requestsApi.verifyReturnedCaseNotes({
+        case_note_ids: selectedCaseNotes,
+        action: 'reject',
+        rejection_reason: rejectionReason
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          toast({
-            title: 'Rejected',
-            description: `Successfully rejected ${selectedCaseNotes.length} case note(s)`,
-            variant: 'destructive',
-          });
-
-                    // Refresh the data and update the selected submission
-          await loadReturnSubmissions();
-
-          // Update the selected submission with fresh data
-          if (selectedSubmission) {
-            const updatedSubmission = returnSubmissions.find(s => s.ca_user_id === selectedSubmission.ca_user_id);
-            if (updatedSubmission && updatedSubmission.case_notes.length > 0) {
-              setSelectedSubmission(updatedSubmission);
-            } else {
-              // If no more case notes for this CA, go back to list
-              setSelectedSubmission(null);
-              toast({
-                title: 'Info',
-                description: 'All case notes for this CA have been processed. Returning to main list.',
-                variant: 'default',
-              });
-            }
+      if (data.success) {
+        toast({
+          title: 'Rejected',
+          description: `Successfully rejected ${selectedCaseNotes.length} case note(s)`,
+          variant: 'destructive',
+        });
+        const fresh = await loadReturnSubmissions();
+        if (selectedSubmission) {
+          const updated = fresh.find(s => s.ca_user_id === selectedSubmission.ca_user_id);
+          if (updated && updated.case_notes.length > 0) {
+            setSelectedSubmission(updated);
+          } else {
+            setSelectedSubmission(null);
           }
-
-          // Reset form
-          setSelectedCaseNotes([]);
-          setRejectionReason('');
-        } else {
-          toast({
-            title: 'Error',
-            description: data.message || 'Failed to reject case notes',
-            variant: 'destructive',
-          });
         }
+        setSelectedCaseNotes([]);
+        setRejectionReason('');
       } else {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to reject case notes');
+        toast({
+          title: 'Error',
+          description: data.message || 'Failed to reject case notes',
+          variant: 'destructive',
+        });
       }
     } catch (error) {
       console.error('Error rejecting case notes:', error);
@@ -310,10 +237,10 @@ const MRStaffReturnedCaseNotesPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="container mx-auto p-6">
+      <div className="space-y-6">
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
             <p className="text-gray-600">Loading returned case notes...</p>
           </div>
         </div>
@@ -323,28 +250,31 @@ const MRStaffReturnedCaseNotesPage: React.FC = () => {
 
   if (selectedSubmission) {
     return (
-      <div className="container mx-auto p-6">
-        <div className="mb-6">
-          <Button
-            variant="outline"
-            onClick={handleBackToList}
-            className="mb-4"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to List
-          </Button>
-
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            Returned Case Notes - {selectedSubmission.ca_name}
-          </h1>
-          <p className="text-gray-600">
-            Submitted on {new Date(selectedSubmission.submission_date).toLocaleString()}
-          </p>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <Button
+              variant="outline"
+              onClick={handleBackToList}
+              className="mb-4"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to List
+            </Button>
+            <h1 className="text-3xl font-bold text-gray-900">Returned Case Notes</h1>
+            <p className="text-gray-600 mt-1">
+              Review and verify case notes returned by {selectedSubmission.ca_name}
+            </p>
+            <p className="text-sm text-gray-500 mt-1">
+              Submitted on {new Date(selectedSubmission.submission_date).toLocaleString()}
+            </p>
+          </div>
         </div>
 
         <div className="grid gap-4">
           {selectedSubmission.case_notes.map((caseNote) => (
-            <Card key={caseNote.id} className="border-l-4 border-l-blue-500">
+            <Card key={caseNote.id} className="border-l-4 border-l-purple-500">
               <CardContent className="p-4">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
@@ -371,10 +301,10 @@ const MRStaffReturnedCaseNotesPage: React.FC = () => {
                         <span>Doctor: {caseNote.doctor.name}</span>
                       </div>
 
-                                             <div className="flex items-center gap-2 text-sm text-gray-600">
-                         <Calendar className="h-4 w-4" />
-                         <span>Returned: {new Date(caseNote.returned_at).toLocaleString()}</span>
-                       </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <Calendar className="h-4 w-4" />
+                        <span>Returned: {new Date(caseNote.returned_at).toLocaleString()}</span>
+                      </div>
 
                       {caseNote.return_notes && (
                         <div className="flex items-start gap-2 text-sm text-gray-600">
@@ -452,63 +382,72 @@ const MRStaffReturnedCaseNotesPage: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto p-6">
-            <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">
-          Returned Case Notes
-        </h1>
-        <p className="text-gray-600">
-          Review and verify case notes returned by CA users
-        </p>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Returned Case Notes</h1>
+          <p className="text-gray-600 mt-1">
+            Review and verify case notes returned by CA users
+          </p>
+        </div>
       </div>
 
-      {returnSubmissions.length === 0 ? (
-        <Card>
-          <CardContent className="p-8 text-center">
-            <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              No returned case notes
-            </h3>
-            <p className="text-gray-600">
-              There are currently no case notes waiting for verification.
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {returnSubmissions.map((submission) => (
-            <Card
-              key={submission.ca_user_id}
-              className="cursor-pointer hover:shadow-md transition-shadow border-l-4 border-l-blue-500"
-              onClick={() => handleSubmissionClick(submission)}
-            >
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <User className="h-5 w-5 text-blue-600" />
-                  {submission.ca_name}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                                     <div className="flex items-center gap-2 text-sm text-gray-600">
-                     <Calendar className="h-4 w-4" />
-                     <span>{new Date(submission.submission_date).toLocaleString()}</span>
-                   </div>
+      {/* Returned Case Notes List */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Returned Case Notes
+          </CardTitle>
+          <CardDescription>
+            {returnSubmissions.length} submission(s) waiting for verification
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {returnSubmissions.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+              <h3 className="text-lg font-medium mb-2">No Returned Case Notes</h3>
+              <p>There are currently no case notes waiting for verification</p>
+            </div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {returnSubmissions.map((submission) => (
+                <Card
+                  key={submission.ca_user_id}
+                  className="cursor-pointer hover:shadow-md transition-shadow border-l-4 border-l-purple-500"
+                  onClick={() => handleSubmissionClick(submission)}
+                >
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <User className="h-5 w-5 text-purple-600" />
+                      {submission.ca_name}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <Calendar className="h-4 w-4" />
+                        <span>{new Date(submission.submission_date).toLocaleString()}</span>
+                      </div>
 
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <FileText className="h-4 w-4" />
-                    <span>{submission.total_count} case note(s) returned</span>
-                  </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <FileText className="h-4 w-4" />
+                        <span>{submission.total_count} case note(s) returned</span>
+                      </div>
 
-                  <Badge variant="outline" className="w-fit">
-                    Pending Verification
-                  </Badge>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+                      <Badge variant="outline" className="w-fit">
+                        Pending Verification
+                      </Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };

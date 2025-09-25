@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Schema\purpleprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('import_progress', function (Blueprint $table) {
+        Schema::create('import_progress', function (purpleprint $table) {
             $table->id();
             $table->string('import_type'); // patients, case_notes, users
             $table->string('file_name');

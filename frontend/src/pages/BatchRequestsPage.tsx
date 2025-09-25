@@ -2,9 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Search, CheckCircle, XCircle, Clock, Filter, Package, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, CheckCircle, XCircle, Clock, Package, ChevronDown, ChevronUp } from 'lucide-react';
 import { useToast } from '@/contexts/ToastContext';
 import { requestsApi } from '@/api/requests';
 import { useAuth } from '@/contexts/AuthContext';
@@ -81,8 +79,8 @@ export const BatchRequestsPage: React.FC = () => {
   const [batchRequests, setBatchRequests] = useState<BatchRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [searchTerm] = useState('');
+  const [statusFilter] = useState('all');
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showVerifyModal, setShowVerifyModal] = useState(false);
   const [selectedBatchForVerification, setSelectedBatchForVerification] = useState<BatchRequest | null>(null);
@@ -151,7 +149,7 @@ export const BatchRequestsPage: React.FC = () => {
         variant: 'outline' as const,
         icon: CheckCircle,
         text: 'Partially Approved',
-        className: 'border-blue-300 text-blue-700 bg-blue-50'
+        className: 'border-purple-300 text-purple-700 bg-purple-50'
       },
     };
 
@@ -289,39 +287,7 @@ export const BatchRequestsPage: React.FC = () => {
         </div>
       )}
 
-      {/* Filters */}
-      <Card className="mb-6">
-        <CardContent className="p-4">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  placeholder="Search by batch number, requester, or case note details..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Filter className="h-4 w-4 text-gray-400" />
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="approved">Approved</SelectItem>
-                  <SelectItem value="rejected">Rejected</SelectItem>
-                  <SelectItem value="partially_approved">Partially Approved</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+
 
       {/* Batch Requests List */}
       {loading ? (
@@ -356,6 +322,7 @@ export const BatchRequestsPage: React.FC = () => {
                   : 'All case note requests have been processed'
               }
             </p>
+
             {!searchTerm && statusFilter === 'all' && hasRole('CA') && (
               <Button onClick={() => setShowCreateForm(true)} className="mt-4">
                 <Plus className="h-4 w-4 mr-2" />
@@ -367,14 +334,14 @@ export const BatchRequestsPage: React.FC = () => {
       ) : (
         <div className="space-y-4">
           {filteredBatchRequests.map((batch) => (
-            <Card key={batch.id} className="hover:shadow-lg transition-all duration-200 border-l-4 border-l-blue-500">
+            <Card key={batch.id} className="hover:shadow-lg transition-all duration-200 border-l-4 border-l-purple-500">
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     {/* Header Section */}
                     <div className="flex items-center space-x-3 mb-4">
-                      <div className="bg-blue-100 p-2 rounded-lg">
-                        <Package className="h-6 w-6 text-blue-600" />
+                      <div className="bg-purple-100 p-2 rounded-lg">
+                        <Package className="h-6 w-6 text-purple-600" />
                       </div>
                       <div className="flex-1">
                         <h3 className="text-xl font-bold text-gray-900">
@@ -418,7 +385,7 @@ export const BatchRequestsPage: React.FC = () => {
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-3">
                         <div
-                          className="bg-gradient-to-r from-green-500 to-blue-500 h-3 rounded-full transition-all duration-300"
+                          className="bg-gradient-to-r from-green-500 to-purple-500 h-3 rounded-full transition-all duration-300"
                           style={{
                             width: `${((batch.approved_count + batch.rejected_count) / (batch.requests_count + batch.approved_count + batch.rejected_count)) * 100}%`
                           }}
@@ -457,7 +424,7 @@ export const BatchRequestsPage: React.FC = () => {
                         <div className="flex items-center justify-between mb-3">
                           <h4 className="text-sm font-semibold text-gray-700">Latest Pending Case Notes</h4>
                           {batch.has_more_pending && (
-                            <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
+                            <span className="text-xs text-purple-600 bg-purple-50 px-2 py-1 rounded-full">
                               +{batch.pending_count - batch.requests.length} more
                             </span>
                           )}
@@ -504,25 +471,25 @@ export const BatchRequestsPage: React.FC = () => {
 
                     {/* Verification Progress - only show for approved batches */}
                     {batch.status === 'approved' && (
-                      <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                      <div className="mb-6 p-4 bg-purple-50 rounded-lg border border-purple-200">
                         <div className="flex items-center space-x-2 mb-3">
-                          <Package className="h-5 w-5 text-blue-600" />
-                          <span className="font-medium text-blue-700">Receipt Verification</span>
+                          <Package className="h-5 w-5 text-purple-600" />
+                          <span className="font-medium text-purple-700">Receipt Verification</span>
                         </div>
-                        <div className="flex justify-between text-sm text-blue-700 mb-2">
+                        <div className="flex justify-between text-sm text-purple-700 mb-2">
                           <span>Progress</span>
                           <span>{batch.received_count || 0}/{batch.approved_count || 0} received</span>
                         </div>
-                        <div className="w-full bg-blue-100 rounded-full h-2">
+                        <div className="w-full bg-purple-100 rounded-full h-2">
                           <div
-                            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                            className="bg-purple-600 h-2 rounded-full transition-all duration-300"
                             style={{
                               width: `${batch.approved_count ? ((batch.received_count || 0) / batch.approved_count) * 100 : 0}%`
                             }}
                           ></div>
                         </div>
                         {batch.is_verified && (
-                          <div className="mt-2 text-xs text-blue-600 flex items-center space-x-1">
+                          <div className="mt-2 text-xs text-purple-600 flex items-center space-x-1">
                             <CheckCircle className="h-3 w-3" />
                             <span>All case notes verified as received</span>
                           </div>

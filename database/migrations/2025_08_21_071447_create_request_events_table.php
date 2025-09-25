@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Schema\purpleprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('request_events', function (Blueprint $table) {
+        Schema::create('request_events', function (purpleprint $table) {
             $table->id();
             $table->foreignId('request_id')->constrained('requests')->onDelete('cascade')->comment('Request this event belongs to');
             $table->enum('type', [

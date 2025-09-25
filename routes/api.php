@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Http\Request as HttpRequest;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
 use App\Models\Request as CaseNoteRequest;
@@ -19,7 +20,7 @@ use App\Models\Request as CaseNoteRequest;
 // Public authentication routes
 Route::prefix('auth')->group(function () {
     Route::post('login', [AuthController::class, 'login']);
-    Route::post('check-email', [AuthController::class, 'checkEmail']);
+    Route::post('check-username', [AuthController::class, 'checkEmail']); // Renamed to reflect username checking
     Route::get('roles', [AuthController::class, 'roles']);
 });
 
@@ -46,6 +47,13 @@ Route::middleware('auth:api')->group(function () {
         ]);
     });
 
+    // Case Note Tracking
+    Route::prefix('case-notes')->group(function () {
+        Route::get('tracking', [App\Http\Controllers\Api\CaseNoteTrackingController::class, 'index']);
+        Route::get('tracking/export', [App\Http\Controllers\Api\CaseNoteTrackingController::class, 'export']);
+        Route::get('tracking/pdf', [App\Http\Controllers\Api\CaseNoteTrackingController::class, 'generatePdf']);
+    });
+
     // Case Note Requests
     Route::get('requests', [App\Http\Controllers\Api\RequestController::class, 'index']);
     Route::post('requests', [App\Http\Controllers\Api\RequestController::class, 'store']);
@@ -59,6 +67,9 @@ Route::middleware('auth:api')->group(function () {
     Route::post('requests/{id}/approve', [App\Http\Controllers\Api\RequestController::class, 'approve']);
     Route::post('requests/{id}/reject', [App\Http\Controllers\Api\RequestController::class, 'reject']);
     Route::post('requests/{id}/complete', [App\Http\Controllers\Api\RequestController::class, 'complete']);
+
+    // PDF generation routes
+    Route::get('requests/ca/{caId}/pdf', [App\Http\Controllers\Api\RequestController::class, 'generateCaseNoteListPdf']);
 
     // Individual Case Note Requests (for CAs)
     Route::prefix('individual-requests')->group(function () {
@@ -103,12 +114,13 @@ Route::middleware('auth:api')->group(function () {
 
         // Doctor management
         Route::prefix('doctors')->group(function () {
-            Route::get('/', [App\Http\Controllers\Api\DoctorController::class, 'index']);
-            Route::post('/', [App\Http\Controllers\Api\DoctorController::class, 'store']);
-            Route::get('/{doctor}', [App\Http\Controllers\Api\DoctorController::class, 'show']);
-            Route::put('/{doctor}', [App\Http\Controllers\Api\DoctorController::class, 'update']);
-            Route::delete('/{doctor}', [App\Http\Controllers\Api\DoctorController::class, 'destroy']);
-            Route::patch('/{doctor}/toggle-status', [App\Http\Controllers\Api\DoctorController::class, 'toggleStatus']);
+            Route::get('/', [App\Http\Controllers\Api\Admin\DoctorController::class, 'index']);
+            Route::post('/', [App\Http\Controllers\Api\Admin\DoctorController::class, 'store']);
+            Route::get('/stats', [App\Http\Controllers\Api\Admin\DoctorController::class, 'getStats']);
+            Route::get('/{doctor}', [App\Http\Controllers\Api\Admin\DoctorController::class, 'show']);
+            Route::put('/{doctor}', [App\Http\Controllers\Api\Admin\DoctorController::class, 'update']);
+            Route::delete('/{doctor}', [App\Http\Controllers\Api\Admin\DoctorController::class, 'destroy']);
+            Route::patch('/{doctor}/toggle-status', [App\Http\Controllers\Api\Admin\DoctorController::class, 'toggleStatus']);
         });
 
         // User management
@@ -170,6 +182,14 @@ Route::middleware('auth:api')->group(function () {
     Route::get('/case-notes/{caseNoteId}/timeline', [App\Http\Controllers\Api\CaseNoteTimelineController::class, 'getTimeline']);
     Route::post('/case-notes/timeline/update-doctor-info', [App\Http\Controllers\Api\CaseNoteTimelineController::class, 'updateExistingEventsWithDoctorInfo']);
 
+    // Opened Case Notes routes (MR Staff)
+    Route::prefix('opened-case-notes')->group(function () {
+        Route::get('/', [App\Http\Controllers\Api\OpenedCaseNoteController::class, 'index']);
+        Route::post('/', [App\Http\Controllers\Api\OpenedCaseNoteController::class, 'store']);
+        Route::post('/check-restriction', [App\Http\Controllers\Api\OpenedCaseNoteController::class, 'checkPatientRestriction']);
+        Route::post('/{id}/deactivate', [App\Http\Controllers\Api\OpenedCaseNoteController::class, 'deactivate']);
+    });
+
     // Handover request routes
     Route::post('/case-notes/{caseNoteId}/request-handover', [App\Http\Controllers\Api\HandoverRequestController::class, 'requestHandover']);
     Route::get('/handover-requests/my-requests', [App\Http\Controllers\Api\HandoverRequestController::class, 'getMyHandoverRequests']);
@@ -178,6 +198,16 @@ Route::middleware('auth:api')->group(function () {
     Route::get('/handover-requests/pending-verification', [App\Http\Controllers\Api\HandoverRequestController::class, 'getHandoverRequestsPendingVerification']);
     Route::post('/handover-requests/{handoverRequestId}/respond', [App\Http\Controllers\Api\HandoverRequestController::class, 'respondToHandoverRequest']);
     Route::post('/handover-requests/{handoverRequestId}/verify', [App\Http\Controllers\Api\HandoverRequestController::class, 'verifyHandoverRequest']);
+});
+
+// Health check route (public)
+// Public test route
+Route::get('test', function () {
+    return response()->json([
+        'status' => 'success',
+        'message' => 'API is working!',
+        'timestamp' => now(),
+    ]);
 });
 
 // Health check route (public)

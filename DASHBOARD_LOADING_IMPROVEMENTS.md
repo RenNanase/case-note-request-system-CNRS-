@@ -97,7 +97,7 @@ if (dashboardResponse.cached) {
 ### 4. Subtle Animations
 ```tsx
 // Progress component with fade-in animation
-<Card className="mb-6 border-blue-200 bg-blue-50 animate-in fade-in duration-300">
+<Card className="mb-6 border-purple-200 bg-purple-50 animate-in fade-in duration-300">
 
 // Stats cards with fade-in animation
 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 animate-in fade-in duration-300">

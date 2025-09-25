@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Schema\purpleprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('request_events', function (Blueprint $table) {
+        Schema::table('request_events', function (purpleprint $table) {
             // Drop the existing enum and recreate it with new values
             $table->enum('type', [
                 'created', 'submitted', 'approved', 'rejected',
@@ -26,7 +26,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('request_events', function (Blueprint $table) {
+        Schema::table('request_events', function (purpleprint $table) {
             // Revert to original enum values
             $table->enum('type', [
                 'created', 'submitted', 'approved', 'rejected',

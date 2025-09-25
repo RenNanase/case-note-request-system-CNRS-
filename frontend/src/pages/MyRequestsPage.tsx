@@ -24,12 +24,22 @@ import { HandoverRequestModal } from '@/components/modals/HandoverRequestModal';
 import type { CaseNoteRequest, Patient } from '@/types/requests';
 
 // Status badge component
-const getStatusBadge = (status: string, displayStatus?: string, isWaitingForApproval?: boolean, isIndividualRequest?: boolean, isCompletedAndHandedOver?: boolean) => {
+const getStatusBadge = (status: string, displayStatus?: string, isWaitingForApproval?: boolean, isIndividualRequest?: boolean, isCompletedAndHandedOver?: boolean, isRejectedReturn?: boolean) => {
+  // Check for rejected return status first
+  if (isRejectedReturn) {
+    return (
+      <Badge variant="outline" className="bg-red-100 text-red-800 border-red-200">
+        <AlertTriangle className="h-3 w-3" />
+        <span>REJECTED RETURN</span>
+      </Badge>
+    );
+  }
+
   // If there's a custom display status (like "Waiting for Approval"), use it
   if (displayStatus && isWaitingForApproval) {
     if (isIndividualRequest) {
       return (
-        <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200">
+        <Badge variant="outline" className="bg-purple-100 text-purple-800 border-purple-200">
           <Clock className="h-3 w-3" />
           <span>WAITING FOR MR APPROVAL</span>
         </Badge>
@@ -90,7 +100,7 @@ const getInvolvementBadge = (requestedBy: number, currentPIC: number, userId: nu
   // Handle individual requests (waiting for MR approval)
   if (isIndividualRequest) {
     return (
-      <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200">
+      <Badge variant="outline" className="bg-purple-100 text-purple-800 border-purple-200">
         <FileText className="h-3 w-3 mr-1" />
         Requested by Me
       </Badge>
@@ -112,7 +122,7 @@ const getInvolvementBadge = (requestedBy: number, currentPIC: number, userId: nu
     if (currentPIC === userId) {
       // User created it and still owns it
       return (
-        <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200">
+        <Badge variant="outline" className="bg-purple-100 text-purple-800 border-purple-200">
           <FileText className="h-3 w-3 mr-1" />
         Requested & Verified
         </Badge>
@@ -320,32 +330,32 @@ export default function MyRequestsPage() {
 
 
       {/* Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Filter className="h-5 w-5" />
+      <Card className="border-slate-200/60">
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center space-x-2 text-lg">
+            <Filter className="h-5 w-5 text-gray-600" />
             <span>Filters</span>
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-0">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">Search</label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
                   placeholder="Search by patient name, MRN, or request number..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                 />
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">Status</label>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
+                <SelectTrigger className="focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
                   <SelectValue placeholder="All statuses" />
                 </SelectTrigger>
                 <SelectContent>
@@ -361,10 +371,10 @@ export default function MyRequestsPage() {
               </Select>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Involvement</label>
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">Involvement</label>
               <Select value={involvementFilter} onValueChange={setInvolvementFilter}>
-                <SelectTrigger>
+                <SelectTrigger className="focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
                   <SelectValue placeholder="All involvement" />
                 </SelectTrigger>
                 <SelectContent>
@@ -422,24 +432,19 @@ export default function MyRequestsPage() {
             <div className="text-center py-8">
               <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4" />
               <p className="text-gray-500 mb-4">No case note requests found</p>
-              <Link to="/requests/new">
-                <Button>
-                  <FileText className="h-4 w-4 mr-2" />
-                  Create New Request
-                </Button>
-              </Link>
+
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto bg-white rounded-lg border border-gray-200">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-3 px-4 font-medium text-gray-700">Date</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-700">Patient Name</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-700">MRN</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-700">Status</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-700">Involvement</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-700">Actions</th>
+                  <tr className="bg-gray-50/50 border-b border-gray-200">
+                    <th className="text-left py-4 px-6 font-semibold text-gray-900 text-sm">Date</th>
+                    <th className="text-left py-4 px-6 font-semibold text-gray-900 text-sm">Patient Name</th>
+                    <th className="text-left py-4 px-6 font-semibold text-gray-900 text-sm">MRN</th>
+                    <th className="text-left py-4 px-6 font-semibold text-gray-900 text-sm">Status</th>
+                    <th className="text-left py-4 px-6 font-semibold text-gray-900 text-sm">Involvement</th>
+                    <th className="text-left py-4 px-6 font-semibold text-gray-900 text-sm">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -451,12 +456,12 @@ export default function MyRequestsPage() {
 
                     // Apply pink background for completed and handed over case notes
                     const rowClassName = isCompletedAndHandedOver
-                      ? "border-b hover:bg-pink-50 bg-pink-25"
-                      : "border-b hover:bg-gray-50";
+                      ? "border-b border-gray-200 hover:bg-pink-50/50 bg-pink-50/20 transition-colors"
+                      : "border-b border-gray-200 hover:bg-gray-50/50 transition-colors";
 
                     return (
                       <tr key={request.id} className={rowClassName}>
-                      <td className="py-3 px-4">
+                      <td className="py-4 px-6">
                         <div className="flex items-center space-x-2">
                           <Calendar className="h-4 w-4 text-gray-400" />
                           <span className="text-sm text-gray-600">
@@ -464,26 +469,51 @@ export default function MyRequestsPage() {
                           </span>
                         </div>
                       </td>
-                      <td className="py-3 px-4">
+                      <td className="py-4 px-6">
                         <div>
                           <div className="flex items-center space-x-2">
-                            <p className="font-medium text-gray-900">{request.patient?.name || 'N/A'}</p>
+                            <p className="font-semibold text-gray-900">{request.patient?.name || 'N/A'}</p>
                             {isCompletedAndHandedOver && (
-                              <span className="text-xs text-pink-600 bg-pink-100 px-1 py-0.5 rounded" title="Completed and handed over - no longer active">
+                              <span className="text-xs text-pink-600 bg-pink-100 px-2 py-1 rounded-full font-medium" title="Completed and handed over - no longer active">
                                 ✓
                               </span>
                             )}
+                            {request.status === 'rejected' && request.rejection_reason && (
+                              <span className="text-xs text-red-600 bg-red-100 px-2 py-1 rounded-full font-medium" title="Case note was rejected">
+                                ✗
+                              </span>
+                            )}
                           </div>
-                          <p className="text-sm text-gray-500">#{request.request_number}</p>
+                          <p className="text-sm text-gray-500 font-mono">#{request.request_number}</p>
+                          {request.status === 'rejected' && request.rejection_reason && (
+                            <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-md">
+                              <div className="text-xs text-red-700">
+                                <div className="font-medium mb-1">Rejection Reason:</div>
+                                <div className="italic">"{request.rejection_reason}"</div>
+                                {request.rejected_at && (
+                                  <div className="text-xs mt-1 text-red-600">
+                                    Rejected on {new Date(request.rejected_at).toLocaleDateString()}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </td>
-                      <td className="py-3 px-4">
-                        <span className="text-sm text-gray-600">{request.patient?.mrn || 'N/A'}</span>
+                      <td className="py-4 px-6">
+                        <span className="text-sm text-gray-700 font-mono">{request.patient?.mrn || 'N/A'}</span>
                       </td>
-                      <td className="py-3 px-4">
-                        {getStatusBadge(request.status, request.display_status, request.is_waiting_for_approval, request.is_individual_request, isCompletedAndHandedOver)}
+                      <td className="py-4 px-6">
+                        {getStatusBadge(
+                          request.status,
+                          request.display_status,
+                          request.is_waiting_for_approval,
+                          request.is_individual_request,
+                          request.is_completed_and_handed_over,
+                          request.is_rejected_return
+                        )}
                       </td>
-                      <td className="py-3 px-4">
+                      <td className="py-4 px-6">
                         {getInvolvementBadge(
                           request.requested_by_user_id,
                           request.current_pic_user_id || 0,
@@ -492,16 +522,14 @@ export default function MyRequestsPage() {
                           request.status
                         )}
                       </td>
-                      <td className="py-3 px-4">
+                      <td className="py-4 px-6">
                         <div className="flex space-x-2">
                           <Link to={`/requests/${request.id}`}>
-                            <Button variant="outline" size="sm">
-                              <FileText className="h-4 w-4 mr-2" />
+                            <Button variant="outline" size="sm" className="text-xs">
+                              <FileText className="h-3 w-3 mr-2" />
                               View Details
                             </Button>
                           </Link>
-
-
                         </div>
                       </td>
                     </tr>

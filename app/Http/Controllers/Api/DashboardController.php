@@ -60,8 +60,15 @@ class DashboardController extends Controller
                 ], 403);
             }
 
-            // Cache the results for 30 seconds
-            Cache::put($cacheKey, $stats, 30);
+            // Clear any existing cache for this user to ensure fresh data
+            Cache::forget($cacheKey);
+            
+            // Clear all dashboard-related cache keys for this user
+            Cache::forget("dashboard_stats_{$user->id}_CA");
+            Cache::forget("dashboard_stats_{$user->id}");
+            
+            // Temporarily disable caching to debug verification badge issue
+            // Cache::put($cacheKey, $stats, 30);
 
             $executionTime = microtime(true) - $startTime;
 
@@ -70,6 +77,7 @@ class DashboardController extends Controller
                 'user_role' => $user->roles->pluck('name')->first(),
                 'execution_time_ms' => round($executionTime * 1000, 2),
                 'stats_keys' => array_keys($stats),
+                'stats_values' => $stats,
                 'cache_hit' => false
             ]);
 
@@ -99,8 +107,8 @@ class DashboardController extends Controller
      */
     private function getCAStats($user): array
     {
-        // Single optimized query for all CA stats
-        $stats = DB::table('requests')
+        // Get original case note request stats
+        $originalStats = DB::table('requests')
             ->selectRaw('
                 COUNT(*) as total_requests,
                 SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as pending_requests,
@@ -111,7 +119,7 @@ class DashboardController extends Controller
                 SUM(CASE WHEN DATE(created_at) = CURDATE() THEN 1 ELSE 0 END) as today_requests,
                 SUM(CASE WHEN created_at >= ? AND created_at <= ? THEN 1 ELSE 0 END) as this_week_requests,
                 SUM(CASE WHEN YEAR(created_at) = YEAR(CURDATE()) AND MONTH(created_at) = MONTH(CURDATE()) THEN 1 ELSE 0 END) as this_month_requests,
-                SUM(CASE WHEN status = ? AND is_received = 0 AND approved_at IS NOT NULL THEN 1 ELSE 0 END) as pending_verifications
+                SUM(CASE WHEN status = ? AND is_received = 0 AND approved_at IS NOT NULL AND current_pic_user_id = ? THEN 1 ELSE 0 END) as pending_verifications
             ', [
                 CaseNoteRequest::STATUS_PENDING,
                 CaseNoteRequest::STATUS_APPROVED,
@@ -122,10 +130,39 @@ class DashboardController extends Controller
                 CaseNoteRequest::STATUS_REJECTED,
                 now()->startOfWeek(),
                 now()->endOfWeek(),
-                CaseNoteRequest::STATUS_APPROVED
+                CaseNoteRequest::STATUS_APPROVED,
+                $user->id // Add user ID parameter for pending_verifications check
             ])
             ->where('requested_by_user_id', $user->id)
             ->first();
+
+        // Get handover request stats made by this CA
+        $handoverStats = DB::table('handover_requests')
+            ->selectRaw('
+                COUNT(*) as total_handover_requests,
+                SUM(CASE WHEN DATE(requested_at) = CURDATE() THEN 1 ELSE 0 END) as today_handover_requests,
+                SUM(CASE WHEN requested_at >= ? AND requested_at <= ? THEN 1 ELSE 0 END) as this_week_handover_requests,
+                SUM(CASE WHEN YEAR(requested_at) = YEAR(CURDATE()) AND MONTH(requested_at) = MONTH(CURDATE()) THEN 1 ELSE 0 END) as this_month_handover_requests
+            ', [
+                now()->startOfWeek(),
+                now()->endOfWeek()
+            ])
+            ->where('requested_by_user_id', $user->id)
+            ->first();
+
+        // Combine original and handover stats
+        $stats = (object) [
+            'total_requests' => ($originalStats->total_requests ?? 0) + ($handoverStats->total_handover_requests ?? 0),
+            'pending_requests' => $originalStats->pending_requests ?? 0,
+            'approved_requests' => $originalStats->approved_requests ?? 0,
+            'completed_requests' => $originalStats->completed_requests ?? 0,
+            'rejected_requests' => $originalStats->rejected_requests ?? 0,
+            'overdue_requests' => $originalStats->overdue_requests ?? 0,
+            'today_requests' => ($originalStats->today_requests ?? 0) + ($handoverStats->today_handover_requests ?? 0),
+            'this_week_requests' => ($originalStats->this_week_requests ?? 0) + ($handoverStats->this_week_handover_requests ?? 0),
+            'this_month_requests' => ($originalStats->this_month_requests ?? 0) + ($handoverStats->this_month_handover_requests ?? 0),
+            'pending_verifications' => $originalStats->pending_verifications ?? 0,
+        ];
 
         // Get pending handover requests count for CA dashboard
         $pendingHandoverCount = DB::table('handover_requests')
@@ -133,17 +170,59 @@ class DashboardController extends Controller
             ->where('status', HandoverRequest::STATUS_PENDING) // Only count pending handovers that CA hasn't approved/rejected yet
             ->count();
 
-        // Log handover stats for debugging
+        // Get pending handover requests for verification count (handover requests that this CA needs to verify)
+        // This CA is the current holder who needs to approve/reject the handover request
+        $pendingHandoverVerificationCount = DB::table('handover_requests')
+            ->where('current_holder_user_id', $user->id)
+            ->where('status', HandoverRequest::STATUS_PENDING)
+            ->count();
+
+        // Get approved handover requests that this CA requested and need verification
+        // This CA requested the handover, it was approved, but they haven't verified the case note yet
+        // Only count handovers where the case note is actually received and ready for verification
+        $approvedHandoversPendingVerification = DB::table('handover_requests')
+            ->join('requests', 'handover_requests.case_note_id', '=', 'requests.id')
+            ->where('handover_requests.requested_by_user_id', $user->id)
+            ->where('handover_requests.status', HandoverRequest::STATUS_APPROVED_PENDING_VERIFICATION)
+            ->where('requests.current_pic_user_id', $user->id) // Only count if CA currently owns the case note
+            ->where('requests.is_received', true) // Only count if case note is received
+            ->count();
+
+        // Ensure the counts are always integers (never null)
+        $pendingHandoverVerificationCount = (int) $pendingHandoverVerificationCount;
+        $approvedHandoversPendingVerification = (int) $approvedHandoversPendingVerification;
+
+        // Debug: Get actual handover request data for this user (as current holder)
+        $debugHandoverRequests = DB::table('handover_requests')
+            ->where('current_holder_user_id', $user->id)
+            ->select(['id', 'status', 'case_note_id', 'requested_at', 'requested_by_user_id'])
+            ->get();
+
+        // Log handover stats for debugging with timestamp
         Log::info('CA Dashboard handover stats:', [
+            'timestamp' => now()->toDateTimeString(),
             'user_id' => $user->id,
+            'user_name' => $user->name,
             'pending_handover_count' => $pendingHandoverCount,
+            'pending_handover_verification_count' => $pendingHandoverVerificationCount,
+            'approved_handovers_pending_verification' => $approvedHandoversPendingVerification,
+            'pending_verifications' => $stats->pending_verifications ?? 0,
+            'total_verification_count' => ($stats->pending_verifications ?? 0) + $approvedHandoversPendingVerification,
             'query_conditions' => [
                 'current_holder_user_id' => $user->id,
                 'status' => HandoverRequest::STATUS_PENDING
-            ]
+            ],
+            'verification_query_conditions' => [
+                'current_holder_user_id' => $user->id,
+                'status' => HandoverRequest::STATUS_PENDING
+            ],
+            'cache_key' => "dashboard_stats_user_{$user->id}",
+            'debug_handover_requests' => $debugHandoverRequests->toArray()
         ]);
 
-        // Get active case notes count in single query
+        // Get active case notes count - show all case notes currently owned by this CA
+        // This includes both originally requested case notes AND case notes received via handover
+        // The key is current_pic_user_id - whoever currently owns the case note
         $activeCaseNotesCount = DB::table('requests')
             ->where('current_pic_user_id', $user->id)
             ->where('is_received', true)
@@ -153,15 +232,16 @@ class DashboardController extends Controller
                       ->where('is_returned', false)
                       ->where('is_rejected_return', false);
                 })
-                ->orWhere('is_rejected_return', true)
-                ->orWhereIn('handover_status', ['pending', 'approved_pending_verification']);
-            });
+                ->orWhere('is_rejected_return', true);
+            })
+            // Exclude case notes that have been completed (fully processed)
+            ->whereNotIn('handover_status', ['completed']);
 
         // Log the query details for debugging
         $debugQuery = clone $activeCaseNotesCount;
         $debugResults = $debugQuery->get(['id', 'status', 'is_received', 'current_pic_user_id', 'requested_by_user_id']);
 
-        Log::info('Dashboard active case notes query debug:', [
+        Log::info('Dashboard active case notes query debug (includes handovers):', [
             'user_id' => $user->id,
             'user_roles' => $user->getRoleNames('api'),
             'query_conditions' => [
@@ -169,13 +249,56 @@ class DashboardController extends Controller
                 'is_received' => true,
                 'status_in' => [CaseNoteRequest::STATUS_APPROVED, CaseNoteRequest::STATUS_COMPLETED],
                 'is_returned' => false,
-                'is_rejected_return' => false
+                'is_rejected_return' => false,
+                'excludes_handover_status' => ['completed']
             ],
             'debug_results_count' => $debugResults->count(),
-            'debug_results' => $debugResults->toArray()
+            'debug_results' => $debugResults->map(function($result) {
+                return [
+                    'id' => $result->id,
+                    'current_pic_user_id' => $result->current_pic_user_id,
+                    'requested_by_user_id' => $result->requested_by_user_id,
+                    'is_handover' => $result->current_pic_user_id != $result->requested_by_user_id
+                ];
+            })->toArray()
         ]);
 
         $activeCaseNotesCount = $activeCaseNotesCount->count();
+
+        // Get rejected returns count - case notes that were returned by this CA but rejected by MR staff
+        // Use current_pic_user_id since returned_by_user_id gets cleared when MR staff rejects
+        $rejectedReturnsCount = DB::table('requests')
+            ->where('current_pic_user_id', $user->id)
+            ->where('is_rejected_return', true)
+            ->where('status', CaseNoteRequest::STATUS_APPROVED)
+            ->where('is_received', true)
+            ->count();
+
+        // Debug logging for rejected returns - check all possible rejected returns for this user
+        $debugAllRejectedReturns = DB::table('requests')
+            ->where('is_rejected_return', true)
+            ->select(['id', 'request_number', 'status', 'is_rejected_return', 'is_received', 'returned_by_user_id', 'rejected_at', 'rejection_reason', 'current_pic_user_id', 'requested_by_user_id'])
+            ->get();
+
+        $debugUserRejectedReturns = DB::table('requests')
+            ->where('returned_by_user_id', $user->id)
+            ->where('is_rejected_return', true)
+            ->select(['id', 'request_number', 'status', 'is_rejected_return', 'is_received', 'returned_by_user_id', 'rejected_at', 'rejection_reason'])
+            ->get();
+
+        Log::info('CA Dashboard rejected returns debug:', [
+            'user_id' => $user->id,
+            'user_name' => $user->name,
+            'rejected_returns_count' => $rejectedReturnsCount,
+            'query_conditions' => [
+                'current_pic_user_id' => $user->id,
+                'is_rejected_return' => true,
+                'status' => CaseNoteRequest::STATUS_APPROVED,
+                'is_received' => true
+            ],
+            'all_rejected_returns_in_system' => $debugAllRejectedReturns->toArray(),
+            'user_rejected_returns' => $debugUserRejectedReturns->toArray()
+        ]);
 
         return [
             // Basic stats
@@ -193,6 +316,8 @@ class DashboardController extends Controller
 
             // Verification stats
             'pending_verifications' => $stats->pending_verifications ?? 0,
+            'pending_handover_verifications' => $pendingHandoverVerificationCount,
+            'approved_handovers_pending_verification' => $approvedHandoversPendingVerification,
 
             // Handover stats - only pending handovers that CA hasn't approved/rejected yet
             'total_handovers' => $pendingHandoverCount,
@@ -201,6 +326,9 @@ class DashboardController extends Controller
 
             // Active case notes
             'active_case_notes' => $activeCaseNotesCount,
+
+            // Rejected returns count
+            'rejected_returns_count' => $rejectedReturnsCount,
 
             // Legacy compatibility
             'total' => $stats->total_requests ?? 0,

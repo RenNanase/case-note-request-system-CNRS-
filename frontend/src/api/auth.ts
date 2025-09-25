@@ -58,10 +58,10 @@ export const authApi = {
     }
   },
 
-  // Check if email exists (for better UX)
-  async checkEmail(email: string): Promise<CheckEmailResponse> {
+  // Check if username exists (for better UX)
+  async checkEmail(username: string): Promise<CheckEmailResponse> {
     try {
-      const response = await apiClient.post('/auth/check-email', { email });
+      const response = await apiClient.post('/auth/check-username', { username });
       return response.data;
     } catch (error: any) {
       return {

@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Schema\purpleprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('locations', function (Blueprint $table) {
+        Schema::create('locations', function (purpleprint $table) {
             $table->id();
             $table->string('name')->comment('Location name (e.g., Ward 3A, MR Room 1)');
             $table->enum('type', ['ward', 'clinic', 'room', 'office', 'archive'])->comment('Type of location');

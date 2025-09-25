@@ -164,8 +164,7 @@ class BatchRequestController extends Controller
             'department_id' => 'required|exists:departments,id',
             'doctor_id' => 'nullable|exists:doctors,id',
             'location_id' => 'nullable|exists:locations,id',
-            'priority' => 'required|in:low,normal,high,urgent',
-            'purpose' => 'required|string|max:1000',
+            'purpose' => 'nullable|string|max:1000',
             'needed_date' => 'required|date|after_or_equal:today',
             'batch_notes' => 'nullable|string|max:1000',
         ]);
@@ -200,7 +199,7 @@ class BatchRequestController extends Controller
                     'department_id' => $request->department_id,
                     'doctor_id' => $request->doctor_id ?? null,
                     'location_id' => $request->location_id ?? null,
-                    'priority' => $request->priority,
+                    'priority' => 'normal', // Set default priority
                     'purpose' => $request->purpose,
                     'needed_date' => $request->needed_date,
                     'remarks' => $caseNoteData['remarks'] ?? null,
@@ -538,6 +537,8 @@ class BatchRequestController extends Controller
                         'verification_notes' => $validatedData['verification_notes'] ?? null,
                         'verified_at' => now()->toDateTimeString(),
                         'counts_match' => $receivedCount === $approvedCount,
+                        'location_name' => 'Medical Record Department',
+                        'completion_notes' => 'Case note completed and stored in Medical Record Department'
                     ]
                 ]);
             }

@@ -110,7 +110,7 @@ const getReturnStatusBadge = (isReturned: boolean, isRejectedReturn: boolean, re
   }
 
   return (
-    <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200 font-semibold">
+    <Badge variant="outline" className="bg-purple-100 text-purple-800 border-purple-200 font-semibold">
       <RotateCcw className="h-3 w-3 mr-1" />
       Available for Return
     </Badge>
@@ -685,7 +685,7 @@ export default function ReturnCaseNotesPage() {
           {/* Summary of case note counts */}
           <div className="flex items-center space-x-4 mt-4 text-sm">
             <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+              <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
               <span>Available: {requests.filter(r => r.is_received && !r.is_returned && !r.is_rejected_return).length}</span>
             </div>
             <div className="flex items-center space-x-2">
@@ -785,7 +785,7 @@ export default function ReturnCaseNotesPage() {
 
       {/* Batch Action Bar */}
       {returnableCaseNotes.length > 0 && (
-        <Card className="border-blue-200 bg-blue-50">
+        <Card className="border-purple-200 bg-purple-50">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
@@ -839,7 +839,7 @@ export default function ReturnCaseNotesPage() {
           <CardDescription>
             Showing {filteredRequests.length} of {allRequests.length} case notes
             {returnableCaseNotes.length > 0 && (
-              <span className="ml-2 text-blue-600 font-medium">
+              <span className="ml-2 text-purple-600 font-medium">
                 • {returnableCaseNotes.length} available for return
               </span>
             )}
@@ -928,9 +928,9 @@ export default function ReturnCaseNotesPage() {
                       <tr key={request.id} className={`border-b hover:bg-gray-50 ${
                         request.is_rejected_return ? 'bg-red-50' :
                         request.is_returned ? 'bg-green-50' :
-                        'bg-blue-50'
+                        'bg-purple-50'
                       } ${
-                        selectedCaseNotes.has(request.id) ? 'ring-2 ring-blue-500' : ''
+                        selectedCaseNotes.has(request.id) ? 'ring-2 ring-purple-500' : ''
                       }`}>
                         {/* Selection checkbox */}
                         <td className="py-3 px-2">
@@ -981,7 +981,7 @@ export default function ReturnCaseNotesPage() {
                           {request.return_notes && (
                             <div className="mb-2">
                               <p className="text-xs font-medium text-gray-500 mb-1">Return Notes:</p>
-                              <p className="text-sm text-gray-700 bg-blue-50 p-2 rounded border-l-2 border-blue-300">
+                              <p className="text-sm text-gray-700 bg-purple-50 p-2 rounded border-l-2 border-purple-300">
                                 {request.return_notes}
                               </p>
                               <div className="text-xs text-gray-500 mt-1 space-y-1">
@@ -1110,7 +1110,7 @@ export default function ReturnCaseNotesPage() {
                   if (!caseNote) return null;
 
                   return (
-                    <div key={caseNoteId} className="flex items-center justify-between p-2 bg-blue-50 rounded">
+                    <div key={caseNoteId} className="flex items-center justify-between p-2 bg-purple-50 rounded">
                       <div className="flex-1">
                         <div className="font-medium text-sm">{caseNote.patient?.name}</div>
                         <div className="text-xs text-gray-600">

@@ -33,8 +33,7 @@ import type {
   Patient,
   Department,
   Doctor,
-  Location,
-  Priority
+  Location
 } from '@/types/requests';
 import { cn } from '@/lib/utils';
 
@@ -56,8 +55,7 @@ const batchRequestSchema = z.object({
   department_id: z.number().min(1, 'Please select a department').or(z.literal(0)), // Allow 0 for initial state
   doctor_id: z.number().optional(),
   location_id: z.number().optional(),
-  priority: z.string().min(1, 'Please select a priority'),
-  purpose: z.string().min(10, 'Purpose must be at least 10 characters'),
+  purpose: z.string().optional(),
   needed_date: z.string().min(1, 'Please select when case notes are needed'),
   batch_notes: z.string().optional(),
 });
@@ -87,7 +85,7 @@ const STEPS = [
     id: 'details',
     title: 'Request Details',
     icon: FileText,
-    description: 'Specify priority, purpose, and additional information for the batch'
+    description: 'Specify purpose and additional information for the batch'
   },
   {
     id: 'review',
@@ -119,7 +117,6 @@ export const BatchRequestForm: React.FC<BatchRequestFormProps> = ({
   const [departments, setDepartments] = useState<Department[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
-  const [priorities, setPriorities] = useState<Priority[]>([]);
 
   // Form setup
   const form = useForm<BatchRequestForm>({
@@ -129,7 +126,6 @@ export const BatchRequestForm: React.FC<BatchRequestFormProps> = ({
       department_id: 0,
       doctor_id: undefined,
       location_id: undefined,
-      priority: undefined,
       purpose: '',
       needed_date: undefined,
       batch_notes: '',
@@ -142,7 +138,7 @@ export const BatchRequestForm: React.FC<BatchRequestFormProps> = ({
     name: 'case_notes'
   });
 
-  const watchedValues = watch(['priority', 'purpose', 'needed_date']);
+  const watchedValues = watch(['purpose', 'needed_date']);
   const caseNotesValues = watch('case_notes'); // Watch for changes to trigger re-validation
 
   // Check permissions
@@ -157,10 +153,9 @@ export const BatchRequestForm: React.FC<BatchRequestFormProps> = ({
   useEffect(() => {
     const loadResources = async () => {
       try {
-        const [departmentsRes, locationsRes, prioritiesRes] = await Promise.all([
+        const [departmentsRes, locationsRes] = await Promise.all([
           resourcesApi.getDepartments(),
-          resourcesApi.getLocations(),
-          resourcesApi.getPriorities()
+          resourcesApi.getLocations()
         ]);
 
         if (departmentsRes.success) {
@@ -168,9 +163,6 @@ export const BatchRequestForm: React.FC<BatchRequestFormProps> = ({
         }
         if (locationsRes.success) {
           setLocations(locationsRes.locations);
-        }
-        if (prioritiesRes.success) {
-          setPriorities(prioritiesRes.priorities);
         }
       } catch (error) {
         console.error('Failed to load resources:', error);
@@ -270,10 +262,17 @@ export const BatchRequestForm: React.FC<BatchRequestFormProps> = ({
         const departmentId = getValues('department_id');
         return departmentId && departmentId > 0;
       case 2: // Details step
-        const [priority, purpose, needed_date] = watchedValues;
-        return priority && priority !== '' &&
-               purpose && purpose.trim().length >= 10 &&
-               needed_date && needed_date !== '';
+        const [purpose, needed_date] = watchedValues;
+        const purposeValid = true; // Purpose is now optional
+        const dateValid = needed_date && needed_date !== '';
+        const detailsValid = purposeValid && dateValid;
+        console.log('Step 2 validation:', {
+          purpose, purposeLength: purpose?.length || 0, purposeValid,
+          needed_date, dateValid,
+          detailsValid,
+          watchedValues
+        });
+        return detailsValid;
       default:
         return true;
     }
@@ -329,7 +328,6 @@ export const BatchRequestForm: React.FC<BatchRequestFormProps> = ({
         department_id: data.department_id,
         doctor_id: data.doctor_id || undefined,
         location_id: data.location_id || undefined,
-        priority: data.priority,
         purpose: data.purpose,
         needed_date: data.needed_date,
         batch_notes: data.batch_notes || undefined,
@@ -365,36 +363,6 @@ export const BatchRequestForm: React.FC<BatchRequestFormProps> = ({
     } finally {
       setSubmitting(false);
     }
-  };
-
-  // Get priority badge with proper styling
-  const getPriorityBadge = (priority: string) => {
-    const config = {
-      low: {
-        variant: 'outline' as const,
-        className: 'border-gray-300 text-gray-700 bg-gray-50'
-      },
-      normal: {
-        variant: 'outline' as const,
-        className: 'border-blue-300 text-blue-700 bg-blue-50'
-      },
-      high: {
-        variant: 'outline' as const,
-        className: 'border-orange-300 text-orange-700 bg-orange-50'
-      },
-      urgent: {
-        variant: 'outline' as const,
-        className: 'border-red-300 text-red-700 bg-red-50'
-      },
-    };
-
-    const configItem = config[priority.toLowerCase() as keyof typeof config] || config.normal;
-
-    return (
-      <Badge variant={configItem.variant} className={`ml-2 ${configItem.className}`}>
-        {priorities.find(p => p.value === priority)?.label}
-      </Badge>
-    );
   };
 
   // Format date for display
@@ -433,19 +401,19 @@ export const BatchRequestForm: React.FC<BatchRequestFormProps> = ({
                   <div className="flex flex-col items-center">
                     <div className={cn(
                       "w-12 h-12 rounded-full border-2 flex items-center justify-center transition-colors",
-                      isActive ? "border-blue-600 bg-blue-50" :
+                      isActive ? "border-purple-600 bg-purple-50" :
                       isCompleted ? "border-green-600 bg-green-50" : "border-gray-300 bg-gray-50"
                     )}>
                       <Icon className={cn(
                         "h-5 w-5",
-                        isActive ? "text-blue-600" :
+                        isActive ? "text-purple-600" :
                         isCompleted ? "text-green-600" : "text-gray-400"
                       )} />
                     </div>
                     <div className="mt-2 text-center">
                       <p className={cn(
                         "text-sm font-medium",
-                        isActive ? "text-blue-600" :
+                        isActive ? "text-purple-600" :
                         isCompleted ? "text-green-600" : "text-gray-500"
                       )}>
                         {step.title}
@@ -470,65 +438,106 @@ export const BatchRequestForm: React.FC<BatchRequestFormProps> = ({
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
           {/* Step 0: Add Case Notes */}
           {currentStep === 0 && (
-            <Card>
+            <Card className="min-h-[600px]">
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <Users className="h-5 w-5" />
-                                      <span>Add Case Notes ({fields.length}/20)</span>
+                  <span>Add Case Notes ({fields.length}/20)</span>
                 </CardTitle>
                 <CardDescription>
                   Add patients whose case notes you need to request. You can add up to 20 case notes in this batch.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
-                {fields.map((field, index) => (
-                  <div key={field.id} className="border rounded-lg p-4 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-medium text-gray-900">Case Note #{index + 1}</h4>
-                      {fields.length > 1 && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeCaseNote(index)}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
+              <CardContent className="space-y-4 pb-8">
+                {/* Simple List View */}
+                <div className="space-y-3">
+                  {fields.map((field, index) => {
+                    const selectedPatient = getValues(`case_notes.${index}.patient`);
+                    return (
+                      <div key={field.id} className="flex items-center space-x-3 p-3 border rounded-lg bg-gray-50">
+                        <div className="flex-shrink-0 w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center text-sm font-medium text-purple-600">
+                          {index + 1}
+                        </div>
+
+                        <div className="flex-1">
+                          <FormField
+                            control={form.control}
+                            name={`case_notes.${index}.patient_id`}
+                            render={() => (
+                              <FormItem className="space-y-1">
+                                <FormControl>
+                                  <PatientSearch
+                                    onPatientSelect={(patient) => handlePatientSelect(index, patient)}
+                                    selectedPatient={selectedPatient}
+                                    onRequestHandover={handleRequestHandover}
+                                    placeholder={`Search for patient ${index + 1}...`}
+                                    className="w-full"
+                                  />
+                                </FormControl>
+                                <FormMessage className="text-xs" />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        {fields.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeCaseNote(index)}
+                            className="text-red-500 hover:text-red-700 hover:bg-red-50 flex-shrink-0"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Show summary of selected patients */}
+                {fields.some((_, index) => getValues(`case_notes.${index}.patient`)) && (
+                  <div className="mt-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
+                    <h4 className="font-medium text-purple-900 mb-2 flex items-center">
+                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                      Selected Patients ({fields.filter((_, index) => getValues(`case_notes.${index}.patient`)).length})
+                    </h4>
+                    <div className="space-y-2">
+                      {fields.map((_, index) => {
+                        const patient = getValues(`case_notes.${index}.patient`);
+                        if (!patient) return null;
+                        return (
+                          <div key={index} className="flex items-center space-x-2 text-sm">
+                            <div className="w-5 h-5 bg-purple-500 text-white rounded-full flex items-center justify-center text-xs">
+                              {index + 1}
+                            </div>
+                            <span className="font-medium">{patient.name}</span>
+                            <span className="text-gray-500">•</span>
+                            <span className="text-gray-600">MRN: {patient.mrn}</span>
+                            {patient.has_medical_alerts && (
+                              <span className="text-red-600 text-xs">⚠️ Medical Alert</span>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
-
-                    <FormField
-                      control={form.control}
-                      name={`case_notes.${index}.patient_id`}
-                      render={() => (
-                        <FormItem>
-                          <FormLabel>Patient Search</FormLabel>
-                          <FormControl>
-                            <PatientSearch
-                              onPatientSelect={(patient) => handlePatientSelect(index, patient)}
-                              selectedPatient={getValues(`case_notes.${index}.patient`)}
-                              onRequestHandover={handleRequestHandover}
-                            />
-                          </FormControl>
-
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
                   </div>
-                ))}
+                )}
 
+                {/* Add more case notes */}
                 {fields.length < 20 && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={addCaseNote}
-                    className="w-full flex items-center space-x-2"
-                  >
-                    <Plus className="h-4 w-4" />
-                    <span>Add Another Case Note</span>
-                  </Button>
+                  <div className="pt-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={addCaseNote}
+                      className="w-full flex items-center justify-center space-x-2 py-3 border-dashed border-2 hover:border-purple-300 hover:bg-purple-50"
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span>Add Another Patient ({fields.length}/20)</span>
+                    </Button>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -637,35 +646,10 @@ export const BatchRequestForm: React.FC<BatchRequestFormProps> = ({
                   <span>Request Details</span>
                 </CardTitle>
                 <CardDescription>
-                  Specify the priority, purpose, and when you need all the case notes in this batch
+                  Specify the purpose and when you need all the case notes in this batch
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <FormField
-                  control={form.control}
-                  name="priority"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Priority *</FormLabel>
-                      <Select onValueChange={(value) => setValue('priority', value)} value={field.value || ''}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select priority level" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {priorities.map((priority) => (
-                            <SelectItem key={priority.value} value={priority.value}>
-                              {priority.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
                 <FormField
                   control={form.control}
                   name="needed_date"
@@ -693,10 +677,10 @@ export const BatchRequestForm: React.FC<BatchRequestFormProps> = ({
                   name="purpose"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Purpose / Reason *</FormLabel>
+                      <FormLabel>Purpose / Reason</FormLabel>
                       <FormControl>
                         <Textarea
-                          placeholder="Please describe why you need access to these case notes..."
+                          placeholder="Optional: Describe why you need access to these case notes..."
                           className="resize-none"
                           rows={4}
                           value={field.value || ''}
@@ -704,7 +688,7 @@ export const BatchRequestForm: React.FC<BatchRequestFormProps> = ({
                         />
                       </FormControl>
                       <FormDescription>
-                        Provide a clear explanation of why you need the case notes (minimum 10 characters)
+                        Optional: Provide additional context about why these case notes are needed
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -739,7 +723,7 @@ export const BatchRequestForm: React.FC<BatchRequestFormProps> = ({
           {/* Step 3: Review & Submit */}
           {currentStep === 3 && (
             <div className="space-y-6">
-              <Card>
+              <Card className="bg-pink-50/30 border-pink-200">
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
                     <CheckCircle2 className="h-5 w-5" />
@@ -751,7 +735,7 @@ export const BatchRequestForm: React.FC<BatchRequestFormProps> = ({
                 </CardHeader>
                 <CardContent className="space-y-6">
                   {/* Case Notes Summary */}
-                  <div>
+                  <div className="bg-pink-50/30 border border-pink-200 rounded-lg p-4">
                     <h4 className="font-medium text-gray-900 mb-3 flex items-center">
                       <Users className="h-4 w-4 mr-2" />
                       Case Notes ({fields.length} patients)
@@ -785,7 +769,7 @@ export const BatchRequestForm: React.FC<BatchRequestFormProps> = ({
                   <Separator />
 
                   {/* Department & Doctor */}
-                  <div>
+                  <div className="bg-purple-50/30 border border-purple-200 rounded-lg p-4">
                     <h4 className="font-medium text-gray-900 mb-3 flex items-center">
                       <Building2 className="h-4 w-4 mr-2" />
                       Department & Doctor
@@ -804,16 +788,13 @@ export const BatchRequestForm: React.FC<BatchRequestFormProps> = ({
                   <Separator />
 
                   {/* Request Details */}
-                  <div>
+                  <div className="bg-orange-50/30 border border-orange-200 rounded-lg p-4">
                     <h4 className="font-medium text-gray-900 mb-3 flex items-center">
                       <FileText className="h-4 w-4 mr-2" />
                       Request Details
                     </h4>
                     <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium">Priority:</span>
-                        {getPriorityBadge(getValues('priority'))}
-                      </div>
+                      
                       <div>
                         <span className="font-medium">Needed by:</span>
                         <div className="mt-1 flex items-center text-gray-600">

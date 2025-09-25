@@ -50,7 +50,7 @@ sudo service apache2 restart
 ### Step 4: Test Direct File Access
 Try accessing these URLs directly in your browser:
 - `http://10.2.10.178/crns/frontend/assets/index-CPfXTIc0.js`
-- `http://10.2.10.178/crns/frontend/assets/index-ARMcF9ci.css`
+- `http://10.2.10.178/crns/frontend/assets/index-CbxKHTRT.css`
 
 **Expected Result**: You should see the actual file content, not HTML.
 

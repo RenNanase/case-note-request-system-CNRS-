@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Schema\purpleprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('patients', function (Blueprint $table) {
+        Schema::table('patients', function (purpleprint $table) {
             // Drop columns if they exist
             $columnsToDrop = [
                 'nric',
@@ -39,7 +39,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('patients', function (Blueprint $table) {
+        Schema::table('patients', function (purpleprint $table) {
             // Re-add all the dropped columns
             $table->string('nric', 20)->nullable()->comment('National Registration Identity Card');
             $table->date('date_of_birth')->comment('Patient date of birth');

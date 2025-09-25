@@ -154,7 +154,7 @@ export default function PatientImportComponent({ onImportComplete }: PatientImpo
           <div
             className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
               dragActive
-                ? 'border-blue-500 bg-blue-50'
+                ? 'border-purple-500 bg-purple-50'
                 : file
                 ? 'border-green-500 bg-green-50'
                 : 'border-gray-300 bg-gray-50'
@@ -289,8 +289,8 @@ export default function PatientImportComponent({ onImportComplete }: PatientImpo
                   <p className="text-2xl font-bold text-red-600">{result.statistics.skipped}</p>
                   <p className="text-sm text-gray-600">Skipped</p>
                 </div>
-                <div className="text-center p-4 bg-blue-50 rounded-lg">
-                  <p className="text-2xl font-bold text-blue-600">{result.statistics.total_processed}</p>
+                <div className="text-center p-4 bg-purple-50 rounded-lg">
+                  <p className="text-2xl font-bold text-purple-600">{result.statistics.total_processed}</p>
                   <p className="text-sm text-gray-600">Total Processed</p>
                 </div>
               </div>

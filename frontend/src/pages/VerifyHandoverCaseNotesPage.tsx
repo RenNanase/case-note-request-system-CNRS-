@@ -187,7 +187,7 @@ const VerifyHandoverCaseNotesPage: React.FC = () => {
       },
       normal: {
         variant: 'outline' as const,
-        className: 'border-blue-300 text-blue-700 bg-blue-50 text-xs'
+        className: 'border-purple-300 text-purple-700 bg-purple-50 text-xs'
       },
       high: {
         variant: 'outline' as const,
@@ -245,7 +245,7 @@ const VerifyHandoverCaseNotesPage: React.FC = () => {
         </div>
         <div className="text-right">
           <div className="text-sm text-gray-500">Total Pending</div>
-          <div className="text-2xl font-bold text-blue-600">{totalHandovers}</div>
+          <div className="text-2xl font-bold text-purple-600">{totalHandovers}</div>
         </div>
       </div>
 
@@ -343,7 +343,7 @@ const VerifyHandoverCaseNotesPage: React.FC = () => {
                         key={handover.id}
                         className={`p-4 rounded-lg border transition-colors ${
                           isSelected
-                            ? 'border-blue-500 bg-blue-50'
+                            ? 'border-purple-500 bg-purple-50'
                             : isOverdue
                             ? 'border-red-300 bg-red-50'
                             : 'border-gray-200 hover:bg-gray-50'

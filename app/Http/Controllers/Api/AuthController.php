@@ -13,12 +13,13 @@ use App\Models\User;
 class AuthController extends Controller
 {
     /**
-     * User login with email and password
+     * User login with username and password
+     * Automatically appends @cnrs.jmc to username to create full email
      */
     public function login(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'email' => 'required|email',
+            'username' => 'required|string|min:1',
             'password' => 'required|min:1', // No strict rules as per requirements
         ]);
 
@@ -30,8 +31,11 @@ class AuthController extends Controller
             ], 422);
         }
 
-        // Try to authenticate user
-        if (Auth::attempt(['email' => $request->email, 'password' => $request->password])) {
+        // Automatically append @cnrs.jmc to username to create full email
+        $fullEmail = $request->username . '@cnrs.jmc';
+
+        // Try to authenticate user with the full email
+        if (Auth::attempt(['email' => $fullEmail, 'password' => $request->password])) {
             $user = Auth::user();
 
             // Check if user account is active
@@ -190,22 +194,25 @@ class AuthController extends Controller
     }
 
     /**
-     * Check if email exists (for better UX)
+     * Check if username exists (for better UX)
+     * Automatically appends @cnrs.jmc to username to check full email
      */
     public function checkEmail(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'email' => 'required|email',
+            'username' => 'required|string|min:1',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Invalid email format',
+                'message' => 'Invalid username format',
             ], 422);
         }
 
-        $user = User::where('email', $request->email)->first();
+        // Automatically append @cnrs.jmc to username to create full email
+        $fullEmail = $request->username . '@cnrs.jmc';
+        $user = User::where('email', $fullEmail)->first();
 
         if ($user) {
             return response()->json([

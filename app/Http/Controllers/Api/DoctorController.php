@@ -197,6 +197,31 @@ class DoctorController extends Controller
     }
 
     /**
+     * Get doctor statistics
+     */
+    public function stats(): JsonResponse
+    {
+        try {
+            $total = Doctor::count();
+            $active = Doctor::where('is_active', true)->count();
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'total' => $total,
+                    'active' => $active
+                ]
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error fetching doctor stats: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch doctor statistics',
+            ], 500);
+        }
+    }
+
+    /**
      * Toggle doctor status (active/inactive)
      */
     public function toggleStatus(Request $request, Doctor $doctor): JsonResponse

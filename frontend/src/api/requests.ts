@@ -164,8 +164,8 @@ export const requestsApi = {
     department_id: number;
     doctor_id?: number;
     location_id?: number;
-    priority: string;
-    purpose: string;
+    priority?: string;
+    purpose?: string;
     needed_date: string;
     batch_notes?: string;
   }): Promise<ApiResponse<any>> => {
@@ -422,6 +422,89 @@ export const requestsApi = {
         message: error.response?.data?.message || 'Failed to get pending verification case notes'
       };
     }
+   },
+
+  // Get returned submissions for MR Staff review
+  getReturnedSubmissions: async (): Promise<{ success: boolean; submissions?: any[]; message?: string }> => {
+    try {
+      const response = await apiClient.get('/case-notes/returned-submissions');
+      return response.data;
+    } catch (error: any) {
+      console.error('Error getting returned submissions:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to get returned submissions'
+      };
+    }
+  },
+
+  // Verify returned case notes
+  verifyReturnedCaseNotes: async (data: { case_note_ids: number[]; action: 'verify' | 'reject'; verification_notes?: string; rejection_reason?: string }): Promise<{ success: boolean; message?: string }> => {
+    try {
+      const response = await apiClient.post('/case-notes/verify-returned', data);
+      return response.data;
+    } catch (error: any) {
+      console.error('Error verifying returned case notes:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to verify returned case notes'
+      };
+    }
+  },
+
+  // Generate and download PDF for case note list from a specific CA
+  generateCaseNoteListPdf: async (caId: number, requestIds?: number[]): Promise<Blob> => {
+    const params = new URLSearchParams();
+    if (requestIds) {
+      requestIds.forEach(id => params.append('request_ids[]', id.toString()));
+    }
+    const response = await apiClient.get(`/requests/ca/${caId}/pdf?${params.toString()}`, {
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+
+  // Case Note Tracking
+  getCaseNoteTracking: async (params: {
+    type: 'in' | 'out';
+    start_date: string;
+    end_date: string;
+  }): Promise<ApiResponse<Array<{
+    id: number;
+    patient_name: string;
+    mrn: string;
+    request_number: string;
+    requested_by: string;
+    requested_at: string;
+    status: string;
+    type: 'in' | 'out';
+  }>>> => {
+    const response = await apiClient.get('/case-notes/tracking', { params });
+    return response.data;
+  },
+
+  exportCaseNoteTracking: async (params: {
+    type: 'in' | 'out';
+    start_date: string;
+    end_date: string;
+  }): Promise<Blob> => {
+    const response = await apiClient.get('/case-notes/tracking/export', {
+      params,
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+
+  generateCaseNoteTrackingPdf: async (params: {
+    type: 'in' | 'out';
+    start_date: string;
+    end_date: string;
+  }): Promise<Blob> => {
+    const response = await apiClient.get('/case-notes/tracking/pdf', {
+      params,
+      responseType: 'blob',
+    });
+    return response.data;
   }
 };
 

@@ -15,8 +15,7 @@ import type { Patient, Department, Location, Doctor } from '@/types/requests';
 
 // Form schema
 const handoverRequestSchema = z.object({
-  reason: z.string().min(10, 'Reason must be at least 10 characters'),
-  priority: z.enum(['low', 'normal', 'high', 'urgent']),
+  reason: z.string().optional(),
   department_id: z.number().min(1, 'Please select a department'),
   location_id: z.number().optional(),
   doctor_id: z.number().optional(),
@@ -47,7 +46,6 @@ export function HandoverRequestModal({
     resolver: zodResolver(handoverRequestSchema),
     defaultValues: {
       reason: '',
-      priority: 'normal',
       department_id: 0,
       location_id: undefined,
       doctor_id: undefined,
@@ -172,12 +170,7 @@ export function HandoverRequestModal({
                   {patient.current_holder?.name || 'Unknown'}
                 </span>
               </div>
-              <div>
-                <span className="text-gray-500">Status:</span>
-                <Badge variant="destructive" className="ml-2">
-                  Unavailable
-                </Badge>
-              </div>
+              
             </div>
           </div>
 
@@ -189,41 +182,17 @@ export function HandoverRequestModal({
                 name="reason"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Reason for Handover Request *</FormLabel>
+                    <FormLabel>Reason for Handover Request</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="Please explain why you need this case note..."
+                        placeholder="Optional: Explain why you need this case note..."
                         className="min-h-[100px]"
                         {...field}
                       />
                     </FormControl>
                     <FormDescription>
-                      Provide a clear reason for requesting this case note from the current holder.
+                      Optional: Provide additional context about why you need this case note.
                     </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="priority"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Priority *</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select priority" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="low">Low</SelectItem>
-                        <SelectItem value="normal">Normal</SelectItem>
-                        <SelectItem value="high">High</SelectItem>
-                        <SelectItem value="urgent">Urgent</SelectItem>
-                      </SelectContent>
-                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}

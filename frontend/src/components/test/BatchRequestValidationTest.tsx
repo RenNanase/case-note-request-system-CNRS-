@@ -143,7 +143,7 @@ export const BatchRequestValidationTest: React.FC = () => {
           </div>
 
           {validationResult && (
-            <div className="border rounded-lg p-4 bg-blue-50">
+            <div className="border rounded-lg p-4 bg-purple-50">
               <h4 className="font-medium mb-2">Validation Test Results:</h4>
               <pre className="text-sm whitespace-pre-wrap">{validationResult}</pre>
             </div>

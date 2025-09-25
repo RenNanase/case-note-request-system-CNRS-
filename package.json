@@ -3,15 +3,22 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "build": "vite build",
+        "build": "vite build && npm run copy-manifest && npm run copy-logo",
+        "copy-manifest": "copy \"public\\build\\.vite\\manifest.json\" \"public\\build\\manifest.json\"",
+        "copy-logo": "copy \"frontend\\public\\cnrs.logo.png\" \"public\\cnrs.logo.png\"",
         "dev": "vite"
     },
     "devDependencies": {
+        "@tailwindcss/postcss": "^4.1.13",
         "@tailwindcss/vite": "^4.0.0",
+        "@vitejs/plugin-react": "^5.0.2",
+        "autoprefixer": "^10.4.21",
         "axios": "^1.11.0",
         "concurrently": "^9.0.1",
         "laravel-vite-plugin": "^2.0.0",
-        "tailwindcss": "^4.0.0",
+        "postcss": "^8.5.6",
+        "tailwindcss": "^4.1.13",
+        "terser": "^5.44.0",
         "vite": "^7.0.4"
     }
 }

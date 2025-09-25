@@ -376,7 +376,7 @@ export const BatchRequestForm: React.FC<BatchRequestFormProps> = ({
       },
       normal: {
         variant: 'outline' as const,
-        className: 'border-blue-300 text-blue-700 bg-blue-50'
+        className: 'border-purple-300 text-purple-700 bg-purple-50'
       },
       high: {
         variant: 'outline' as const,
@@ -433,19 +433,19 @@ export const BatchRequestForm: React.FC<BatchRequestFormProps> = ({
                   <div className="flex flex-col items-center">
                     <div className={cn(
                       "w-12 h-12 rounded-full border-2 flex items-center justify-center transition-colors",
-                      isActive ? "border-blue-600 bg-blue-50" :
+                      isActive ? "border-purple-600 bg-purple-50" :
                       isCompleted ? "border-green-600 bg-green-50" : "border-gray-300 bg-gray-50"
                     )}>
                       <Icon className={cn(
                         "h-5 w-5",
-                        isActive ? "text-blue-600" :
+                        isActive ? "text-purple-600" :
                         isCompleted ? "text-green-600" : "text-gray-400"
                       )} />
                     </div>
                     <div className="mt-2 text-center">
                       <p className={cn(
                         "text-sm font-medium",
-                        isActive ? "text-blue-600" :
+                        isActive ? "text-purple-600" :
                         isCompleted ? "text-green-600" : "text-gray-500"
                       )}>
                         {step.title}
@@ -470,65 +470,106 @@ export const BatchRequestForm: React.FC<BatchRequestFormProps> = ({
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
           {/* Step 0: Add Case Notes */}
           {currentStep === 0 && (
-            <Card>
+            <Card className="min-h-[600px]">
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <Users className="h-5 w-5" />
-                                      <span>Add Case Notes ({fields.length}/20)</span>
+                  <span>Add Case Notes ({fields.length}/20)</span>
                 </CardTitle>
                 <CardDescription>
                   Add patients whose case notes you need to request. You can add up to 20 case notes in this batch.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
-                {fields.map((field, index) => (
-                  <div key={field.id} className="border rounded-lg p-4 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-medium text-gray-900">Case Note #{index + 1}</h4>
-                      {fields.length > 1 && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeCaseNote(index)}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
+              <CardContent className="space-y-4 pb-8">
+                {/* Simple List View */}
+                <div className="space-y-3">
+                  {fields.map((field, index) => {
+                    const selectedPatient = getValues(`case_notes.${index}.patient`);
+                    return (
+                      <div key={field.id} className="flex items-center space-x-3 p-3 border rounded-lg bg-gray-50">
+                        <div className="flex-shrink-0 w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center text-sm font-medium text-purple-600">
+                          {index + 1}
+                        </div>
+                        
+                        <div className="flex-1">
+                          <FormField
+                            control={form.control}
+                            name={`case_notes.${index}.patient_id`}
+                            render={() => (
+                              <FormItem className="space-y-1">
+                                <FormControl>
+                                  <PatientSearch
+                                    onPatientSelect={(patient) => handlePatientSelect(index, patient)}
+                                    selectedPatient={selectedPatient}
+                                    onRequestHandover={handleRequestHandover}
+                                    placeholder={`Search for patient ${index + 1}...`}
+                                    className="w-full"
+                                  />
+                                </FormControl>
+                                <FormMessage className="text-xs" />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        {fields.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeCaseNote(index)}
+                            className="text-red-500 hover:text-red-700 hover:bg-red-50 flex-shrink-0"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Show summary of selected patients */}
+                {fields.some((_, index) => getValues(`case_notes.${index}.patient`)) && (
+                  <div className="mt-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
+                    <h4 className="font-medium text-purple-900 mb-2 flex items-center">
+                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                      Selected Patients ({fields.filter((_, index) => getValues(`case_notes.${index}.patient`)).length})
+                    </h4>
+                    <div className="space-y-2">
+                      {fields.map((_, index) => {
+                        const patient = getValues(`case_notes.${index}.patient`);
+                        if (!patient) return null;
+                        return (
+                          <div key={index} className="flex items-center space-x-2 text-sm">
+                            <div className="w-5 h-5 bg-purple-500 text-white rounded-full flex items-center justify-center text-xs">
+                              {index + 1}
+                            </div>
+                            <span className="font-medium">{patient.name}</span>
+                            <span className="text-gray-500">•</span>
+                            <span className="text-gray-600">MRN: {patient.mrn}</span>
+                            {patient.has_medical_alerts && (
+                              <span className="text-red-600 text-xs">⚠️ Medical Alert</span>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
-
-                    <FormField
-                      control={form.control}
-                      name={`case_notes.${index}.patient_id`}
-                      render={() => (
-                        <FormItem>
-                          <FormLabel>Patient Search</FormLabel>
-                          <FormControl>
-                            <PatientSearch
-                              onPatientSelect={(patient) => handlePatientSelect(index, patient)}
-                              selectedPatient={getValues(`case_notes.${index}.patient`)}
-                              onRequestHandover={handleRequestHandover}
-                            />
-                          </FormControl>
-
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
                   </div>
-                ))}
+                )}
 
+                {/* Add more case notes */}
                 {fields.length < 20 && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={addCaseNote}
-                    className="w-full flex items-center space-x-2"
-                  >
-                    <Plus className="h-4 w-4" />
-                    <span>Add Another Case Note</span>
-                  </Button>
+                  <div className="pt-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={addCaseNote}
+                      className="w-full flex items-center justify-center space-x-2 py-3 border-dashed border-2 hover:border-purple-300 hover:bg-purple-50"
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span>Add Another Patient ({fields.length}/20)</span>
+                    </Button>
+                  </div>
                 )}
               </CardContent>
             </Card>

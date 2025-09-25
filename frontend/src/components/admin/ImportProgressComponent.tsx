@@ -152,7 +152,7 @@ export default function ImportProgressComponent({ onRefresh }: ImportProgressCom
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'processing':
-        return <Play className="h-4 w-4 text-blue-600" />;
+        return <Play className="h-4 w-4 text-purple-600" />;
       case 'completed':
         return <CheckCircle2 className="h-4 w-4 text-green-600" />;
       case 'failed':
@@ -185,7 +185,7 @@ export default function ImportProgressComponent({ onRefresh }: ImportProgressCom
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <div className="flex items-center">
-                <Play className="h-5 w-5 mr-2 text-blue-600" />
+                <Play className="h-5 w-5 mr-2 text-purple-600" />
                 Active Imports ({activeImports.length})
               </div>
               <Button
@@ -260,7 +260,7 @@ export default function ImportProgressComponent({ onRefresh }: ImportProgressCom
                     <div className="text-gray-600">Skipped</div>
                   </div>
                   <div className="text-center">
-                    <div className="font-medium text-blue-600">
+                    <div className="font-medium text-purple-600">
                       {importProgress.duplicate_count.toLocaleString()}
                     </div>
                     <div className="text-gray-600">Duplicates</div>

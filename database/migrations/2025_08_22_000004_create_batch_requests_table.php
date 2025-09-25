@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Schema\purpleprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('batch_requests', function (Blueprint $table) {
+        Schema::create('batch_requests', function (purpleprint $table) {
             $table->id();
             $table->string('batch_number')->unique()->comment('Unique batch identifier');
             $table->foreignId('requested_by_user_id')->constrained('users')->onDelete('restrict')->comment('CA who created the batch');
@@ -31,18 +31,18 @@ return new class extends Migration
         });
 
         // Add batch_id to existing requests table
-        Schema::table('requests', function (Blueprint $table) {
+        Schema::table('requests', function (purpleprint $table) {
             $table->foreignId('batch_id')->nullable()->constrained('batch_requests')->onDelete('set null');
             $table->index('batch_id');
         });
 
-        Schema::table('requests', function (Blueprint $table) {
+        Schema::table('requests', function (purpleprint $table) {
             $table->timestamp('handover_pending_since')->nullable()->after('handover_status');
             $table->timestamp('handover_verified_at')->nullable()->after('handover_pending_since');
             $table->index(['handover_status', 'handover_pending_since']);
         });
 
-        Schema::table('case_note_handovers', function (Blueprint $table) {
+        Schema::table('case_note_handovers', function (purpleprint $table) {
             $table->timestamp('handed_over_at')->nullable()->after('status');
             $table->timestamp('verified_at')->nullable()->after('handed_over_at');
             $table->text('verification_notes')->nullable()->after('verified_at');
@@ -59,7 +59,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('requests', function (Blueprint $table) {
+        Schema::table('requests', function (purpleprint $table) {
             $table->dropForeign(['batch_id']);
             $table->dropIndex(['batch_id']);
             $table->dropColumn('batch_id');

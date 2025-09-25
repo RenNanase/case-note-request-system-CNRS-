@@ -48,30 +48,35 @@ class Doctor extends Model
 
     public function requests(): HasMany
     {
-        return $this->hasMany(Request::class);
+        return $this->hasMany(\App\Models\Request::class);
     }
 
     public function caseNotes(): HasMany
     {
-        return $this->hasMany(CaseNote::class);
+        return $this->hasMany(\App\Models\CaseNote::class);
     }
 
     /**
      * Scopes
      */
-    public function scopeActive($query): Builder
+    public function scopeActive(Builder $query): Builder
     {
         return $query->where('is_active', true);
     }
 
-    public function scopeByDepartment($query, int $departmentId): Builder
+    public function scopeInactive(Builder $query): Builder
+    {
+        return $query->where('is_active', false);
+    }
+
+    public function scopeByDepartment(Builder $query, int $departmentId): Builder
     {
         return $query->where('department_id', $departmentId);
     }
 
-    public function scopeSearch($query, string $term): Builder
+    public function scopeSearch(Builder $query, string $search): Builder
     {
-        return $query->where('name', 'LIKE', "%{$term}%");
+        return $query->where('name', 'like', "%{$search}%");
     }
 
     /**
@@ -93,14 +98,15 @@ class Doctor extends Model
     }
 
     /**
-     * Helper methods
+     * Convert the doctor to a select option format
      */
     public function toSelectOption(): array
     {
         return [
             'value' => $this->id,
             'label' => $this->display_name,
-            'department' => $this->department->name ?? null,
+            'department' => $this->department ? $this->department->name : null,
+            'department_code' => $this->department ? $this->department->code : null,
         ];
     }
 }

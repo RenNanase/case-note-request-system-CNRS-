@@ -224,7 +224,7 @@ const HandoverRequestsPage: React.FC = () => {
       },
       normal: {
         variant: 'secondary' as const,
-        className: 'bg-blue-100 text-blue-800 border-blue-200'
+        className: 'bg-purple-100 text-purple-800 border-purple-200'
       },
       high: {
         variant: 'outline' as const,
@@ -364,8 +364,8 @@ const HandoverRequestsPage: React.FC = () => {
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center space-x-3 mb-3">
-                          <div className="bg-blue-100 p-2 rounded-lg">
-                            <Package className="h-5 w-5 text-blue-600" />
+                          <div className="bg-purple-100 p-2 rounded-lg">
+                            <Package className="h-5 w-5 text-purple-600" />
                           </div>
                           <div>
                             <h3 className="font-semibold text-gray-900">
@@ -495,50 +495,136 @@ const HandoverRequestsPage: React.FC = () => {
 
       {/* Response Modal */}
       <Dialog open={showResponseModal} onOpenChange={setShowResponseModal}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Respond to Handover Request</DialogTitle>
-            <DialogDescription>
-              {selectedRequest?.case_note?.patient?.name || 'Unknown Patient'} - {selectedRequest?.reason}
+        <DialogContent className="max-w-2xl">
+          <DialogHeader className="pb-6">
+            <DialogTitle className="text-xl font-semibold text-gray-900 flex items-center space-x-2">
+              <ArrowRight className="h-5 w-5 text-purple-600" />
+              <span>Handover Request Review</span>
+            </DialogTitle>
+            <DialogDescription className="text-gray-600 mt-2">
+              Please review the handover request details and provide your decision.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium text-gray-700">Response Notes (Optional)</label>
-              <Textarea
-                value={responseNotes}
-                onChange={(e) => setResponseNotes(e.target.value)}
-                placeholder="Add any notes about your decision..."
-                rows={3}
-                className="mt-1"
-                disabled={submitting}
-              />
-            </div>
-          </div>
+          {selectedRequest && (
+            <div className="space-y-6">
+              {/* Request Details Card */}
+              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
+                  <Package className="h-4 w-4 mr-2 text-purple-600" />
+                  Case Note Details
+                </h3>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium text-gray-700">Patient:</span>
+                    <p className="text-gray-900 mt-1">{selectedRequest.case_note?.patient?.name || 'Unknown Patient'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-700">MRN:</span>
+                    <p className="text-gray-900 mt-1">{selectedRequest.case_note?.patient?.mrn || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-700">Department:</span>
+                    <p className="text-gray-900 mt-1">{selectedRequest.case_note?.department?.name || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-700">Priority:</span>
+                    <div className="mt-1">{getPriorityBadge(selectedRequest.priority)}</div>
+                  </div>
+                </div>
+              </div>
 
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowResponseModal(false)}
-              disabled={submitting}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={() => handleSubmitResponse('reject')}
-              disabled={submitting}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              {submitting ? 'Processing...' : 'Reject'}
-            </Button>
-            <Button
-              onClick={() => handleSubmitResponse('approve')}
-              disabled={submitting}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              {submitting ? 'Processing...' : 'Approve'}
-            </Button>
+              {/* Request Information */}
+              <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
+                <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
+                  <User className="h-4 w-4 mr-2 text-purple-600" />
+                  Request Information
+                </h3>
+                <div className="space-y-3 text-sm">
+                  <div>
+                    <span className="font-medium text-gray-700">Requested by:</span>
+                    <p className="text-gray-900 mt-1">{selectedRequest.requester?.name}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-700">Reason for handover:</span>
+                    <p className="text-gray-900 mt-1 bg-white p-3 rounded border">{selectedRequest.reason}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-700">Requested on:</span>
+                    <p className="text-gray-900 mt-1">{new Date(selectedRequest.requested_at).toLocaleString()}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Response Notes */}
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-900 flex items-center">
+                  <span>Response Notes</span>
+                  <span className="text-gray-500 font-normal ml-1">(Optional)</span>
+                </label>
+                <Textarea
+                  value={responseNotes}
+                  onChange={(e) => setResponseNotes(e.target.value)}
+                  placeholder="Add any notes about your decision, reasons for approval/rejection, or additional instructions..."
+                  rows={4}
+                  className="resize-none border-gray-300 focus:border-purple-500 focus:ring-purple-500"
+                  disabled={submitting}
+                />
+                <p className="text-xs text-gray-500">
+                  These notes will be visible to the requester and will be logged in the system.
+                </p>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="pt-6 border-t border-gray-200">
+            <div className="flex items-center justify-between w-full">
+              <Button
+                variant="outline"
+                onClick={() => setShowResponseModal(false)}
+                disabled={submitting}
+                className="px-6"
+              >
+                Cancel
+              </Button>
+              <div className="flex space-x-3">
+                <Button
+                  onClick={() => handleSubmitResponse('reject')}
+                  disabled={submitting}
+                  variant="outline"
+                  className="px-6 border-red-300 text-red-700 hover:bg-red-50 hover:border-red-400"
+                >
+                  {submitting ? (
+                    <div className="flex items-center space-x-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Processing...</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center space-x-2">
+                      <XCircle className="h-4 w-4" />
+                      <span>Reject</span>
+                    </div>
+                  )}
+                </Button>
+                <Button
+                  onClick={() => handleSubmitResponse('approve')}
+                  disabled={submitting}
+                  className="px-6 bg-green-600 hover:bg-green-700 text-white"
+                >
+                  {submitting ? (
+                    <div className="flex items-center space-x-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Processing...</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center space-x-2">
+                      <CheckCircle className="h-4 w-4" />
+                      <span>Approve</span>
+                    </div>
+                  )}
+                </Button>
+              </div>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>

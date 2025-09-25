@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Schema\purpleprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('requests', function (Blueprint $table) {
+        Schema::table('requests', function (purpleprint $table) {
             // Add handover-related fields
             $table->foreignId('current_handover_id')->nullable()->constrained('case_note_handovers')->onDelete('set null');
             $table->foreignId('current_pic_user_id')->nullable()->constrained('users')->onDelete('set null'); // Current Person in Charge
@@ -28,7 +28,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('requests', function (Blueprint $table) {
+        Schema::table('requests', function (purpleprint $table) {
             $table->dropForeign(['current_handover_id']);
             $table->dropForeign(['current_pic_user_id']);
             $table->dropIndex(['current_pic_user_id']);

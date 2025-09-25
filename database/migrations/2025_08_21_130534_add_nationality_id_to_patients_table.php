@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Schema\purpleprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('patients', function (Blueprint $table) {
+        Schema::table('patients', function (purpleprint $table) {
             $table->string('nationality_id', 20)->nullable()->after('nric')->comment('Nationality identification number for import compatibility');
             $table->index('nationality_id');
         });
@@ -22,7 +22,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('patients', function (Blueprint $table) {
+        Schema::table('patients', function (purpleprint $table) {
             $table->dropIndex(['nationality_id']);
             $table->dropColumn('nationality_id');
         });

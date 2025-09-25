@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Schema\purpleprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('requests', function (Blueprint $table) {
+        Schema::create('requests', function (purpleprint $table) {
             $table->id();
             $table->string('request_number', 20)->unique()->comment('Unique request identifier');
             $table->foreignId('patient_id')->constrained('patients')->onDelete('restrict')->comment('Patient for this request');

@@ -220,10 +220,8 @@ class AdminPatientController extends Controller
             $query->search($request->search);
         }
 
-        // Filter by active status
-        if ($request->filled('active')) {
-            $query->where('is_active', $request->boolean('active'));
-        }
+        // Note: is_active column doesn't exist in simplified patient structure
+        // Active status filtering is not available
 
         // Sort options
         $sortBy = $request->get('sort_by', 'created_at');
@@ -256,12 +254,26 @@ class AdminPatientController extends Controller
     public function statistics(): JsonResponse
     {
         try {
+            $totalPatients = Patient::count();
+            
+            // Get the most recent import information
+            $lastImport = ImportProgress::where('import_type', ImportProgress::TYPE_PATIENTS)
+                ->where('status', ImportProgress::STATUS_COMPLETED)
+                ->orderBy('completed_at', 'desc')
+                ->first();
+            
             $stats = [
-                'total_patients' => Patient::count(),
-                'active_patients' => Patient::active()->count(),
-                'inactive_patients' => Patient::where('is_active', false)->count(),
+                'total_patients' => $totalPatients,
+                'active_patients' => $totalPatients, // Since is_active column doesn't exist, assume all are active
+                'inactive_patients' => 0, // Since is_active column doesn't exist
                 'patients_with_nationality_id' => Patient::whereNotNull('nationality_id')->count(),
                 'recent_imports' => Patient::where('created_at', '>=', now()->subDays(30))->count(),
+                'last_import' => $lastImport ? [
+                    'date' => $lastImport->completed_at ? $lastImport->completed_at->toISOString() : null,
+                    'file_name' => $lastImport->file_name,
+                    'imported_count' => $lastImport->processed_rows ?? 0,
+                    'user_name' => $lastImport->requestedBy ? $lastImport->requestedBy->name : 'Unknown',
+                ] : null,
             ];
 
             return response()->json([
@@ -278,6 +290,7 @@ class AdminPatientController extends Controller
                     'inactive_patients' => 0,
                     'patients_with_nationality_id' => 0,
                     'recent_imports' => 0,
+                    'last_import' => null,
                 ],
             ], 200); // Return 200 with error message instead of 500
         }
@@ -285,59 +298,26 @@ class AdminPatientController extends Controller
 
     /**
      * Update patient status (activate/deactivate)
+     * Note: is_active column doesn't exist in simplified patient structure
      */
     public function updateStatus(Request $request, Patient $patient): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
-            'is_active' => 'required|boolean',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Invalid input',
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-
-        $patient->update([
-            'is_active' => $request->boolean('is_active'),
-        ]);
-
         return response()->json([
-            'success' => true,
-            'message' => 'Patient status updated successfully',
-            'patient' => $patient->toSearchResult(),
-        ]);
+            'success' => false,
+            'message' => 'Patient status update is not available in the simplified patient structure',
+        ], 400);
     }
 
     /**
      * Bulk update patient status
+     * Note: is_active column doesn't exist in simplified patient structure
      */
     public function bulkUpdateStatus(Request $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
-            'patient_ids' => 'required|array|min:1',
-            'patient_ids.*' => 'exists:patients,id',
-            'is_active' => 'required|boolean',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Invalid input',
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-
-        $updatedCount = Patient::whereIn('id', $request->patient_ids)
-            ->update(['is_active' => $request->boolean('is_active')]);
-
         return response()->json([
-            'success' => true,
-            'message' => "Updated status for {$updatedCount} patients",
-            'updated_count' => $updatedCount,
-        ]);
+            'success' => false,
+            'message' => 'Bulk patient status update is not available in the simplified patient structure',
+        ], 400);
     }
 
     /**

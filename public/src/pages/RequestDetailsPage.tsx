@@ -203,7 +203,7 @@ export default function RequestDetailsPage() {
     const statusColors = {
       'pending': { variant: 'secondary' as const, icon: Clock, color: 'text-yellow-600', bgColor: undefined },
       'approved': { variant: 'default' as const, icon: CheckCircle, color: 'text-white', bgColor: 'bg-green-600 border-green-700' },
-      'in_progress': { variant: 'default' as const, icon: Play, color: 'text-blue-600', bgColor: undefined },
+      'in_progress': { variant: 'default' as const, icon: Play, color: 'text-purple-600', bgColor: undefined },
       'completed': { variant: 'default' as const, icon: CheckCircle2, color: 'text-green-600', bgColor: undefined },
       'rejected': { variant: 'destructive' as const, icon: XCircle, color: 'text-white', bgColor: 'bg-red-600 border-red-700' }
     };
@@ -227,7 +227,7 @@ export default function RequestDetailsPage() {
     const priorityColors = {
       'urgent': { variant: 'outline' as const, className: 'border-red-300 text-red-700 bg-red-50' },
       'high': { variant: 'outline' as const, className: 'border-orange-300 text-orange-700 bg-orange-50' },
-      'normal': { variant: 'outline' as const, className: 'border-blue-300 text-blue-700 bg-blue-50' },
+      'normal': { variant: 'outline' as const, className: 'border-purple-300 text-purple-700 bg-purple-50' },
       'low': { variant: 'outline' as const, className: 'border-gray-300 text-gray-700 bg-gray-50' }
     };
 
@@ -379,7 +379,7 @@ export default function RequestDetailsPage() {
 
               {/* Role indicator */}
               {hasRole('MR_STAFF') && (
-                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
                   MR Staff View
                 </Badge>
               )}
@@ -737,9 +737,9 @@ export default function RequestDetailsPage() {
                         case 'handed_over': return 'bg-orange-500';
                         case 'status_changed': return 'bg-orange-500';
 
-                        // Progress events (blue)
-                        case 'in_progress': return 'bg-blue-500';
-                        case 'updated': return 'bg-blue-500';
+                        // Progress events (purple)
+                        case 'in_progress': return 'bg-purple-500';
+                        case 'updated': return 'bg-purple-500';
 
                         // Default
                         default: return 'bg-gray-500';
@@ -786,7 +786,7 @@ export default function RequestDetailsPage() {
                                       ? 'border-green-400'
                                       : event.type.includes('requested') || event.type.includes('created') || event.type.includes('submitted')
                                       ? 'border-purple-400'
-                                      : 'border-blue-400'
+                                      : 'border-purple-400'
                                   }`}>
                                     <span className="text-xs font-medium text-gray-600 block mb-1">Comments:</span>
                                     <p className="text-sm text-gray-700">

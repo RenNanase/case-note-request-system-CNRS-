@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Create axios instance with base configuration
 const apiClient = axios.create({
-  baseURL: 'http://10.2.10.178/crns/api', // Use full network server path for production
+  baseURL: 'http://10.2.10.178/CNRS/api', // Use full network server path for production
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -10,8 +10,8 @@ const apiClient = axios.create({
   },
 });
 
-console.log('🔧 API Client initialized with baseURL:', 'http://10.2.10.178/crns/api');
-console.log('🔧 Network server target:', 'http://10.2.10.178/crns');
+console.log('🔧 API Client initialized with baseURL:', 'http://10.2.10.178/CNRS/api');
+console.log('🔧 Network server target:', 'http://10.2.10.178/CNRS');
 
 // Request interceptor to add auth token
 apiClient.interceptors.request.use(

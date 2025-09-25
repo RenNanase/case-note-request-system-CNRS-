@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Schema\purpleprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('requests', function (Blueprint $table) {
+        Schema::table('requests', function (purpleprint $table) {
             // Individual case note verification fields
             $table->boolean('is_received')->default(false)->after('handover_status');
             $table->timestamp('received_at')->nullable()->after('is_received');
@@ -28,7 +28,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('requests', function (Blueprint $table) {
+        Schema::table('requests', function (purpleprint $table) {
             $table->dropForeign(['received_by_user_id']);
             $table->dropColumn([
                 'is_received',

@@ -270,7 +270,7 @@ class CaseNoteTimelineController extends Controller
                 $departmentName = $metadata['department_name'] ?? null;
                 $locationName = $metadata['location_name'] ?? null;
                 $purpose = $metadata['purpose'] ?? null;
-                
+
                 $description = 'Case note request created';
                 if ($doctorName) {
                     $description .= " for {$doctorName}";
@@ -303,7 +303,7 @@ class CaseNoteTimelineController extends Controller
                 $doctorName = $metadata['doctor_name'] ?? null;
                 $departmentName = $metadata['department_name'] ?? null;
                 $locationName = $metadata['location_name'] ?? null;
-                
+
                 $description = "Handover requested from {$from} to {$to}";
                 if ($doctorName) {
                     $description .= " for {$doctorName}";
@@ -360,7 +360,13 @@ class CaseNoteTimelineController extends Controller
             case 'completed':
                 $completer = $metadata['completed_by_name'] ?? $event->actor->name ?? 'Unknown';
                 $notes = $metadata['completion_notes'] ?? $event->reason ?? '';
-                return "Case note completed by {$completer}" . ($notes ? " - {$notes}" : '');
+                $locationName = $metadata['location_name'] ?? null;
+
+                $description = "Case note completed by {$completer}";
+                if ($locationName) {
+                    $description .= " | Location: {$locationName}";
+                }
+                return $description . ($notes ? " - {$notes}" : '');
 
             case 'updated':
                 $updater = $metadata['updated_by_name'] ?? $event->actor->name ?? 'Unknown';
@@ -379,7 +385,7 @@ class CaseNoteTimelineController extends Controller
                 $doctorName = $metadata['doctor_name'] ?? null;
                 $departmentName = $metadata['department_name'] ?? null;
                 $locationName = $metadata['location_name'] ?? null;
-                
+
                 $description = "Handover verified by {$verifiedBy}";
                 if ($doctorName) {
                     $description .= " for {$doctorName}";
@@ -407,7 +413,12 @@ class CaseNoteTimelineController extends Controller
             case 'returned_verified':
                 $verifiedBy = $metadata['verified_by_user_name'] ?? $event->actor->name ?? 'Unknown';
                 $verificationNotes = $metadata['verification_notes'] ?? '';
+                $locationName = $metadata['location_name'] ?? null;
+
                 $description = "Returned case note verified by {$verifiedBy} - marked as Complete";
+                if ($locationName) {
+                    $description .= " | Location: {$locationName}";
+                }
                 return $description . ($verificationNotes ? " - {$verificationNotes}" : '');
 
             case 'returned_rejected':

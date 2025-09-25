@@ -12,6 +12,16 @@ export interface Patient {
   has_existing_requests?: boolean;
   is_available?: boolean;
   handover_status?: string;
+  restriction_type?: string;
+  restriction_details?: {
+    department_name: string;
+    location_name: string;
+    doctor_name: string;
+    user_type_label: string;
+    remarks: string;
+    opened_by_name: string;
+    opened_at: string;
+  };
   current_holder?: {
     id: number;
     name: string;
@@ -170,8 +180,8 @@ export interface RequestFormData {
   department_id: number;
   doctor_id?: number;
   location_id?: number;
-  priority: string;
-  purpose: string;
+  priority?: string;
+  purpose?: string;
   needed_date: string;
   remarks?: string;
 }
@@ -216,6 +226,7 @@ export interface DashboardStats {
   my_completed?: number;
   my_rejected?: number;
   pending_verifications?: number;
+  pending_handover_verifications?: number;
   handed_over_to_me?: number;
   my_handovers?: number;
   total_handovers?: number;

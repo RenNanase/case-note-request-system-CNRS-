@@ -209,7 +209,7 @@ const CaseNoteTimelinePage: React.FC = () => {
       },
       normal: {
         variant: 'outline' as const,
-        className: 'border-blue-300 text-blue-700 bg-blue-50 text-xs'
+        className: 'border-purple-300 text-purple-700 bg-purple-50 text-xs'
       },
       high: {
         variant: 'outline' as const,
@@ -286,7 +286,7 @@ const CaseNoteTimelinePage: React.FC = () => {
       case 'created': return 'text-purple-600 bg-purple-100';
       case 'handover_requested': return 'text-purple-600 bg-purple-100';
       case 'submitted': return 'text-purple-600 bg-purple-100';
-      
+
       // Approved/Verified events (green)
       case 'approved': return 'text-green-600 bg-green-100';
       case 'handover_approved': return 'text-green-600 bg-green-100';
@@ -296,21 +296,21 @@ const CaseNoteTimelinePage: React.FC = () => {
       case 'received': return 'text-green-600 bg-green-100';
       case 'acknowledged': return 'text-green-600 bg-green-100';
       case 'completed': return 'text-emerald-600 bg-emerald-100';
-      
+
       // Rejected events (red)
       case 'rejected': return 'text-red-600 bg-red-100';
       case 'handover_rejected': return 'text-red-600 bg-red-100';
       case 'rejected_not_received': return 'text-red-600 bg-red-100';
       case 'returned_rejected': return 'text-red-600 bg-red-100';
-      
+
       // Transfer/Handover events (orange)
       case 'handed_over': return 'text-orange-600 bg-orange-100';
       case 'status_changed': return 'text-orange-600 bg-orange-100';
-      
-      // Progress events (blue)
-      case 'in_progress': return 'text-blue-600 bg-blue-100';
-      case 'updated': return 'text-blue-600 bg-blue-100';
-      
+
+      // Progress events (purple)
+      case 'in_progress': return 'text-purple-600 bg-purple-100';
+      case 'updated': return 'text-purple-600 bg-purple-100';
+
       // Default
       default: return 'text-gray-600 bg-gray-100';
     }
@@ -393,7 +393,7 @@ const CaseNoteTimelinePage: React.FC = () => {
                     key={caseNote.id}
                     className={`p-4 border rounded-lg cursor-pointer transition-colors ${
                       selectedCaseNote?.id === caseNote.id
-                        ? 'border-blue-500 bg-blue-50'
+                        ? 'border-purple-500 bg-purple-50'
                         : 'border-gray-200 hover:bg-gray-50'
                     }`}
                     onClick={() => handleCaseNoteSelection(caseNote)}
@@ -448,7 +448,7 @@ const CaseNoteTimelinePage: React.FC = () => {
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <h3 className="font-semibold text-gray-900 mb-3">Case Note Information</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                    <div>
+                    {/* <div>
                       <span className="font-medium text-gray-600">Patient:</span>
                       <p className="text-gray-900">{selectedCaseNote.patient.name}</p>
                     </div>
@@ -459,27 +459,27 @@ const CaseNoteTimelinePage: React.FC = () => {
                     <div>
                       <span className="font-medium text-gray-600">Nationality ID:</span>
                       <p className="text-gray-900">{selectedCaseNote.patient.nationality_id}</p>
-                    </div>
+                    </div> */}
                     <div>
                       <span className="font-medium text-gray-600">Request Number:</span>
                       <p className="text-gray-900">{selectedCaseNote.request_number}</p>
                     </div>
-                    <div>
+                    {/* <div>
                       <span className="font-medium text-gray-600">Status:</span>
                       {getStatusBadge(selectedCaseNote.status)}
                     </div>
                     <div>
                       <span className="font-medium text-gray-600">Priority:</span>
                       {getPriorityBadge(selectedCaseNote.priority)}
-                    </div>
+                    </div> */}
                     <div>
                       <span className="font-medium text-gray-600">Department:</span>
                       <p className="text-gray-900">{selectedCaseNote.department.name}</p>
                     </div>
-                    <div>
+                    {/* <div>
                       <span className="font-medium text-gray-600">Purpose:</span>
                       <p className="text-gray-900">{selectedCaseNote.purpose}</p>
-                    </div>
+                    </div> */}
                     <div>
                       <span className="font-medium text-gray-600">Requested By:</span>
                       <p className="text-gray-900">{selectedCaseNote.requested_by.name}</p>
@@ -548,8 +548,8 @@ const CaseNoteTimelinePage: React.FC = () => {
                               }`}>
                                 <div className="space-y-2">
                                   {/* Comments and Notes with color-coded borders */}
-                                  {(event.metadata.notes || event.metadata.reason || event.metadata.verification_notes || 
-                                    event.metadata.completion_notes || event.metadata.approval_remarks || 
+                                  {(event.metadata.notes || event.metadata.reason || event.metadata.verification_notes ||
+                                    event.metadata.completion_notes || event.metadata.approval_remarks ||
                                     event.metadata.rejection_reason || event.metadata.handover_reason) && (
                                     <div className={`bg-white p-2 rounded border-l-4 ${
                                       event.event_type.includes('rejected') || event.event_type.includes('rejected_not_received') || event.event_type.includes('returned_rejected')
@@ -558,12 +558,12 @@ const CaseNoteTimelinePage: React.FC = () => {
                                         ? 'border-green-400'
                                         : event.event_type.includes('requested') || event.event_type.includes('created') || event.event_type.includes('submitted')
                                         ? 'border-purple-400'
-                                        : 'border-blue-400'
+                                        : 'border-purple-400'
                                     }`}>
                                       <span className="text-xs font-medium text-gray-600 block mb-1">Comments:</span>
                                       <p className="text-sm text-gray-700">
-                                        {event.metadata.notes || event.metadata.reason || event.metadata.verification_notes || 
-                                         event.metadata.completion_notes || event.metadata.approval_remarks || 
+                                        {event.metadata.notes || event.metadata.reason || event.metadata.verification_notes ||
+                                         event.metadata.completion_notes || event.metadata.approval_remarks ||
                                          event.metadata.rejection_reason || event.metadata.handover_reason}
                                       </p>
                                     </div>
@@ -598,7 +598,7 @@ const CaseNoteTimelinePage: React.FC = () => {
                                   )}
 
                                   {/* Transfer Information */}
-                                  {(event.metadata.from_user || event.metadata.to_user || 
+                                  {(event.metadata.from_user || event.metadata.to_user ||
                                     event.metadata.handed_over_from_user_name || event.metadata.handed_over_to_user_name) && (
                                     <div className="bg-white p-2 rounded border-l-2 border-indigo-300">
                                       <span className="text-xs font-medium text-gray-600 block mb-1">Transfer:</span>

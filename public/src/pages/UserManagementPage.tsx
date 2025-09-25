@@ -370,7 +370,7 @@ export default function UserManagementPage() {
                   <p className="text-sm font-medium text-gray-600">Total Users</p>
                   <p className="text-3xl font-bold text-gray-900">{statistics.total_users}</p>
                 </div>
-                <Users className="h-8 w-8 text-blue-600" />
+                <Users className="h-8 w-8 text-purple-600" />
               </div>
             </CardContent>
           </Card>
@@ -392,9 +392,9 @@ export default function UserManagementPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Password Changed</p>
-                  <p className="text-3xl font-bold text-blue-600">{statistics.password_status.changed}</p>
+                  <p className="text-3xl font-bold text-purple-600">{statistics.password_status.changed}</p>
                 </div>
-                <ShieldCheck className="h-8 w-8 text-blue-600" />
+                <ShieldCheck className="h-8 w-8 text-purple-600" />
               </div>
             </CardContent>
           </Card>

@@ -35,7 +35,7 @@ class CreateTestCompleteWorkflowCaseNote extends Command
 
         try {
             // Get a CA user
-            $caUser = User::where('email', 'ca@cnrs.test')->first();
+            $caUser = User::where('email', 'ca@cnrs.jmc')->first();
             if (!$caUser) {
                 $this->error("CA user not found");
                 return;

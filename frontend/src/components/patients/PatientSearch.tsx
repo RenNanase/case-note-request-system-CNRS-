@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, User, AlertCircle, Clock, CheckCircle2, XCircle, CheckCircle } from 'lucide-react';
+import { Search, User, AlertCircle, Clock, CheckCircle2, XCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -47,9 +47,14 @@ export default function PatientSearch({
       }
     }
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
 
   // Search patients with debouncing
   const searchPatients = async (searchQuery: string) => {
@@ -244,158 +249,181 @@ export default function PatientSearch({
         </Card>
       )}
 
-      {/* Search Results Dropdown */}
+      {/* Search Results Dropdown - Inline */}
       {isOpen && (
-        <Card className="absolute z-50 w-full mt-1 max-h-80 overflow-y-auto shadow-lg border">
-          <CardContent className="p-0">
-            {loading ? (
-              <div className="p-4 space-y-3">
-                {[...Array(3)].map((_, index) => (
-                  <div key={index} className="flex items-center space-x-3">
-                    <Skeleton className="h-10 w-10 rounded-full" />
-                    <div className="space-y-2 flex-1">
-                      <Skeleton className="h-4 w-3/4" />
-                      <Skeleton className="h-3 w-1/2" />
+        <div className="absolute top-full left-0 right-0 mt-1 z-50">
+          <Card className="shadow-lg border bg-white rounded-md overflow-hidden max-h-64 overflow-y-auto border-gray-200">
+            <CardContent className="p-0">
+              {loading ? (
+                <div className="p-3 space-y-2">
+                  {[...Array(3)].map((_, index) => (
+                    <div key={index} className="flex items-center space-x-2">
+                      <Skeleton className="h-8 w-8 rounded-full" />
+                      <div className="space-y-1 flex-1">
+                        <Skeleton className="h-3 w-3/4" />
+                        <Skeleton className="h-2 w-1/2" />
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            ) : error ? (
-              <div className="p-4 text-center">
-                <AlertCircle className="h-6 w-6 text-red-500 mx-auto mb-2" />
-                <p className="text-sm text-red-600">{error}</p>
-              </div>
-            ) : results.length === 0 ? (
-              <div className="p-4 text-center text-gray-500">
-                <Search className="h-6 w-6 mx-auto mb-2 text-gray-300" />
-                <p className="text-sm">No patients found</p>
-                <p className="text-xs text-gray-400 mt-1">
-                  Try searching with MRN, NRIC, or patient name
-                </p>
-              </div>
-            ) : (
-              <div className="py-2">
-                {results.map((patient, index) => (
-                  <div key={patient.id} className="relative">
-                    <button
-                      type="button"
-                      onClick={() => handlePatientSelect(patient)}
-                      disabled={patient.has_existing_requests && !patient.is_available}
+                  ))}
+                </div>
+              ) : error ? (
+                <div className="p-4 text-center">
+                  <AlertCircle className="h-5 w-5 text-red-500 mx-auto mb-2" />
+                  <p className="text-sm text-red-600">{error}</p>
+                </div>
+              ) : results.length === 0 ? (
+                <div className="p-4 text-center text-gray-500">
+                  <Search className="h-5 w-5 mx-auto mb-2 text-gray-300" />
+                  <p className="text-sm">No patients found</p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Try searching with MRN, NRIC, or patient name
+                  </p>
+                </div>
+              ) : (
+                <div className="max-h-64 overflow-y-auto">
+                  {results.map((patient, index) => (
+                    <div
+                      key={patient.id}
                       className={cn(
-                        "w-full px-4 py-3 text-left hover:bg-gray-50 focus:bg-gray-50 focus:outline-none transition-colors",
-                        focusedIndex === index && "bg-blue-50",
-                        patient.has_existing_requests && !patient.is_available && "cursor-not-allowed hover:bg-gray-100",
-                        patient.has_existing_requests && !patient.is_available && "bg-pink-50 border-l-4 border-l-red-300"
+                        "relative border-b border-gray-100 last:border-b-0 transition-colors",
+                        focusedIndex === index && "bg-purple-50",
+                        patient.has_existing_requests && !patient.is_available ? "bg-red-50" : "hover:bg-gray-50"
                       )}
                     >
-                      <div className="flex items-center space-x-3">
-                        <Avatar className="h-10 w-10">
-                          <AvatarFallback className="bg-gray-100">
-                            <User className="h-5 w-5 text-gray-500" />
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center space-x-2">
-                            <h3 className="font-medium text-gray-900 truncate">
-                              {patient.name}
-                            </h3>
-                            {patient.has_medical_alerts && (
-                              <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
-                            )}
-                            {/* Availability indicators */}
-                            {patient.has_existing_requests && (
-                              patient.handover_status === 'requested' ? (
-                                <Badge variant="outline" className="text-xs text-orange-600 border-orange-200">
-                                  <Clock className="h-3 w-3 mr-1" />
-                                  Handover Requested
-                                </Badge>
-                              ) : !patient.is_available ? (
-                                <Badge variant="destructive" className="text-xs">
-                                  <XCircle className="h-3 w-3 mr-1" />
-                                  Unavailable
-                                </Badge>
-                              ) : (
-                                <Badge variant="default" className="text-xs bg-green-100 text-green-700 border-green-200">
-                                  <CheckCircle className="h-3 w-3 mr-1" />
-                                  Available
-                                </Badge>
-                              )
-                            )}
+                      <div className="flex items-start p-3 space-x-3">
+                        {/* Patient Avatar */}
+                        <div className="flex-shrink-0">
+                          <div className={cn(
+                            "w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium",
+                            patient.has_existing_requests && !patient.is_available
+                              ? "bg-red-100 text-red-700"
+                              : "bg-purple-100 text-purple-700"
+                          )}>
+                            {patient.name.charAt(0).toUpperCase()}
                           </div>
-                          <div className="flex items-center space-x-4 text-sm text-gray-500">
-                            <span>MRN: {patient.mrn}</span>
-                            {patient.nric && patient.nric !== 'N/A' && (
-                              <span>NRIC: {patient.nric}</span>
-                            )}
-                            {patient.nationality_id && (
-                              <span>IC: {patient.nationality_id}</span>
-                            )}
-                          </div>
-                          {patient.phone && (
-                            <p className="text-xs text-gray-400 mt-1">
-                              📞 {patient.phone}
-                            </p>
-                          )}
-                          {/* Status information for patients with existing requests */}
-                          {patient.has_existing_requests && (() => {
-                            console.log('🔍 Patient availability check:', {
-                              name: patient.name,
-                              has_existing_requests: patient.has_existing_requests,
-                              is_available: patient.is_available,
-                              handover_status: patient.handover_status,
-                              current_holder: patient.current_holder
-                            });
-                            return (
-                              <div className="mt-2 space-y-1">
-                                {patient.handover_status === 'requested' && (
-                                  <p className="text-xs text-orange-600">
-                                    ⚠️ Handover request pending for this patient
-                                  </p>
-                                )}
-                                {!patient.is_available && patient.current_holder && (
-                                  <p className="text-xs text-red-600">
-                                    🔒 Currently held by: {patient.current_holder.name}
-                                  </p>
-                                )}
-                                {patient.is_available && patient.has_existing_requests && (
-                                  <p className="text-xs text-green-600">
-                                    ✅ Available for new request
-                                  </p>
-                                )}
-                              </div>
-                            );
-                          })()}
                         </div>
-                      </div>
-                    </button>
 
-                    {/* Handover request button - positioned outside the main button */}
-                    {!patient.is_available && patient.has_existing_requests && onRequestHandover && (
-                      <div className="absolute top-2 right-2 z-10">
+                        {/* Patient Info - Clickable Area */}
                         <button
                           type="button"
-                          onClick={(e) => {
-                            console.log('🔵 Handover button clicked!');
-                            e.stopPropagation();
-                            console.log('🔵 Request Handover clicked for patient:', patient.name);
-                            if (onRequestHandover) {
-                              onRequestHandover(patient);
-                            } else {
-                              console.error('❌ onRequestHandover function is not available');
+                          onClick={() => {
+                            if (!(patient.has_existing_requests && !patient.is_available)) {
+                              handlePatientSelect(patient);
                             }
                           }}
-                          className="text-xs bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 transition-colors font-medium shadow-sm border border-blue-500"
+                          disabled={patient.has_existing_requests && !patient.is_available}
+                          className={cn(
+                            "flex-1 text-left focus:outline-none",
+                            patient.has_existing_requests && !patient.is_available
+                              ? "cursor-not-allowed"
+                              : "cursor-pointer"
+                          )}
                         >
-                          📋 Request
+                          <div className="space-y-1">
+                            <div className="flex items-center space-x-2">
+                              <span className={cn(
+                                "font-medium text-sm truncate",
+                                patient.has_existing_requests && !patient.is_available
+                                  ? "text-gray-500"
+                                  : "text-gray-900"
+                              )}>
+                                {patient.name}
+                              </span>
+                              {patient.has_medical_alerts && (
+                                <span className="text-red-500 text-xs" title="Medical Alert">⚠️</span>
+                              )}
+                            </div>
+                            <div className={cn(
+                              "text-xs space-x-3",
+                              patient.has_existing_requests && !patient.is_available
+                                ? "text-gray-400"
+                                : "text-gray-600"
+                            )}>
+                              <span>MRN: {patient.mrn}</span>
+                              {patient.nationality_id && (
+                                <span>ID: {patient.nationality_id}</span>
+                              )}
+                            </div>
+                            {/* Status Indicators */}
+                            <div className="flex items-center space-x-2 mt-2">
+                              {patient.has_existing_requests && (
+                                patient.handover_status === "requested" ? (
+                                  <Badge variant="outline" className="text-xs px-2 py-0.5 bg-orange-50 text-orange-700 border-orange-200">
+                                    <Clock className="w-3 h-3 mr-1" />
+                                    Handover Pending
+                                  </Badge>
+                                ) : patient.handover_status === "mr_staff_opened" ? (
+                                  <Badge variant="outline" className="text-xs px-2 py-0.5 bg-green-50 text-green-700 border-green-200">
+                                    <CheckCircle2 className="w-3 h-3 mr-1" />
+                                    MR Staff Opened
+                                  </Badge>
+                                ) : patient.is_available ? (
+                                  <Badge variant="outline" className="text-xs px-2 py-0.5 bg-green-50 text-green-700 border-green-200">
+                                    <CheckCircle2 className="w-3 h-3 mr-1" />
+                                    Available
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="text-xs px-2 py-0.5 bg-red-50 text-red-700 border-red-200">
+                                    <XCircle className="w-3 h-3 mr-1" />
+                                    Unavailable
+                                  </Badge>
+                                )
+                              )}
+                            </div>
+
+                            {/* MR Staff Restriction Banner */}
+                            {patient.handover_status === "mr_staff_opened" && patient.restriction_details && (
+                              <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-md">
+                                <div className="flex items-start space-x-2">
+                                  <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                                  <div className="text-xs text-green-800">
+                                    <p className="font-medium">Active - Case Note Opened by MR Staff</p>
+                                    <p className="mt-1">
+                                      <strong>Department:</strong> {patient.restriction_details.department_name}<br/>
+                                      <strong>Location:</strong> {patient.restriction_details.location_name}<br/>
+                                      <strong>Doctor:</strong> {patient.restriction_details.doctor_name}<br/>
+                                      <strong>User:</strong> {patient.restriction_details.user_type_label}<br/>
+                                      <strong>Opened by:</strong> {patient.restriction_details.opened_by_name}<br/>
+                                      <strong>Opened at:</strong> {new Date(patient.restriction_details.opened_at).toLocaleString()}
+                                    </p>
+                                    <p className="mt-1 text-green-700">
+                                      <strong>Note:</strong> CA cannot request handover or request this case note.
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         </button>
+
+                        {/* Handover Request Button - Separate from clickable area */}
+                        {!patient.is_available && patient.has_existing_requests && patient.handover_status !== "requested" && patient.handover_status !== "mr_staff_opened" && onRequestHandover && (
+                          <div className="flex-shrink-0">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                console.log('🔵 Handover request button clicked for:', patient.name);
+                                onRequestHandover(patient);
+                              }}
+                              className="text-xs h-7 px-3 bg-purple-600 hover:bg-purple-700 text-white border-purple-600 hover:border-purple-700 focus:ring-2 focus:ring-purple-500 focus:ring-offset-1"
+                            >
+                              <User className="w-3 h-3 mr-1" />
+                              Request Handover
+                            </Button>
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       )}
     </div>
   );

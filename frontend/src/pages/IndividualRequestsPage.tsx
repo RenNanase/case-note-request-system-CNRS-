@@ -182,7 +182,7 @@ export default function IndividualRequestsPage() {
   const getPriorityBadge = (priority: string) => {
     const priorityConfig = {
       low: { variant: 'secondary', className: 'bg-gray-100 text-gray-800' },
-      normal: { variant: 'default', className: 'bg-blue-100 text-blue-800' },
+      normal: { variant: 'default', className: 'bg-purple-100 text-purple-800' },
       high: { variant: 'default', className: 'bg-orange-100 text-orange-800' },
       urgent: { variant: 'destructive', className: 'bg-red-100 text-red-800' },
     };

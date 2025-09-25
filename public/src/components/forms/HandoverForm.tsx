@@ -225,7 +225,7 @@ export function HandoverForm({
             <p className="text-gray-600">{loadError}</p>
             <Button
               onClick={() => window.location.reload()}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="bg-purple-600 hover:bg-purple-700 text-white"
             >
               Try Again
             </Button>
@@ -238,15 +238,15 @@ export function HandoverForm({
   return (
     <div className="w-full max-w-4xl mx-auto space-y-6">
       {/* Header Card */}
-      <Card className="border-2 border-blue-100 bg-gradient-to-r from-blue-50 to-indigo-50">
+      <Card className="border-2 border-purple-100 bg-gradient-to-r from-purple-50 to-indigo-50">
         <CardHeader className="text-center pb-4">
           <div className="flex items-center justify-center space-x-2 mb-2">
-            <ArrowUpRight className="h-8 w-8 text-blue-600" />
-            <CardTitle className="text-2xl font-bold text-blue-900">
+            <ArrowUpRight className="h-8 w-8 text-purple-600" />
+            <CardTitle className="text-2xl font-bold text-purple-900">
               Case Note Handover
             </CardTitle>
           </div>
-          <CardDescription className="text-blue-700">
+          <CardDescription className="text-purple-700">
             Transfer responsibility for this case note to another Clinic Assistant
           </CardDescription>
         </CardHeader>
@@ -452,7 +452,7 @@ export function HandoverForm({
         </div>
 
         {/* Additional Notes - Full Width */}
-        <Card className="border-2 border-indigo-100 bg-gradient-to-r from-indigo-50 to-blue-50">
+        <Card className="border-2 border-indigo-100 bg-gradient-to-r from-indigo-50 to-purple-50">
           <CardHeader className="pb-3">
             <div className="flex items-center space-x-2">
               <FileText className="h-5 w-5 text-indigo-600" />
@@ -503,7 +503,7 @@ export function HandoverForm({
                 <Button
                   type="submit"
                   disabled={submitting}
-                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-6"
+                  className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-6"
                 >
                   {submitting ? (
                     <>

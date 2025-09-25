@@ -509,7 +509,7 @@ const VerifyCaseNotesPage: React.FC = () => {
       },
       normal: {
         variant: 'outline' as const,
-        className: 'border-blue-300 text-blue-700 bg-blue-50 text-xs'
+        className: 'border-purple-300 text-purple-700 bg-purple-50 text-xs'
       },
       high: {
         variant: 'outline' as const,
@@ -581,7 +581,7 @@ const VerifyCaseNotesPage: React.FC = () => {
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center">
-                  <div className="p-2 rounded-lg bg-blue-500 text-white mr-3">
+                  <div className="p-2 rounded-lg bg-purple-500 text-white mr-3">
                     <FileText className="h-4 w-4" />
                   </div>
                   <div>
@@ -863,14 +863,14 @@ const VerifyCaseNotesPage: React.FC = () => {
 
                               {/* Display MR Staff approval remarks if available */}
                               {caseNote.approval_remarks && (
-                                <div className="col-span-full mt-2 p-2 bg-blue-50 border border-blue-200 rounded-md">
+                                <div className="col-span-full mt-2 p-2 bg-purple-50 border border-purple-200 rounded-md">
                                   <div className="flex items-start gap-2">
-                                    <MessageSquare className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                                    <MessageSquare className="h-4 w-4 text-purple-600 mt-0.5 flex-shrink-0" />
                                     <div className="flex-1">
-                                      <div className="text-xs font-medium text-blue-800 mb-1">
+                                      <div className="text-xs font-medium text-purple-800 mb-1">
                                         MR Staff Approval Notes:
                                       </div>
-                                      <div className="text-xs text-blue-700">
+                                      <div className="text-xs text-purple-700">
                                         {caseNote.approval_remarks}
                                       </div>
                                     </div>
@@ -1045,7 +1045,7 @@ const VerifyCaseNotesPage: React.FC = () => {
                             )}
 
                             {handover.acknowledged_at && (
-                              <div className="text-xs text-blue-600 mt-1">
+                              <div className="text-xs text-purple-600 mt-1">
                                 ✓ Acknowledged by {handover.handedOverTo.name} on{' '}
                                 {new Date(handover.acknowledged_at).toLocaleDateString('en-US', {
                                   month: 'short',
@@ -1098,7 +1098,7 @@ const VerifyCaseNotesPage: React.FC = () => {
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center">
-                  <div className="p-2 rounded-lg bg-blue-500 text-white mr-3">
+                  <div className="p-2 rounded-lg bg-purple-500 text-white mr-3">
                     <CheckCircle2 className="h-4 w-4" />
                   </div>
                   <div>
@@ -1229,7 +1229,7 @@ const VerifyCaseNotesPage: React.FC = () => {
                         )}
 
                         {handoverRequest.response_notes && (
-                          <div className="text-xs text-blue-600 mt-1 p-2 bg-blue-100 rounded">
+                          <div className="text-xs text-purple-600 mt-1 p-2 bg-purple-100 rounded">
                             <strong>Response:</strong> {handoverRequest.response_notes}
                           </div>
                         )}

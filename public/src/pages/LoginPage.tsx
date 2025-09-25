@@ -244,23 +244,23 @@ export default function LoginPage() {
           {/* <div className="flex justify-center mb-4">
             <img src="/cnrs.logo.png" alt="CNRS Logo" className="h-16 w-auto" />
           </div> */}
-          <h2 className="text-xl font-semibold text-gray-700 mb-2">CASE NOTE REQUEST SYSTEM</h2>
-          <p className="text-gray-600">From request to record . Tracked every step</p>
+          <h2 className="text-xl font-semibold text-gray-700 mb-2">CASEh23 NOTE REQUEST SYSTEM</h2>
+          <p className="text-gray-600">Fromx request to record . Tracked every step</p>
         </div>
 
         {/* Login Card */}
         <Card className="shadow-soft-lg border-0 bg-white/90 backdrop-blur-sm">
           <CardHeader className="space-y-1 pb-4">
-            <CardTitle className="text-2xl text-center">Sign In</CardTitle>
+            <CardTitle className="text-2xl text-center">Sign Inx</CardTitle>
             <CardDescription className="text-center text-gray-600">
-              Enter your credentials to access the system
+              Enter your credentials to access the systemx
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               {/* Email Field */}
               <div className="space-y-2">
-                <Label htmlFor="email">Email Address</Label>
+                <Label htmlFor="email">Email Addressx</Label>
                 <Input
                   id="email"
                   type="email"
@@ -359,7 +359,7 @@ export default function LoginPage() {
         {/* Demo Credentials */}
         <Card className="shadow-soft border-0 bg-white/70 backdrop-blur-sm">
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg">Demo Login Credentials</CardTitle>
+            <CardTitle className="text-lg">Demo Login Credentialsx</CardTitle>
             <CardDescription>Use these credentials to test the system</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -369,21 +369,21 @@ export default function LoginPage() {
                   <User className="h-4 w-4" />
                   <span className="font-medium">CA</span>
                 </div>
-                <div className="text-sm text-gray-600">ca@cnrs.test / password</div>
+                <div className="text-sm text-gray-600">ca@cnrs.jmc / password</div>
               </div>
               <div className="flex items-center justify-between p-2 rounded bg-gray-50 border">
                 <div className="flex items-center gap-2">
                   <UserCheck className="h-4 w-4" />
                   <span className="font-medium">MR Staff</span>
                 </div>
-                <div className="text-sm text-gray-600">mr@cnrs.test / password</div>
+                <div className="text-sm text-gray-600">mr@cnrs.jmc / password</div>
               </div>
               <div className="flex items-center justify-between p-2 rounded bg-gray-50 border">
                 <div className="flex items-center gap-2">
                   <Shield className="h-4 w-4" />
                   <span className="font-medium">Admin</span>
                 </div>
-                <div className="text-sm text-gray-600">admin@cnrs.test / password</div>
+                <div className="text-sm text-gray-600">admin@cnrs.jmc / password</div>
               </div>
             </div>
           </CardContent>

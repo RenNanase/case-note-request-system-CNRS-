@@ -89,33 +89,33 @@ class RoleSeeder extends Seeder
         $users = [
             [
                 'name' => 'Alice Wong (CA)',
-                'email' => 'ca@cnrs.test',
+                'email' => 'ca@cnrs.jmc',
                 'password' => Hash::make('password'),
                 'role' => 'CA'
             ],
             [
                 'name' => 'Bob Chen (MR Staff)',
-                'email' => 'mr@cnrs.test',
+                'email' => 'mr@cnrs.jmc',
                 'password' => Hash::make('password'),
                 'role' => 'MR_STAFF'
             ],
             [
                 'name' => 'Carol Admin',
-                'email' => 'admin@cnrs.test',
+                'email' => 'admin@cnrs.jmc',
                 'password' => Hash::make('password'),
                 'role' => 'ADMIN'
             ],
             // Additional CA users
             [
                 'name' => 'David Lim (CA)',
-                'email' => 'ca2@cnrs.test',
+                'email' => 'ca2@cnrs.jmc',
                 'password' => Hash::make('password'),
                 'role' => 'CA'
             ],
             // Additional MR Staff
             [
                 'name' => 'Eva Martinez (MR)',
-                'email' => 'mr2@cnrs.test',
+                'email' => 'mr2@cnrs.jmc',
                 'password' => Hash::make('password'),
                 'role' => 'MR_STAFF'
             ],
@@ -134,8 +134,8 @@ class RoleSeeder extends Seeder
 
         $this->command->info('✅ Roles and permissions created successfully!');
         $this->command->info('📧 Demo login credentials:');
-        $this->command->info('   CA: ca@cnrs.test / password');
-        $this->command->info('   MR: mr@cnrs.test / password');
-        $this->command->info('   Admin: admin@cnrs.test / password');
+        $this->command->info('   CA: ca@cnrs.jmc / password');
+        $this->command->info('   MR: mr@cnrs.jmc / password');
+        $this->command->info('   Admin: admin@cnrs.jmc / password');
     }
 }

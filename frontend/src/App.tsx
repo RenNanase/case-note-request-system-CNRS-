@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { ToastProvider } from '@/contexts/ToastContext';
 import { Toaster } from '@/components/ui/toaster';
@@ -18,6 +19,8 @@ import ReturnCaseNotesPage from '@/pages/ReturnCaseNotesPage';
 import MRStaffCaseNoteRequestsPage from '@/pages/MRStaffCaseNoteRequestsPage';
 import MRStaffReturnedCaseNotesPage from '@/pages/MRStaffReturnedCaseNotesPage';
 import CaseNoteTimelinePage from '@/pages/CaseNoteTimelinePage';
+import CaseNoteTrackingPage from '@/pages/CaseNoteTrackingPage';
+import OpenNewCaseNotePage from '@/pages/OpenNewCaseNotePage';
 import HandoverRequestsPage from '@/pages/HandoverRequestsPage';
 import DoctorManagementPage from '@/pages/DoctorManagementPage';
 import UserManagementPage from '@/pages/UserManagementPage';
@@ -28,7 +31,7 @@ function LoadingScreen() {
     <div className="min-h-screen bg-canvas flex items-center justify-center">
       <div className="text-center">
         <div className="flex justify-center mb-4">
-          <img src="/cnrs.logo.png" alt="CNRS Logo" className="h-12 w-auto" />
+          <img src="/CNRS/cnrs.logo.png" alt="CNRS Logo" className="h-12 w-auto" />
         </div>
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
         <p className="text-gray-600">Loading CNRS...</p>
@@ -95,6 +98,8 @@ function AppContent() {
           <Route path="mrs-case-note-requests" element={<MRStaffCaseNoteRequestsPage />} />
           <Route path="mrs-returned-case-notes" element={<MRStaffReturnedCaseNotesPage />} />
           <Route path="case-note-timeline" element={<CaseNoteTimelinePage />} />
+          <Route path="case-note-tracking" element={<CaseNoteTrackingPage />} />
+          <Route path="open-new-case-note" element={<OpenNewCaseNotePage />} />
           <Route path="handover-requests" element={<HandoverRequestsPage />} />
           <Route index element={<Navigate to="/dashboard" replace />} />
         </Route>
@@ -107,14 +112,26 @@ function AppContent() {
 }
 
 // Root App component with providers
+// Create a client
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
+
 function App() {
   return (
-    <AuthProvider>
-      <ToastProvider>
-        <AppContent />
-        <Toaster />
-      </ToastProvider>
-    </AuthProvider>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <ToastProvider>
+          <AppContent />
+          <Toaster />
+        </ToastProvider>
+      </AuthProvider>
+    </QueryClientProvider>
   );
 }
 

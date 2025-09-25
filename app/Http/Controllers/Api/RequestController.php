@@ -35,15 +35,20 @@ class RequestController extends Controller
             if ($includeAllInvolvement) {
                 // For "My Case Notes" page: show all case notes where user is involved
                 // This includes case notes they created, currently own, or have pending handover requests for
+                // EXCLUDE case notes that have been handed over to other CAs (where ownership has transferred)
                 $query->where(function($q) use ($user) {
                     $q->where('current_pic_user_id', $user->id)
-                      ->orWhere('requested_by_user_id', $user->id)
+                      ->orWhere(function($subQ) use ($user) {
+                          // Show case notes they originally requested but only if not handed over
+                          $subQ->where('requested_by_user_id', $user->id)
+                               ->where('current_pic_user_id', $user->id); // Must still own it
+                      })
                       ->orWhereHas('handoverRequests', function($handoverQuery) use ($user) {
                           $handoverQuery->where('requested_by_user_id', $user->id)
                                        ->where('status', 'pending');
                       });
                 })
-                ->whereIn('status', ['approved', 'completed', 'in_progress']); // Include more statuses for comprehensive view
+                ->whereIn('status', ['approved', 'completed', 'in_progress', 'rejected']); // Include more statuses for comprehensive view including rejected
 
                 Log::info('CA user requesting all involved case notes data (My Case Notes page):', [
                     'user_id' => $user->id,
@@ -125,6 +130,22 @@ class RequestController extends Controller
         $sortOrder = $request->get('sort_order', 'desc');
         $query->orderBy($sortBy, $sortOrder);
 
+        // Debug query for CA users (BEFORE pagination to avoid issues)
+        $debugResults = null;
+        if ($user->hasRole('CA', 'api')) {
+            try {
+                $debugQuery = clone $query;
+                $debugResults = $debugQuery->get(['id', 'status', 'is_received', 'current_pic_user_id', 'requested_by_user_id']);
+            } catch (\Exception $e) {
+                Log::error('Debug query failed for CA user:', [
+                    'user_id' => $user->id,
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]);
+                $debugResults = collect(); // Empty collection as fallback
+            }
+        }
+
         // Pagination
         $perPage = $request->get('per_page', 15);
         $requests = $query->paginate($perPage);
@@ -152,10 +173,7 @@ class RequestController extends Controller
         }
 
         // Log the results for CA users
-        if ($user->hasRole('CA', 'api')) {
-            // Add detailed debugging for the query
-            $debugQuery = clone $query;
-            $debugResults = $debugQuery->get(['id', 'status', 'is_received', 'current_pic_user_id', 'requested_by_user_id']);
+        if ($user->hasRole('CA', 'api') && $debugResults !== null) {
 
             // Also check what case notes exist for this user without any filters
             $allUserCaseNotes = \App\Models\Request::where(function($q) use ($user) {
@@ -199,8 +217,7 @@ class RequestController extends Controller
             'department_id' => 'required|exists:departments,id',
             'doctor_id' => 'nullable|exists:doctors,id',
             'location_id' => 'nullable|exists:locations,id',
-            'priority' => 'required|in:' . implode(',', array_keys(\App\Models\Request::getPriorityOptions())),
-            'purpose' => 'required|string|max:1000',
+            'purpose' => 'nullable|string|max:1000',
             'needed_date' => 'required|date|after_or_equal:today',
             'remarks' => 'nullable|string|max:1000',
         ]);
@@ -268,7 +285,7 @@ class RequestController extends Controller
             'department_id' => $request->department_id,
             'doctor_id' => $request->doctor_id,
             'location_id' => $request->location_id,
-            'priority' => $request->priority,
+            'priority' => 'normal', // Set default priority
             'status' => \App\Models\Request::STATUS_PENDING,
             'purpose' => $request->purpose,
             'needed_date' => $request->needed_date,
@@ -1106,12 +1123,18 @@ class RequestController extends Controller
             ->where(function($query) use ($user) {
                 $query->where(function($q) use ($user) {
                     // Case notes currently assigned to me that are approved/completed and received
+                    // Exclude case notes that have been handed over to other CAs
                     $q->where('current_pic_user_id', $user->id)
                       ->whereIn('status', ['approved', 'completed'])
                       ->where('is_received', 1)
                       ->where(function($subQ) {
                           $subQ->where('is_returned', false) // Not yet returned
                                ->orWhere('is_rejected_return', true); // OR it was rejected and can be re-returned
+                      })
+                      // Exclude case notes that have been completed (fully processed)
+                      ->where(function($subQ) {
+                          $subQ->whereNull('handover_status')
+                               ->orWhere('handover_status', '!=', 'completed');
                       });
                 })->orWhere(function($q) use ($user) {
                     // Case notes that were returned by me but rejected by MR staff (need to be re-returned)
@@ -1119,38 +1142,74 @@ class RequestController extends Controller
                     $q->where('returned_by_user_id', $user->id)
                       ->where('is_rejected_return', true)
                       ->where('status', 'approved') // Status goes back to approved when MR staff rejects
-                      ->where('is_received', true); // Should still be received
+                      ->where('is_received', true) // Should still be received
+                      // Exclude case notes that have been completed (fully processed)
+                      ->where(function($subQ) {
+                          $subQ->whereNull('handover_status')
+                               ->orWhere('handover_status', '!=', 'completed');
+                      });
                 });
             })
             ->orderBy('created_at', 'desc')
             ->get();
 
-            // Debug: Log what we found
+            // Debug: Log what we found with user names for easier debugging
+            $caseNotesSummary = $caseNotes->map(function($cn) use ($user) {
+                $requestedByUser = \App\Models\User::find($cn->requested_by_user_id);
+                $currentPicUser = \App\Models\User::find($cn->current_pic_user_id);
+                $returnedByUser = $cn->returned_by_user_id ? \App\Models\User::find($cn->returned_by_user_id) : null;
+
+                // Get handover info if applicable
+                $handoverInfo = [];
+                if ($cn->handover_status) {
+                    $handoverRequest = \App\Models\HandoverRequest::where('case_note_id', $cn->id)
+                        ->orderBy('created_at', 'desc')
+                        ->first();
+
+                    if ($handoverRequest) {
+                        $handoverInfo = [
+                            'handover_request_id' => $handoverRequest->id,
+                            'status' => $handoverRequest->status,
+                            'requested_by' => $handoverRequest->requester ? $handoverRequest->requester->name : 'Unknown',
+                            'current_holder' => $handoverRequest->currentHolder ? $handoverRequest->currentHolder->name : 'Unknown',
+                            'requested_at' => $handoverRequest->requested_at,
+                            'verified_at' => $handoverRequest->verified_at,
+                            'verification_notes' => $handoverRequest->verification_notes
+                        ];
+                    }
+                }
+
+                return [
+                    'id' => $cn->id,
+                    'patient_id' => $cn->patient_id,
+                    'status' => $cn->status,
+                    'is_received' => $cn->is_received,
+                    'is_returned' => $cn->is_returned,
+                    'is_rejected_return' => $cn->is_rejected_return,
+                    'requested_by_user_id' => $cn->requested_by_user_id,
+                    'requested_by_name' => $requestedByUser ? $requestedByUser->name : 'Unknown',
+                    'current_pic_user_id' => $cn->current_pic_user_id,
+                    'current_pic_name' => $currentPicUser ? $currentPicUser->name : 'Unknown',
+                    'returned_by_user_id' => $cn->returned_by_user_id,
+                    'returned_by_name' => $returnedByUser ? $returnedByUser->name : 'Unknown',
+                    'patient_name' => $cn->patient ? $cn->patient->name : 'No patient',
+                    'handover_status' => $cn->handover_status,
+                    'handover_requests' => $handoverInfo,
+                    'why_visible' => $cn->current_pic_user_id == $user->id ? 'current_pic_user_id matches' :
+                                   ($cn->returned_by_user_id == $user->id && $cn->is_rejected_return ? 'returned_by_user_id matches (rejected return)' : 'unknown')
+                ];
+            })->toArray();
+
             Log::info('Returnable case notes query results:', [
                 'user_id' => $user->id,
+                'user_name' => $user->name,
                 'total_found' => $caseNotes->count(),
-                'query_conditions' => [
-                    'user_involved' => 'requested_by_user_id OR current_pic_user_id = ' . $user->id,
-                    'status_in' => ['approved', 'completed'],
-                    'is_received' => 1,
-                ],
-                'case_notes_summary' => $caseNotes->map(function($cn) {
-                    return [
-                        'id' => $cn->id,
-                        'status' => $cn->status,
-                        'is_received' => $cn->is_received,
-                        'is_returned' => $cn->is_returned,
-                        'is_rejected_return' => $cn->is_rejected_return,
-                        'requested_by_user_id' => $cn->requested_by_user_id,
-                        'current_pic_user_id' => $cn->current_pic_user_id,
-                        'patient_name' => $cn->patient ? $cn->patient->name : 'No patient',
-                    ];
-                })->toArray()
+                'case_notes_summary' => $caseNotesSummary
             ]);
 
             return response()->json([
                 'success' => true,
-                'case_notes' => $caseNotes,
+                'case_notes' => $caseNotes
             ]);
 
         } catch (\Exception $e) {
@@ -1311,7 +1370,7 @@ class RequestController extends Controller
             try {
                 foreach ($caseNotes as $caseNote) {
                     if ($action === 'verify') {
-                        // Mark case note as complete and available for new requests by any CA
+                        // Mark case note as complete - keep ownership with the CA who returned it
                         $caseNote->update([
                             'status' => \App\Models\Request::STATUS_COMPLETED, // Mark as complete
                             'completed_at' => now(),
@@ -1324,7 +1383,7 @@ class RequestController extends Controller
                             'received_at' => null,
                             'received_by_user_id' => null,
                             'reception_notes' => null,
-                            'current_pic_user_id' => null, // Remove CA ownership - any CA can request
+                            // Keep current_pic_user_id - don't set to null to maintain ownership tracking
                         ]);
 
                         // Create timeline event for verification
@@ -1343,6 +1402,8 @@ class RequestController extends Controller
                                 'completed_by_user_name' => $user->name,
                                 'previous_status' => \App\Models\Request::STATUS_PENDING_RETURN_VERIFICATION,
                                 'new_status' => \App\Models\Request::STATUS_COMPLETED,
+                                'location_name' => 'Medical Record Department',
+                                'completion_notes' => 'Case note completed and stored in Medical Record Department'
                             ]
                         ]);
 
@@ -1796,6 +1857,63 @@ class RequestController extends Controller
         }
 
         return $cleanedMetadata;
+    }
+
+    /**
+     * Generate PDF for case note requests from a specific CA
+     */
+    public function generateCaseNoteListPdf(HttpRequest $request, $caId)
+    {
+        $user = Auth::user();
+
+        // Check if user has permission to generate PDFs
+        if (!$user->hasRole(['MR_STAFF', 'ADMIN'], 'api')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You do not have permission to generate PDFs'
+            ], 403);
+        }
+
+        try {
+            // Get optional request IDs to filter specific case notes
+            $requestIds = $request->get('request_ids', []);
+            if (is_string($requestIds)) {
+                $requestIds = explode(',', $requestIds);
+            }
+            $requestIds = array_filter(array_map('intval', $requestIds));
+
+            // Generate PDF using the service
+            $pdfService = new \App\Services\CaseNotePdfService();
+            $pdf = $pdfService->generateCaseNoteListPdf($caId, $requestIds);
+
+            // Get CA information for filename
+            $ca = \App\Models\User::find($caId);
+            $filename = $pdfService->generateFilename($caId, $ca->name ?? 'Unknown');
+
+            // Log the PDF generation
+            Log::info('Case note list PDF generated', [
+                'user_id' => $user->id,
+                'ca_id' => $caId,
+                'request_ids' => $requestIds,
+                'filename' => $filename
+            ]);
+
+            // Return PDF as download
+            return $pdf->download($filename);
+
+        } catch (\Exception $e) {
+            Log::error('Error generating case note list PDF:', [
+                'user_id' => $user->id,
+                'ca_id' => $caId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to generate PDF: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }
 

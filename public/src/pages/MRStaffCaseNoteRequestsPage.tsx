@@ -422,7 +422,7 @@ const MRStaffCaseNoteRequestsPage: React.FC = () => {
       },
       normal: {
         variant: 'outline' as const,
-        className: 'border-blue-300 text-blue-700 bg-blue-50 text-xs'
+        className: 'border-purple-300 text-purple-700 bg-purple-50 text-xs'
       },
       high: {
         variant: 'outline' as const,
@@ -523,11 +523,11 @@ const MRStaffCaseNoteRequestsPage: React.FC = () => {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                      <User className="h-5 w-5 text-blue-600" />
+                    <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                      <User className="h-5 w-5 text-purple-600" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-medium text-gray-900 cursor-pointer hover:text-blue-600 transition-colors"
+                      <h3 className="text-lg font-medium text-gray-900 cursor-pointer hover:text-purple-600 transition-colors"
                           onClick={() => handleCASelection(caGroup)}>
                         {caGroup.ca_name}
                       </h3>
@@ -554,7 +554,7 @@ const MRStaffCaseNoteRequestsPage: React.FC = () => {
                       variant="default"
                       size="sm"
                       onClick={() => handleCASelection(caGroup)}
-                      className="bg-blue-600 hover:bg-blue-700"
+                      className="bg-purple-600 hover:bg-purple-700"
                     >
                       Review
                     </Button>
@@ -812,29 +812,29 @@ const MRStaffCaseNoteRequestsPage: React.FC = () => {
               {/* Confirmation Message */}
               <div className={`p-3 rounded-lg ${
                 approvalAction === 'approve'
-                  ? 'bg-blue-50 border border-blue-200'
+                  ? 'bg-purple-50 border border-purple-200'
                   : 'bg-orange-50 border border-orange-200'
               }`}>
                 <div className="flex items-start space-x-2">
                   <div className={`p-1 rounded ${
                     approvalAction === 'approve'
-                      ? 'bg-blue-100'
+                      ? 'bg-purple-100'
                       : 'bg-orange-100'
                   }`}>
                     {approvalAction === 'approve' ? (
-                      <CheckCircle className="h-4 w-4 text-blue-600" />
+                      <CheckCircle className="h-4 w-4 text-purple-600" />
                     ) : (
                       <XCircle className="h-4 w-4 text-orange-600" />
                     )}
                   </div>
                   <div className="text-sm">
                     <p className={`font-medium ${
-                      approvalAction === 'approve' ? 'text-blue-800' : 'text-orange-800'
+                      approvalAction === 'approve' ? 'text-purple-800' : 'text-orange-800'
                     }`}>
                       {approvalAction === 'approve' ? 'Ready to Approve' : 'Ready to Reject'}
                     </p>
                     <p className={`text-xs ${
-                      approvalAction === 'approve' ? 'text-blue-600' : 'text-orange-600'
+                      approvalAction === 'approve' ? 'text-purple-600' : 'text-orange-600'
                     }`}>
                       {selectedRequests.length} case note(s) will be {approvalAction === 'approve' ? 'approved' : 'rejected'}.
                     </p>

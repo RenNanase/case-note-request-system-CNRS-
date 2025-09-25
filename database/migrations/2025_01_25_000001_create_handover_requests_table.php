@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Schema\purpleprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('handover_requests', function (Blueprint $table) {
+        Schema::create('handover_requests', function (purpleprint $table) {
             $table->id();
             $table->foreignId('case_note_id')->constrained('requests')->onDelete('cascade');
             $table->foreignId('requested_by_user_id')->constrained('users')->onDelete('cascade');

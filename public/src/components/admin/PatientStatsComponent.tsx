@@ -51,9 +51,9 @@ export default function PatientStatsComponent({ stats }: PatientStatsComponentPr
         <CardContent className="space-y-6">
           {/* Key Metrics */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="text-center p-4 bg-blue-50 rounded-lg">
-              <Users className="h-8 w-8 text-blue-600 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-blue-600">{stats.total_patients.toLocaleString()}</p>
+            <div className="text-center p-4 bg-purple-50 rounded-lg">
+              <Users className="h-8 w-8 text-purple-600 mx-auto mb-2" />
+              <p className="text-2xl font-bold text-purple-600">{stats.total_patients.toLocaleString()}</p>
               <p className="text-sm text-gray-600">Total Patients</p>
             </div>
             

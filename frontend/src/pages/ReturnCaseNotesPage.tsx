@@ -13,7 +13,9 @@ import {
   Eye,
   RefreshCw,
   Trash2,
-  Package
+  Package,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -110,7 +112,7 @@ const getReturnStatusBadge = (isReturned: boolean, isRejectedReturn: boolean, re
   }
 
   return (
-    <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200 font-semibold">
+    <Badge variant="outline" className="bg-purple-100 text-purple-800 border-purple-200 font-semibold">
       <RotateCcw className="h-3 w-3 mr-1" />
       Available for Return
     </Badge>
@@ -159,68 +161,78 @@ function ReturnCaseNoteDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center space-x-2">
-            {isReReturn ? (
-              <>
-                <RefreshCw className="h-5 w-5 text-orange-600" />
-                <span>Re-return Case Note</span>
-              </>
-            ) : (
-              <>
-                <RotateCcw className="h-5 w-5 text-green-600" />
-                <span>Return Case Note</span>
-              </>
-            )}
-          </DialogTitle>
-          <DialogDescription>
-            {isReReturn
-              ? `Re-return case note for ${request.patient?.name} (${request.request_number})`
-              : `Return case note for ${request.patient?.name} (${request.request_number})`
-            }
-          </DialogDescription>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader className="space-y-1">
+          <div className="flex items-center space-x-3">
+            <div className={`p-2 rounded-full ${isReReturn ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'}`}>
+              {isReReturn ? (
+                <RefreshCw className="h-6 w-6" />
+              ) : (
+                <RotateCcw className="h-6 w-6" />
+              )}
+            </div>
+            <div>
+              <DialogTitle className="text-xl font-semibold">
+                {isReReturn ? 'Re-return Case Note' : 'Return Case Note'}
+              </DialogTitle>
+              <DialogDescription className="text-sm text-gray-500">
+                {request.patient?.name} • {request.request_number}
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
 
-        <div className="space-y-4">
-          {/* Case Note Details */}
-          <div className="bg-gray-50 p-3 rounded-lg">
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              <div>
-                <span className="font-medium text-gray-600">Patient:</span>
-                <p className="text-gray-900">{request.patient?.name}</p>
+        <div className="space-y-6 py-2">
+          {/* Case Note Details Card */}
+          <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
+            <h4 className="text-sm font-medium text-gray-500 mb-3">CASE NOTE DETAILS</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-gray-500">Patient Name</p>
+                <p className="text-gray-900 font-medium">{request.patient?.name || 'N/A'}</p>
               </div>
-              <div>
-                <span className="font-medium text-gray-600">MRN:</span>
-                <p className="text-gray-900">{request.patient?.mrn}</p>
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-gray-500">MRN</p>
+                <p className="text-gray-900 font-mono">{request.patient?.mrn || 'N/A'}</p>
               </div>
-              <div>
-                <span className="font-medium text-gray-600">Request #:</span>
-                <p className="text-gray-900">{request.request_number}</p>
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-gray-500">Request #</p>
+                <p className="text-gray-900">{request.request_number || 'N/A'}</p>
               </div>
-              <div>
-                <span className="font-medium text-gray-600">Status:</span>
-                <p className="text-gray-900">{request.status}</p>
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-gray-500">Status</p>
+                <div className="inline-block">
+                  <Badge variant="outline" className="capitalize">
+                    {request.status?.replace('_', ' ').toLowerCase()}
+                  </Badge>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Return Notes Input */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Return Notes {!isReReturn && <span className="text-red-500">*</span>}
-            </label>
+          {/* Return Notes Section */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="block text-sm font-medium text-gray-700">
+                Return Notes
+                {!isReReturn && <span className="text-red-500 ml-1">*</span>}
+              </label>
+              <span className="text-xs text-gray-500">
+                {returnNotes.length}/500
+              </span>
+            </div>
             <Textarea
-              placeholder={isReReturn
-                ? "Explain why you're re-returning this case note..."
-                : "Provide notes about the case note return..."
+              placeholder={
+                isReReturn
+                  ? "Explain why you're re-returning this case note..."
+                  : "Provide details about the case note return..."
               }
               value={returnNotes}
-              onChange={(e) => setReturnNotes(e.target.value)}
-              className="min-h-[100px]"
+              onChange={(e) => setReturnNotes(e.target.value.slice(0, 500))}
+              className="min-h-[120px] text-sm border-gray-300 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
               required={!isReReturn}
             />
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-gray-500">
               {isReReturn
                 ? "Please explain the reason for re-returning this case note."
                 : "Please provide details about the case note return."
@@ -228,32 +240,48 @@ function ReturnCaseNoteDialog({
             </p>
           </div>
 
-          {/* Show rejection reason if re-returning */}
+          {/* Rejection Reason (if re-returning) */}
           {isReReturn && request.rejection_reason && (
-            <div className="bg-red-50 p-3 rounded-lg border-l-2 border-red-300">
-              <p className="text-sm font-medium text-red-800 mb-1">Previous Rejection Reason:</p>
-              <p className="text-sm text-red-700">{request.rejection_reason}</p>
+            <div className="bg-red-50 p-4 rounded-lg border border-red-100">
+              <div className="flex items-start">
+                <AlertTriangle className="h-4 w-4 text-red-500 mt-0.5 mr-2 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-red-800 mb-1">Previous Rejection</p>
+                  <p className="text-sm text-red-700">{request.rejection_reason}</p>
+                </div>
+              </div>
             </div>
           )}
         </div>
 
-        <DialogFooter className="flex space-x-2">
-          <Button variant="outline" onClick={handleCancel} disabled={isSubmitting}>
+        <DialogFooter className="flex flex-col sm:flex-row gap-3 pt-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleCancel}
+            disabled={isSubmitting}
+            className="w-full sm:w-24"
+          >
             Cancel
           </Button>
           <Button
+            type="button"
             onClick={handleSubmit}
             disabled={isSubmitting || (!isReReturn && !returnNotes.trim())}
-            className={isReReturn ? "bg-orange-600 hover:bg-orange-700" : ""}
+            className={`w-full ${isReReturn ? 'bg-orange-600 hover:bg-orange-700' : ''}`}
           >
             {isSubmitting ? (
               <>
                 <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                Submitting...
+                Processing...
               </>
             ) : (
               <>
-                {isReReturn ? <RefreshCw className="h-4 w-4 mr-2" /> : <RotateCcw className="h-4 w-4 mr-2" />}
+                {isReReturn ? (
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                ) : (
+                  <RotateCcw className="h-4 w-4 mr-2" />
+                )}
                 {isReReturn ? 'Re-return' : 'Return'} Case Note
               </>
             )}
@@ -286,6 +314,9 @@ export default function ReturnCaseNotesPage() {
   const [batchReturnDialogOpen, setBatchReturnDialogOpen] = useState(false);
   const [batchReturnNotes, setBatchReturnNotes] = useState('');
   const [batchSubmitting, setBatchSubmitting] = useState(false);
+
+  // Filters section state - default to collapsed
+  const [filtersExpanded, setFiltersExpanded] = useState(false);
 
   useEffect(() => {
     const loadRequests = async () => {
@@ -685,7 +716,7 @@ export default function ReturnCaseNotesPage() {
           {/* Summary of case note counts */}
           <div className="flex items-center space-x-4 mt-4 text-sm">
             <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+              <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
               <span>Available: {requests.filter(r => r.is_received && !r.is_returned && !r.is_rejected_return).length}</span>
             </div>
             <div className="flex items-center space-x-2">
@@ -708,14 +739,22 @@ export default function ReturnCaseNotesPage() {
 
       {/* Filters */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Filter className="h-5 w-5" />
-            <span>Filters</span>
+        <CardHeader className="cursor-pointer" onClick={() => setFiltersExpanded(!filtersExpanded)}>
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Filter className="h-5 w-5" />
+              <span>Filters</span>
+            </div>
+            {filtersExpanded ? (
+              <ChevronUp className="h-5 w-5 text-gray-500" />
+            ) : (
+              <ChevronDown className="h-5 w-5 text-gray-500" />
+            )}
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {filtersExpanded && (
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
               <div className="relative">
@@ -780,12 +819,13 @@ export default function ReturnCaseNotesPage() {
               </Select>
             </div>
           </div>
-        </CardContent>
+          </CardContent>
+        )}
       </Card>
 
       {/* Batch Action Bar */}
       {returnableCaseNotes.length > 0 && (
-        <Card className="border-blue-200 bg-blue-50">
+        <Card className="border-purple-200 bg-purple-50">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
@@ -839,7 +879,7 @@ export default function ReturnCaseNotesPage() {
           <CardDescription>
             Showing {filteredRequests.length} of {allRequests.length} case notes
             {returnableCaseNotes.length > 0 && (
-              <span className="ml-2 text-blue-600 font-medium">
+              <span className="ml-2 text-purple-600 font-medium">
                 • {returnableCaseNotes.length} available for return
               </span>
             )}
@@ -873,38 +913,9 @@ export default function ReturnCaseNotesPage() {
               <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4" />
               <p className="text-gray-500 mb-4">No case notes available for return</p>
 
-              {/* Debug information to help troubleshoot */}
-              <div className="mt-4 p-4 bg-gray-100 rounded-lg text-left max-w-2xl mx-auto">
-                <h4 className="font-medium text-gray-700 mb-2">Debug Information:</h4>
-                <div className="text-sm text-gray-600 space-y-1">
-                  <p>• Total requests loaded: {requests.length}</p>
-                  <p>• Current user ID: {user?.id}</p>
-                  <p>• Search term: "{searchTerm}"</p>
-                  <p>• Status filter: {statusFilter}</p>
-                  <p>• Return status filter: {returnStatusFilter}</p>
-                  <p>• Comment filter: {commentFilter}</p>
-                  {requests.length > 0 && (
-                    <div className="mt-2">
-                      <p className="font-medium">Sample requests:</p>
-                      {requests.slice(0, 3).map(req => (
-                        <div key={req.id} className="ml-4 text-xs">
-                          ID: {req.id}, Status: {req.status}, Returned: {req.is_returned ? 'Yes' : 'No'},
-                          Rejected: {req.is_rejected_return ? 'Yes' : 'No'}, Received: {req.is_received ? 'Yes' : 'No'}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
 
-              <div className="mt-4">
-                <Link to="/my-requests">
-                  <Button>
-                    <FileText className="h-4 w-4 mr-2" />
-                    View My Case Notes
-                  </Button>
-                </Link>
-              </div>
+
+
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -928,9 +939,9 @@ export default function ReturnCaseNotesPage() {
                       <tr key={request.id} className={`border-b hover:bg-gray-50 ${
                         request.is_rejected_return ? 'bg-red-50' :
                         request.is_returned ? 'bg-green-50' :
-                        'bg-blue-50'
+                        'bg-purple-50'
                       } ${
-                        selectedCaseNotes.has(request.id) ? 'ring-2 ring-blue-500' : ''
+                        selectedCaseNotes.has(request.id) ? 'ring-2 ring-purple-500' : ''
                       }`}>
                         {/* Selection checkbox */}
                         <td className="py-3 px-2">
@@ -981,7 +992,7 @@ export default function ReturnCaseNotesPage() {
                           {request.return_notes && (
                             <div className="mb-2">
                               <p className="text-xs font-medium text-gray-500 mb-1">Return Notes:</p>
-                              <p className="text-sm text-gray-700 bg-blue-50 p-2 rounded border-l-2 border-blue-300">
+                              <p className="text-sm text-gray-700 bg-purple-50 p-2 rounded border-l-2 border-purple-300">
                                 {request.return_notes}
                               </p>
                               <div className="text-xs text-gray-500 mt-1 space-y-1">
@@ -1110,7 +1121,7 @@ export default function ReturnCaseNotesPage() {
                   if (!caseNote) return null;
 
                   return (
-                    <div key={caseNoteId} className="flex items-center justify-between p-2 bg-blue-50 rounded">
+                    <div key={caseNoteId} className="flex items-center justify-between p-2 bg-purple-50 rounded">
                       <div className="flex-1">
                         <div className="font-medium text-sm">{caseNote.patient?.name}</div>
                         <div className="text-xs text-gray-600">

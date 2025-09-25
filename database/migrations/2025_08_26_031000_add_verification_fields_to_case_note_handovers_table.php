@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Schema\purpleprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('case_note_handovers', function (Blueprint $table) {
+        Schema::table('case_note_handovers', function (purpleprint $table) {
             $table->text('receipt_verification_notes')->nullable()->after('acknowledgment_notes');
             $table->timestamp('completed_at')->nullable()->after('acknowledged_at');
         });
@@ -22,7 +22,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('case_note_handovers', function (Blueprint $table) {
+        Schema::table('case_note_handovers', function (purpleprint $table) {
             $table->dropColumn(['receipt_verification_notes', 'completed_at']);
         });
     }

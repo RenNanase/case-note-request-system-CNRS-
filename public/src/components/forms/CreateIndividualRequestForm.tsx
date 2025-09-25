@@ -214,7 +214,7 @@ export const CreateIndividualRequestForm: React.FC<CreateIndividualRequestFormPr
   const getPriorityBadge = (priority: string) => {
     const priorityConfig = {
       low: { variant: 'secondary', className: 'bg-gray-100 text-gray-800' },
-      normal: { variant: 'default', className: 'bg-blue-100 text-blue-800' },
+      normal: { variant: 'default', className: 'bg-purple-100 text-purple-800' },
       high: { variant: 'default', className: 'bg-orange-100 text-orange-800' },
       urgent: { variant: 'destructive', className: 'bg-red-100 text-red-800' },
     };
@@ -287,7 +287,7 @@ export const CreateIndividualRequestForm: React.FC<CreateIndividualRequestFormPr
                     className={cn(
                       'w-10 h-10 rounded-full flex items-center justify-center border-2 transition-colors',
                       status === 'completed' && 'bg-green-500 border-green-500 text-white',
-                      status === 'current' && 'bg-blue-500 border-blue-500 text-white',
+                      status === 'current' && 'bg-purple-500 border-purple-500 text-white',
                       status === 'upcoming' && 'bg-gray-200 border-gray-300 text-gray-500'
                     )}
                   >
@@ -301,7 +301,7 @@ export const CreateIndividualRequestForm: React.FC<CreateIndividualRequestFormPr
                     <p className={cn(
                       'text-sm font-medium',
                       status === 'completed' && 'text-green-600',
-                      status === 'current' && 'text-blue-600',
+                      status === 'current' && 'text-purple-600',
                       status === 'upcoming' && 'text-gray-500'
                     )}>
                       {step.title}

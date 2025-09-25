@@ -189,14 +189,14 @@ export default function AdminCaseNoteSearchPage() {
                   key={request.id}
                   className={`flex items-center justify-between p-4 border rounded-lg cursor-pointer transition-colors ${
                     selectedRequest?.id === request.id
-                      ? 'bg-blue-50 border-blue-200'
+                      ? 'bg-purple-50 border-purple-200'
                       : 'hover:bg-gray-50'
                   }`}
                   onClick={() => handleSelectRequest(request)}
                 >
                   <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                      <FileText className="h-6 w-6 text-blue-600" />
+                    <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                      <FileText className="h-6 w-6 text-purple-600" />
                     </div>
                     <div>
                       <h4 className="font-medium text-gray-900">#{request.request_number}</h4>
@@ -412,9 +412,9 @@ export default function AdminCaseNoteSearchPage() {
                          case 'handed_over': return 'bg-orange-500';
                          case 'status_changed': return 'bg-orange-500';
                          
-                         // Progress events (blue)
-                         case 'in_progress': return 'bg-blue-500';
-                         case 'updated': return 'bg-blue-500';
+                         // Progress events (purple)
+                         case 'in_progress': return 'bg-purple-500';
+                         case 'updated': return 'bg-purple-500';
                          
                          // Default
                          default: return 'bg-gray-500';
@@ -533,7 +533,7 @@ export default function AdminCaseNoteSearchPage() {
                                        ? 'border-green-400'
                                        : event.type.includes('requested') || event.type.includes('created') || event.type.includes('submitted')
                                        ? 'border-purple-400'
-                                       : 'border-blue-400'
+                                       : 'border-purple-400'
                                    }`}>
                                      <span className="text-xs font-medium text-gray-600 block mb-1">Comments:</span>
                                      <p className="text-sm text-gray-700">

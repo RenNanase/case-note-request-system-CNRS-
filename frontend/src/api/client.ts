@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Create axios instance with base configuration
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://10.2.10.178/CNRS/public/api', // Use environment variable or fallback
+    baseURL: import.meta.env.VITE_API_BASE_URL || 'http://10.2.10.178/CNRS/public/api', // Use environment variable or fallback
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',

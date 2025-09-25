@@ -139,7 +139,7 @@ export default function AdminPatientsPage() {
                   <p className="text-sm font-medium text-gray-600">Total Patients</p>
                   <p className="text-3xl font-bold text-gray-900">{stats.total_patients.toLocaleString()}</p>
                 </div>
-                <Users className="h-8 w-8 text-blue-600" />
+                <Users className="h-8 w-8 text-purple-600" />
               </div>
             </CardContent>
           </Card>

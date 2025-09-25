@@ -22,17 +22,17 @@ This document outlines the improvements made to the Return Case Notes page for C
 ### 1. Enhanced Visual Indicators
 
 #### **Summary Cards**
-- **Available for Return**: Blue card showing count of case notes ready to return
+- **Available for Return**: purple card showing count of case notes ready to return
 - **Successfully Returned**: Green card showing count of completed returns
 - **Return Rejected**: Red card showing count of rejected returns
 
 #### **Color-Coded Table Rows**
-- **Blue background**: Case notes available for return
+- **purple background**: Case notes available for return
 - **Green background**: Successfully returned case notes
 - **Red background**: Rejected returns (highlighted for attention)
 
 #### **Improved Status Badges**
-- **Available for Return**: Blue badge with `RotateCcw` icon
+- **Available for Return**: purple badge with `RotateCcw` icon
 - **Returned**: Green badge with `CheckCircle` icon  
 - **Return Rejected**: Red badge with `AlertTriangle` icon and rejection date
 
@@ -183,7 +183,7 @@ const handleReturnCaseNote = async (requestId: number, returnNotes: string) => {
 ## Workflow Improvements
 
 ### 1. Return Process
-1. **Identify**: Blue summary card shows available case notes
+1. **Identify**: purple summary card shows available case notes
 2. **Select**: Click "Return Case Note" button
 3. **Document**: Fill mandatory return notes in dialog
 4. **Submit**: Case note is returned with proper documentation
@@ -197,7 +197,7 @@ const handleReturnCaseNote = async (requestId: number, returnNotes: string) => {
 5. **Track**: Monitor re-return status
 
 ### 3. Status Tracking
-- **Available**: Blue background, ready for action
+- **Available**: purple background, ready for action
 - **Returned**: Green background, successfully processed
 - **Rejected**: Red background, requires attention
 - **Comments**: Full audit trail of all actions

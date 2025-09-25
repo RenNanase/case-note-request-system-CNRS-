@@ -290,7 +290,7 @@ const HandoverCaseNotesPage: React.FC = () => {
       },
       normal: {
         variant: 'outline' as const,
-        className: 'border-blue-300 text-blue-700 bg-blue-50 text-xs'
+        className: 'border-purple-300 text-purple-700 bg-purple-50 text-xs'
       },
       high: {
         variant: 'outline' as const,
@@ -320,7 +320,7 @@ const HandoverCaseNotesPage: React.FC = () => {
       },
       'assigned': {
         variant: 'outline' as const,
-        className: 'border-blue-300 text-blue-700 bg-blue-50 text-xs'
+        className: 'border-purple-300 text-purple-700 bg-purple-50 text-xs'
       },
       'in-progress': {
         variant: 'outline' as const,
@@ -395,7 +395,7 @@ const HandoverCaseNotesPage: React.FC = () => {
             <CardDescription>
               Select a case note to handover to another CA
               {caseNotes.length > 0 && (
-                <span className="block mt-1 text-sm text-blue-600">
+                <span className="block mt-1 text-sm text-purple-600">
                   Total available: {caseNotes.length} • Filtered: {filteredCaseNotes.length}
                 </span>
               )}
@@ -432,7 +432,7 @@ const HandoverCaseNotesPage: React.FC = () => {
                     key={caseNote.id}
                     className={`p-3 rounded-lg border cursor-pointer transition-colors ${
                       selectedCaseNote?.id === caseNote.id
-                        ? 'border-blue-500 bg-blue-50'
+                        ? 'border-purple-500 bg-purple-50'
                         : 'border-gray-200 hover:bg-gray-50'
                     }`}
                     onClick={() => {
@@ -497,9 +497,9 @@ const HandoverCaseNotesPage: React.FC = () => {
             ) : (
               <div className="space-y-4">
                 {/* Selected Case Note Summary */}
-                <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                  <h4 className="font-medium text-blue-900 mb-2">Selected Case Note</h4>
-                  <div className="text-sm text-blue-800">
+                <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
+                  <h4 className="font-medium text-purple-900 mb-2">Selected Case Note</h4>
+                  <div className="text-sm text-purple-800">
                     <div><strong>Patient:</strong> {selectedCaseNote?.patient?.name || 'N/A'}</div>
                     <div><strong>MRN:</strong> {selectedCaseNote?.patient?.mrn || 'N/A'}</div>
                     <div><strong>Request:</strong> {selectedCaseNote?.request_number || 'N/A'}</div>

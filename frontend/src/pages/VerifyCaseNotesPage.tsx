@@ -509,7 +509,7 @@ const VerifyCaseNotesPage: React.FC = () => {
       },
       normal: {
         variant: 'outline' as const,
-        className: 'border-blue-300 text-blue-700 bg-blue-50 text-xs'
+        className: 'border-purple-300 text-purple-700 bg-purple-50 text-xs'
       },
       high: {
         variant: 'outline' as const,
@@ -540,8 +540,8 @@ const VerifyCaseNotesPage: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Verify Case Notes</h1>
-          <p className="text-gray-600 mt-1">
-            Verify receipt of approved case notes grouped by approval date
+          <p className="text-gray-600 mt-2">
+            Manage case note verifications and handover requests
           </p>
         </div>
         <div className="flex gap-2">
@@ -558,72 +558,34 @@ const VerifyCaseNotesPage: React.FC = () => {
 
       {/* Tabs for different verification types */}
       <Tabs defaultValue="case-notes" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="case-notes" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
             Verify Case Notes
           </TabsTrigger>
-
-          <TabsTrigger value="handover-verification" className="flex items-center gap-2">
-            <ArrowRightLeft className="h-4 w-4" />
-            Verify Requested Case Notes
-          </TabsTrigger>
-          <TabsTrigger value="handover-request-verification" className="flex items-center gap-2">
+          <TabsTrigger value="handover-request-verification" className="flex items-center gap-2 relative">
             <MessageSquare className="h-4 w-4" />
             Verify Handover Requests
+            {handoverRequestsPendingVerification.length > 0 && (
+              <>
+                {/* Red badge with count */}
+                <Badge 
+                  variant="destructive" 
+                  className="ml-2 bg-red-500 hover:bg-red-600 text-white text-xs px-2 py-0.5 min-w-[20px] h-5 flex items-center justify-center"
+                >
+                  {handoverRequestsPendingVerification.length}
+                </Badge>
+                {/* Pulsing red dot */}
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+              </>
+            )}
           </TabsTrigger>
         </TabsList>
 
         {/* Tab 1: Verify Case Notes */}
         <TabsContent value="case-notes" className="space-y-6">
           {/* Summary Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center">
-                  <div className="p-2 rounded-lg bg-blue-500 text-white mr-3">
-                    <FileText className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">Total Approved</p>
-                    <p className="text-2xl font-bold">{approvedCaseNotes.length}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
 
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center">
-                  <div className="p-2 rounded-lg bg-green-500 text-white mr-3">
-                    <CheckCircle2 className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">Already Received</p>
-                    <p className="text-2xl font-bold">
-                      {approvedCaseNotes.filter(cn => cn.is_received).length}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center">
-                  <div className="p-2 rounded-lg bg-orange-500 text-white mr-3">
-                    <Clock className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">Pending Verification</p>
-                    <p className="text-2xl font-bold">
-                      {approvedCaseNotes.filter(cn => !cn.is_received).length}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
 
           {/* Verification Form */}
           {selectedCaseNotes.size > 0 && (
@@ -756,32 +718,41 @@ const VerifyCaseNotesPage: React.FC = () => {
                 const isExpanded = expandedDates.has(date);
 
                 return (
-                  <Card key={date}>
+                  <Card key={date} className="shadow-sm border-0 bg-white hover:shadow-md transition-shadow">
                     <CardHeader
-                      className="cursor-pointer hover:bg-gray-50"
+                      className="cursor-pointer hover:bg-gray-50/50 transition-colors rounded-t-lg"
                       onClick={() => toggleDateExpansion(date)}
                     >
                       <div className="flex items-center justify-between">
-                        <div>
-                          <CardTitle className="text-lg">
-                            <Calendar className="h-5 w-5 inline mr-2" />
-                            {formatDateDisplay(date)}
-                          </CardTitle>
-                          <CardDescription>
-                            {caseNotes.length} case note(s) • {receivedCount} received • {pendingCount} pending
-                          </CardDescription>
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-purple-100 rounded-lg">
+                            <Calendar className="h-4 w-4 text-purple-600" />
+                          </div>
+                          <div>
+                            <CardTitle className="text-lg font-semibold text-gray-900">
+                              {formatDateDisplay(date)}
+                            </CardTitle>
+                            <CardDescription className="text-sm text-gray-600">
+                              {caseNotes.length} case note{caseNotes.length !== 1 ? 's' : ''} • {receivedCount} received • {pendingCount} pending
+                            </CardDescription>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-3">
                           {pendingCount > 0 && (
-                            <Badge variant="outline" className="text-orange-600 border-orange-200">
+                            <Badge variant="outline" className="text-orange-700 border-orange-200 bg-orange-50 px-3 py-1">
                               {pendingCount} pending
                             </Badge>
                           )}
                           {receivedCount > 0 && (
-                            <Badge variant="outline" className="text-green-600 border-green-200">
+                            <Badge variant="outline" className="text-green-700 border-green-200 bg-green-50 px-3 py-1">
                               {receivedCount} received
                             </Badge>
                           )}
+                          <div className={`transform transition-transform ${isExpanded ? 'rotate-180' : ''}`}>
+                            <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </div>
                         </div>
                       </div>
                     </CardHeader>
@@ -792,10 +763,12 @@ const VerifyCaseNotesPage: React.FC = () => {
                           {caseNotes.map(caseNote => (
                             <div
                               key={caseNote.id}
-                              className={`flex items-center space-x-3 p-3 rounded-lg border ${
+                              className={`flex items-center space-x-4 p-4 rounded-xl border transition-all ${
                                 caseNote.is_received
-                                  ? 'bg-green-50 border-green-200'
-                                  : 'bg-white border-gray-200 hover:bg-gray-50'
+                                  ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 shadow-sm'
+                                  : selectedCaseNotes.has(caseNote.id)
+                                  ? 'bg-purple-50 border-purple-200 shadow-sm'
+                                  : 'bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300'
                               }`}
                             >
                               <Checkbox
@@ -808,32 +781,32 @@ const VerifyCaseNotesPage: React.FC = () => {
                               />
 
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-1">
+                                <div className="flex flex-wrap items-center gap-2 mb-3">
                                   <Label
                                     htmlFor={`case-note-${caseNote.id}`}
-                                    className="font-medium cursor-pointer"
+                                    className="font-semibold cursor-pointer text-gray-900"
                                   >
                                     {caseNote.patient.name}
                                   </Label>
-                                  <Badge variant="outline" className="text-xs">
+                                  <Badge variant="outline" className="text-xs bg-gray-50 text-gray-700 border-gray-300">
                                     MRN: {caseNote.patient.mrn}
                                   </Badge>
                                   {getPriorityBadge(caseNote.priority)}
                                   {caseNote.batch_number && (
-                                    <Badge variant="outline" className="text-xs">
+                                    <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-300">
                                       Batch: {caseNote.batch_number}
                                     </Badge>
                                   )}
                                 </div>
 
-                                <div className="text-sm text-gray-600">
-                                  <div>Request: {caseNote.request_number}</div>
-                                  <div>Purpose: {caseNote.purpose}</div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-600">
+                                  <div><span className="font-medium text-gray-700">Request:</span> {caseNote.request_number}</div>
+                                  <div><span className="font-medium text-gray-700">Purpose:</span> {caseNote.purpose}</div>
                                   {caseNote.department && (
-                                    <div>Department: {caseNote.department.name}</div>
+                                    <div><span className="font-medium text-gray-700">Department:</span> {caseNote.department.name}</div>
                                   )}
                                   {caseNote.doctor && (
-                                    <div>Doctor: {caseNote.doctor.name}</div>
+                                    <div><span className="font-medium text-gray-700">Doctor:</span> {caseNote.doctor.name}</div>
                                   )}
                                 </div>
 
@@ -863,14 +836,14 @@ const VerifyCaseNotesPage: React.FC = () => {
 
                               {/* Display MR Staff approval remarks if available */}
                               {caseNote.approval_remarks && (
-                                <div className="col-span-full mt-2 p-2 bg-blue-50 border border-blue-200 rounded-md">
+                                <div className="col-span-full mt-2 p-2 bg-purple-50 border border-purple-200 rounded-md">
                                   <div className="flex items-start gap-2">
-                                    <MessageSquare className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                                    <MessageSquare className="h-4 w-4 text-purple-600 mt-0.5 flex-shrink-0" />
                                     <div className="flex-1">
-                                      <div className="text-xs font-medium text-blue-800 mb-1">
+                                      <div className="text-xs font-medium text-purple-800 mb-1">
                                         MR Staff Approval Notes:
                                       </div>
-                                      <div className="text-xs text-blue-700">
+                                      <div className="text-xs text-purple-700">
                                         {caseNote.approval_remarks}
                                       </div>
                                     </div>
@@ -1045,7 +1018,7 @@ const VerifyCaseNotesPage: React.FC = () => {
                             )}
 
                             {handover.acknowledged_at && (
-                              <div className="text-xs text-blue-600 mt-1">
+                              <div className="text-xs text-purple-600 mt-1">
                                 ✓ Acknowledged by {handover.handedOverTo.name} on{' '}
                                 {new Date(handover.acknowledged_at).toLocaleDateString('en-US', {
                                   month: 'short',
@@ -1098,7 +1071,7 @@ const VerifyCaseNotesPage: React.FC = () => {
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center">
-                  <div className="p-2 rounded-lg bg-blue-500 text-white mr-3">
+                  <div className="p-2 rounded-lg bg-purple-500 text-white mr-3">
                     <CheckCircle2 className="h-4 w-4" />
                   </div>
                   <div>
@@ -1185,56 +1158,111 @@ const VerifyCaseNotesPage: React.FC = () => {
               </div>
 
               {handoverRequestsPendingVerification.map((handoverRequest: any) => (
-                <Card key={handoverRequest.id} className="border-purple-200">
-                  <CardContent className="p-4">
-                    <div className="flex items-center space-x-3">
+                <Card key={handoverRequest.id} className="border-purple-200 hover:shadow-md transition-shadow">
+                  <CardContent className="p-6">
+                    <div className="flex items-start space-x-4">
                       <Checkbox
                         id={`handover-request-${handoverRequest.id}`}
                         checked={selectedHandoverRequests.has(handoverRequest.id)}
                         onCheckedChange={(checked) =>
                           handleHandoverRequestSelection(handoverRequest.id, checked as boolean)
                         }
+                        className="mt-1"
                       />
 
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
+                        {/* Patient Information Header */}
+                        <div className="flex flex-wrap items-center gap-2 mb-4">
                           <Label
                             htmlFor={`handover-request-${handoverRequest.id}`}
-                            className="font-medium cursor-pointer"
+                            className="text-lg font-semibold cursor-pointer text-gray-900"
                           >
-                            {handoverRequest.caseNote?.patient?.name || 'Unknown Patient'}
+                            {handoverRequest.case_note?.patient?.name || 'Unknown Patient'}
                           </Label>
-                          <Badge variant="outline" className="text-xs">
-                            MRN: {handoverRequest.caseNote?.patient?.mrn || 'N/A'}
+                          <Badge variant="outline" className="text-xs bg-gray-50 text-gray-700 border-gray-300">
+                            MRN: {handoverRequest.case_note?.patient?.mrn || 'N/A'}
                           </Badge>
-                          <Badge variant="outline" className="text-xs bg-purple-100 text-purple-800">
-                            {handoverRequest.priority}
+                          <Badge variant="outline" className="text-xs bg-purple-100 text-purple-800 border-purple-300">
+                            {handoverRequest.priority || 'Normal'}
                           </Badge>
                         </div>
 
-                        <div className="text-sm text-gray-600">
-                          <div>Request: {handoverRequest.caseNote?.request_number || 'N/A'}</div>
-                          <div>Purpose: {handoverRequest.caseNote?.purpose || 'N/A'}</div>
-                          <div>Department: {handoverRequest.department?.name || 'Unknown Department'}</div>
-                          <div>Current Holder: {handoverRequest.currentHolder?.name || 'Unknown User'}</div>
-                          {handoverRequest.doctor && (
-                            <div>Doctor: {handoverRequest.doctor.name}</div>
-                          )}
+                        {/* Key Information Grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                          <div className="space-y-3">
+                            <div className="flex items-start gap-2">
+                              <span className="text-sm font-medium text-gray-700 min-w-[100px]">Requested By:</span>
+                              <span className="text-sm text-gray-900 font-medium">
+                                {handoverRequest.requester?.name || 'Unknown CA'}
+                              </span>
+                            </div>
+                            <div className="flex items-start gap-2">
+                              <span className="text-sm font-medium text-gray-700 min-w-[100px]">Current Holder:</span>
+                              <span className="text-sm text-gray-900 font-medium">
+                                {handoverRequest.current_holder?.name || 'Unknown User'}
+                              </span>
+                            </div>
+                            <div className="flex items-start gap-2">
+                              <span className="text-sm font-medium text-gray-700 min-w-[100px]">Department:</span>
+                              <span className="text-sm text-gray-600">
+                                {handoverRequest.department?.name || handoverRequest.case_note?.department?.name || 'Unknown Department'}
+                              </span>
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-3">
+                            <div className="flex items-start gap-2">
+                              <span className="text-sm font-medium text-gray-700 min-w-[80px]">Request #:</span>
+                              <span className="text-sm text-gray-600 font-mono">
+                                {handoverRequest.case_note?.request_number || 'N/A'}
+                              </span>
+                            </div>
+                            <div className="flex items-start gap-2">
+                              <span className="text-sm font-medium text-gray-700 min-w-[80px]">Purpose:</span>
+                              <span className="text-sm text-gray-600">
+                                {handoverRequest.case_note?.purpose || handoverRequest.reason || 'N/A'}
+                              </span>
+                            </div>
+                            {handoverRequest.doctor && (
+                              <div className="flex items-start gap-2">
+                                <span className="text-sm font-medium text-gray-700 min-w-[80px]">Doctor:</span>
+                                <span className="text-sm text-gray-600">
+                                  {handoverRequest.doctor.name}
+                                </span>
+                              </div>
+                            )}
+                          </div>
                         </div>
 
+                        {/* Handover Reason */}
                         {handoverRequest.reason && (
-                          <div className="text-xs text-gray-500 mt-1 p-2 bg-gray-100 rounded">
-                            <strong>Reason:</strong> {handoverRequest.reason}
+                          <div className="mb-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                            <div className="flex items-start gap-2">
+                              <MessageSquare className="h-4 w-4 text-purple-600 mt-0.5 flex-shrink-0" />
+                              <div>
+                                <div className="text-sm font-medium text-purple-800 mb-1">Handover Reason:</div>
+                                <div className="text-sm text-purple-700">{handoverRequest.reason}</div>
+                              </div>
+                            </div>
                           </div>
                         )}
 
+                        {/* Response Notes */}
                         {handoverRequest.response_notes && (
-                          <div className="text-xs text-blue-600 mt-1 p-2 bg-blue-100 rounded">
-                            <strong>Response:</strong> {handoverRequest.response_notes}
+                          <div className="mb-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                            <div className="flex items-start gap-2">
+                              <MessageSquare className="h-4 w-4 text-purple-600 mt-0.5 flex-shrink-0" />
+                              <div>
+                                <div className="text-sm font-medium text-purple-800 mb-1">Response Notes:</div>
+                                <div className="text-sm text-purple-700">{handoverRequest.response_notes}</div>
+                              </div>
+                            </div>
                           </div>
                         )}
 
-                        <div className="text-xs text-gray-500 mt-1">
+                        {/* Approval Date */}
+                        <div className="text-xs text-gray-500 flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
                           Approved on {new Date(handoverRequest.responded_at).toLocaleDateString('en-US', {
                             month: 'short',
                             day: 'numeric',

@@ -209,7 +209,7 @@ const CaseNoteTimelinePage: React.FC = () => {
       },
       normal: {
         variant: 'outline' as const,
-        className: 'border-blue-300 text-blue-700 bg-blue-50 text-xs'
+        className: 'border-purple-300 text-purple-700 bg-purple-50 text-xs'
       },
       high: {
         variant: 'outline' as const,
@@ -307,9 +307,9 @@ const CaseNoteTimelinePage: React.FC = () => {
       case 'handed_over': return 'text-orange-600 bg-orange-100';
       case 'status_changed': return 'text-orange-600 bg-orange-100';
       
-      // Progress events (blue)
-      case 'in_progress': return 'text-blue-600 bg-blue-100';
-      case 'updated': return 'text-blue-600 bg-blue-100';
+      // Progress events (purple)
+      case 'in_progress': return 'text-purple-600 bg-purple-100';
+      case 'updated': return 'text-purple-600 bg-purple-100';
       
       // Default
       default: return 'text-gray-600 bg-gray-100';
@@ -393,7 +393,7 @@ const CaseNoteTimelinePage: React.FC = () => {
                     key={caseNote.id}
                     className={`p-4 border rounded-lg cursor-pointer transition-colors ${
                       selectedCaseNote?.id === caseNote.id
-                        ? 'border-blue-500 bg-blue-50'
+                        ? 'border-purple-500 bg-purple-50'
                         : 'border-gray-200 hover:bg-gray-50'
                     }`}
                     onClick={() => handleCaseNoteSelection(caseNote)}
@@ -558,7 +558,7 @@ const CaseNoteTimelinePage: React.FC = () => {
                                         ? 'border-green-400'
                                         : event.event_type.includes('requested') || event.event_type.includes('created') || event.event_type.includes('submitted')
                                         ? 'border-purple-400'
-                                        : 'border-blue-400'
+                                        : 'border-purple-400'
                                     }`}>
                                       <span className="text-xs font-medium text-gray-600 block mb-1">Comments:</span>
                                       <p className="text-sm text-gray-700">

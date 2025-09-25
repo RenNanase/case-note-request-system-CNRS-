@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Schema\purpleprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('requests', function (Blueprint $table) {
+        Schema::table('requests', function (purpleprint $table) {
             // Composite index for CA dashboard stats - most commonly used combination
             $table->index(['requested_by_user_id', 'status', 'is_received'], 'idx_requests_ca_dashboard');
 
@@ -28,7 +28,7 @@ return new class extends Migration
             $table->index(['current_pic_user_id', 'is_returned', 'is_rejected_return'], 'idx_requests_return_status');
         });
 
-        Schema::table('handover_requests', function (Blueprint $table) {
+        Schema::table('handover_requests', function (purpleprint $table) {
             // Composite index for incoming handover queries
             $table->index(['current_holder_user_id', 'status'], 'idx_handover_requests_incoming');
 
@@ -42,7 +42,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('requests', function (Blueprint $table) {
+        Schema::table('requests', function (purpleprint $table) {
             $table->dropIndex('idx_requests_ca_dashboard');
             $table->dropIndex('idx_requests_current_pic');
             $table->dropIndex('idx_requests_handover_status');
@@ -50,7 +50,7 @@ return new class extends Migration
             $table->dropIndex('idx_requests_return_status');
         });
 
-        Schema::table('handover_requests', function (Blueprint $table) {
+        Schema::table('handover_requests', function (purpleprint $table) {
             $table->dropIndex('idx_handover_requests_incoming');
             $table->dropIndex('idx_handover_requests_status_time');
         });

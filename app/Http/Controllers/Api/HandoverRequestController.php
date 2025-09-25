@@ -30,8 +30,7 @@ class HandoverRequestController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'reason' => 'required|string|max:500',
-            'priority' => 'required|in:low,normal,high,urgent',
+            'reason' => 'nullable|string|max:500',
             'department_id' => 'required|exists:departments,id',
             'location_id' => 'nullable|exists:locations,id',
             'doctor_id' => 'nullable|exists:doctors,id',
@@ -93,7 +92,7 @@ class HandoverRequestController extends Controller
                 'requested_by_user_id' => $user->id,
                 'current_holder_user_id' => $caseNote->current_pic_user_id,
                 'reason' => $request->reason,
-                'priority' => $request->priority,
+                'priority' => 'normal', // Set default priority
                 'department_id' => $request->department_id,
                 'location_id' => $request->location_id,
                 'doctor_id' => $request->doctor_id,
@@ -111,7 +110,7 @@ class HandoverRequestController extends Controller
                 'metadata' => [
                     'handover_request_id' => $handoverRequest->id,
                     'reason' => $request->reason,
-                    'priority' => $request->priority,
+                    'priority' => 'normal', // Default priority
                     'requested_by_name' => $user->name,
                     'current_holder_name' => $caseNote->currentPIC?->name ?? 'Unknown',
                     'doctor_id' => $request->doctor_id,
@@ -431,6 +430,7 @@ class HandoverRequestController extends Controller
             $handoverRequests = HandoverRequest::with([
                 'caseNote.patient',
                 'caseNote.department',
+                'requester',
                 'currentHolder',
                 'department',
                 'location',
@@ -615,7 +615,9 @@ class HandoverRequestController extends Controller
                 ]);
 
                 // Update the case note to finalize the handover
+                // Ensure the current_pic_user_id remains with the final CA (requester)
                 $handoverRequest->caseNote->update([
+                    'current_pic_user_id' => $handoverRequest->requested_by_user_id, // Ensure ownership stays with final CA
                     'handover_status' => 'verified',
                     'handover_verified_at' => now(),
                 ]);

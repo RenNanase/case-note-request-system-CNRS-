@@ -410,7 +410,7 @@ export default function CreateRequestPage() {
       },
       normal: {
         variant: 'outline' as const,
-        className: 'border-blue-300 text-blue-700 bg-blue-50'
+        className: 'border-purple-300 text-purple-700 bg-purple-50'
       },
       high: {
         variant: 'outline' as const,
@@ -479,19 +479,19 @@ export default function CreateRequestPage() {
                   <div className="flex flex-col items-center">
                     <div className={cn(
                       "w-12 h-12 rounded-full border-2 flex items-center justify-center transition-colors",
-                      isActive ? "border-blue-600 bg-blue-50" :
+                      isActive ? "border-purple-600 bg-purple-50" :
                       isCompleted ? "border-green-600 bg-green-50" : "border-gray-300 bg-gray-50"
                     )}>
                       <Icon className={cn(
                         "h-5 w-5",
-                        isActive ? "text-blue-600" :
+                        isActive ? "text-purple-600" :
                         isCompleted ? "text-green-600" : "text-gray-400"
                       )} />
                     </div>
                     <div className="mt-2 text-center">
                       <p className={cn(
                         "text-sm font-medium",
-                        isActive ? "text-blue-600" :
+                        isActive ? "text-purple-600" :
                         isCompleted ? "text-green-600" : "text-gray-500"
                       )}>
                         {step.title}

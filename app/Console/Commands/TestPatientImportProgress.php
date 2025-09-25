@@ -18,7 +18,7 @@ class TestPatientImportProgress extends Command
         $this->info('Testing patient import progress tracking system...');
 
         // Test with admin user
-        $adminUser = User::where('email', 'admin@cnrs.test')->first();
+        $adminUser = User::where('email', 'admin@cnrs.jmc')->first();
         if (!$adminUser) {
             $this->error('Admin user not found');
             return 1;

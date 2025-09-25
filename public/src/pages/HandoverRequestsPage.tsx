@@ -224,7 +224,7 @@ const HandoverRequestsPage: React.FC = () => {
       },
       normal: {
         variant: 'secondary' as const,
-        className: 'bg-blue-100 text-blue-800 border-blue-200'
+        className: 'bg-purple-100 text-purple-800 border-purple-200'
       },
       high: {
         variant: 'outline' as const,
@@ -364,8 +364,8 @@ const HandoverRequestsPage: React.FC = () => {
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center space-x-3 mb-3">
-                          <div className="bg-blue-100 p-2 rounded-lg">
-                            <Package className="h-5 w-5 text-blue-600" />
+                          <div className="bg-purple-100 p-2 rounded-lg">
+                            <Package className="h-5 w-5 text-purple-600" />
                           </div>
                           <div>
                             <h3 className="font-semibold text-gray-900">

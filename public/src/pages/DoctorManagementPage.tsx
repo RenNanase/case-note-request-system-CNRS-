@@ -355,12 +355,12 @@ export default function DoctorManagementPage() {
         </Card>
         <Card className="p-4">
           <div className="flex items-center space-x-2">
-            <div className="p-2 rounded-full bg-blue-100">
-              <User className="h-4 w-4 text-blue-600" />
+            <div className="p-2 rounded-full bg-purple-100">
+              <User className="h-4 w-4 text-purple-600" />
             </div>
             <div>
               <p className="text-sm font-medium text-gray-600">Total Doctors</p>
-              <p className="text-2xl font-bold text-blue-600">{totalDoctorsCount}</p>
+              <p className="text-2xl font-bold text-purple-600">{totalDoctorsCount}</p>
             </div>
           </div>
         </Card>

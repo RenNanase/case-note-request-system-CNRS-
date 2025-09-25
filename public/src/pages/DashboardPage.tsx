@@ -55,6 +55,32 @@ function CADashboard({ user, stats, loading, loadingProgress, executionTime, cac
         cached={cached}
       />
 
+      {/* Banner notification for pending verifications */}
+      {stats && stats.pending_verifications > 0 && (
+        <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6">
+          <div className="flex items-center space-x-3">
+            <div className="flex-shrink-0">
+              <AlertTriangle className="h-6 w-6 text-orange-600" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-sm font-medium text-orange-800">
+                You have case notes pending verification
+              </h3>
+              <p className="text-sm text-orange-700 mt-1">
+                {stats.pending_verifications} case note{stats.pending_verifications > 1 ? 's' : ''} need{stats.pending_verifications === 1 ? 's' : ''} to be verified as received.
+              </p>
+            </div>
+            <div className="flex-shrink-0">
+              <Link to="/verify-case-notes">
+                <Button variant="outline" size="sm" className="border-orange-300 text-orange-700 hover:bg-orange-100">
+                  Verify Now
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* CA-specific welcome */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Hi, {user?.name || 'Clinic Assistant'}!</h1>
@@ -86,16 +112,16 @@ function CADashboard({ user, stats, loading, loadingProgress, executionTime, cac
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600">Total Requested</p>
-                    <p className="text-2xl font-bold text-blue-600">{stats.total_requests || 0}</p>
+                    <p className="text-2xl font-bold text-purple-600">{stats.total_requests || 0}</p>
                   </div>
-                  <FileText className="h-8 w-8 text-blue-400" />
+                  <FileText className="h-8 w-8 text-purple-400" />
                 </div>
               </CardContent>
             </Card>
           </Link>
 
           {/* Pending Verifications Card */}
-          <Link to="/individual-requests?status=approved&is_received=false">
+          <Link to="/verify-case-notes">
             <Card className="cursor-pointer hover:shadow-lg transition-shadow border-orange-200 bg-orange-50 h-32">
               <CardContent className="p-6 h-full flex flex-col justify-between">
                 <div className="flex items-center justify-between">
@@ -217,9 +243,9 @@ function MRStaffDashboard({ user, stats, recentRequests, loading }: any) {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Current Active(dummy)</p>
-                  <p className="text-2xl font-bold text-blue-600">{stats.approved + stats.in_progress}</p>
+                  <p className="text-2xl font-bold text-purple-600">{stats.approved + stats.in_progress}</p>
                 </div>
-                <Activity className="h-8 w-8 text-blue-400" />
+                <Activity className="h-8 w-8 text-purple-400" />
               </div>
             </CardContent>
           </Card>
@@ -296,8 +322,8 @@ function MRStaffDashboard({ user, stats, recentRequests, loading }: any) {
                   {recentRequests.slice(0, 5).map((request: CaseNoteRequest) => (
                     <div key={request.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
                       <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                          <FileText className="h-5 w-5 text-blue-600" />
+                        <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                          <FileText className="h-5 w-5 text-purple-600" />
                         </div>
                         <div>
                           <h4 className="text-sm font-medium">{request.request_number}</h4>
@@ -399,9 +425,9 @@ function AdminDashboard({ user, stats, loading }: any) {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Active Sessions</p>
-                  <p className="text-2xl font-bold text-blue-600">{stats.active_sessions || 0}</p>
+                  <p className="text-2xl font-bold text-purple-600">{stats.active_sessions || 0}</p>
                 </div>
-                <Activity className="h-8 w-8 text-blue-400" />
+                <Activity className="h-8 w-8 text-purple-400" />
               </div>
             </CardContent>
           </Card>

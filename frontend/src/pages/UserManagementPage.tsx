@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
-import { usersApi } from '@/api/users';
-import type { UserDetail, UserStatistics } from '@/types/auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
+import { usersApi } from '@/api/users';
+import type { UserDetail, UserStatistics } from '@/types/auth';
 import {
   Select,
   SelectContent,
@@ -63,6 +63,8 @@ import {
   UserX,
   ShieldCheck,
   ShieldX,
+  Activity,
+  Info,
 } from 'lucide-react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -92,6 +94,7 @@ export default function UserManagementPage() {
   const [users, setUsers] = useState<UserDetail[]>([]);
   const [statistics, setStatistics] = useState<UserStatistics | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Pagination and filtering
   const [currentPage, setCurrentPage] = useState(1);
@@ -124,32 +127,66 @@ export default function UserManagementPage() {
     resolver: zodResolver(updateUserSchema),
   });
 
-    // Check if user has admin role
+  // Debounced search term
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+
+  // Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 500); // 500ms delay
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Load users and statistics
+  useEffect(() => {
+    if (hasRole('ADMIN')) {
+      fetchData();
+    }
+  }, [currentPage, debouncedSearchTerm, roleFilter, statusFilter, passwordStatusFilter, hasRole]);
+
+  // Initial load without search term dependency
+  useEffect(() => {
+    if (hasRole('ADMIN') && debouncedSearchTerm === '' && searchTerm === '') {
+      loadStatistics();
+    }
+  }, [hasRole]);
+
+  // Check if user has admin role
   if (!hasRole('ADMIN')) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h1>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Access Denied</h2>
           <p className="text-gray-600">You don't have permission to access this page.</p>
         </div>
       </div>
     );
   }
 
-  // Load users and statistics
-  useEffect(() => {
-    loadUsers();
-    loadStatistics();
-  }, [currentPage, searchTerm, roleFilter, statusFilter, passwordStatusFilter]);
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      await Promise.all([
+        loadUsers(),
+        // Only reload statistics on initial load or when filters change (not on search)
+        ...(debouncedSearchTerm === '' ? [loadStatistics()] : [])
+      ]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadUsers = async () => {
     try {
-      setLoading(true);
       const params = {
         page: currentPage,
         per_page: 15,
-        search: searchTerm || undefined,
+        search: debouncedSearchTerm || undefined,
         role: roleFilter === 'all' ? undefined : roleFilter,
         status: statusFilter === 'all' ? undefined : statusFilter,
         password_status: passwordStatusFilter === 'all' ? undefined : passwordStatusFilter,
@@ -165,8 +202,7 @@ export default function UserManagementPage() {
       }
     } catch (err) {
       console.error('Load users error:', err);
-    } finally {
-      setLoading(false);
+      throw err;
     }
   };
 
@@ -178,6 +214,7 @@ export default function UserManagementPage() {
       }
     } catch (err) {
       console.error('Load statistics error:', err);
+      throw err;
     }
   };
 
@@ -202,8 +239,7 @@ export default function UserManagementPage() {
         console.log('🔍 Toast should have been shown');
         setShowCreateDialog(false);
         createForm.reset();
-        loadUsers();
-        loadStatistics();
+        fetchData();
       } else {
         console.log('🔍 User creation failed:', response);
       }
@@ -234,7 +270,7 @@ export default function UserManagementPage() {
         });
         setShowEditDialog(false);
         setSelectedUser(null);
-        loadUsers();
+        fetchData();
       }
     } catch (err: any) {
       toast({
@@ -262,7 +298,7 @@ export default function UserManagementPage() {
         });
         setShowResetPasswordDialog(false);
         setSelectedUser(null);
-        loadUsers();
+        fetchData();
       }
     } catch (err: any) {
       toast({
@@ -290,8 +326,7 @@ export default function UserManagementPage() {
         });
         setShowToggleStatusDialog(false);
         setSelectedUser(null);
-        loadUsers();
-        loadStatistics();
+        fetchData();
       }
     } catch (err: any) {
       toast({
@@ -353,24 +388,116 @@ export default function UserManagementPage() {
     }
   };
 
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">User Management</h1>
-        <p className="text-gray-600">Manage system users, roles, and account status</p>
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
+            <p className="text-gray-600">Manage system users, roles, and account status</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Card>
+            <CardContent className="p-6">
+              <div className="animate-pulse space-y-3">
+                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-6">
+              <div className="animate-pulse space-y-3">
+                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-6">
+              <div className="animate-pulse space-y-3">
+                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-6">
+              <div className="animate-pulse space-y-3">
+                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Error</h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <Button onClick={fetchData} variant="outline">
+            Try Again
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
+          <p className="text-gray-600">Manage system users, roles, and account status</p>
+        </div>
+        <div className="flex space-x-2">
+          <Button variant="outline" onClick={fetchData}>
+            <Activity className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+          <Button onClick={() => setShowCreateDialog(true)} className="flex items-center gap-2">
+            <UserPlus className="h-4 w-4" />
+            Add User
+          </Button>
+        </div>
+      </div>
+
+      {/* Default Password Reminder */}
+      <Card className="border-blue-200 bg-blue-50">
+        <CardContent className="p-4">
+          <div className="flex items-start space-x-3">
+            <Info className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <h3 className="text-sm font-semibold text-blue-900 mb-1">Default Password Information</h3>
+              <p className="text-sm text-blue-800">
+                <strong>Default Password:</strong> <code className="bg-blue-100 px-2 py-1 rounded text-blue-900 font-mono">password</code>
+              </p>
+              <p className="text-xs text-blue-700 mt-2">
+                All new users are created with the default password "password". Users should change their password on first login for security purposes.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Statistics Cards */}
       {statistics && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Total Users</p>
-                  <p className="text-3xl font-bold text-gray-900">{statistics.total_users}</p>
+                  <p className="text-3xl font-bold text-gray-900">{statistics.total_users.toLocaleString()}</p>
                 </div>
-                <Users className="h-8 w-8 text-blue-600" />
+                <Users className="h-8 w-8 text-purple-600" />
               </div>
             </CardContent>
           </Card>
@@ -380,7 +507,7 @@ export default function UserManagementPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Active Users</p>
-                  <p className="text-3xl font-bold text-green-600">{statistics.active_users}</p>
+                  <p className="text-3xl font-bold text-green-600">{statistics.active_users.toLocaleString()}</p>
                 </div>
                 <UserCheck className="h-8 w-8 text-green-600" />
               </div>
@@ -392,9 +519,9 @@ export default function UserManagementPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Password Changed</p>
-                  <p className="text-3xl font-bold text-blue-600">{statistics.password_status.changed}</p>
+                  <p className="text-3xl font-bold text-purple-600">{statistics.password_status.changed.toLocaleString()}</p>
                 </div>
-                <ShieldCheck className="h-8 w-8 text-blue-600" />
+                <ShieldCheck className="h-8 w-8 text-purple-600" />
               </div>
             </CardContent>
           </Card>
@@ -404,7 +531,7 @@ export default function UserManagementPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Recent Logins</p>
-                  <p className="text-3xl font-bold text-purple-600">{statistics.recent_logins}</p>
+                  <p className="text-3xl font-bold text-purple-600">{statistics.recent_logins.toLocaleString()}</p>
                 </div>
                 <Clock className="h-8 w-8 text-purple-600" />
               </div>
@@ -414,58 +541,57 @@ export default function UserManagementPage() {
       )}
 
       {/* Actions and Filters */}
-      <div className="flex flex-col lg:flex-row gap-4 mb-6">
-        <Button onClick={() => setShowCreateDialog(true)} className="flex items-center gap-2">
-          <UserPlus className="h-4 w-4" />
-          Add User
-        </Button>
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex flex-col lg:flex-row gap-4">
+            <div className="flex-1 flex flex-col lg:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  placeholder="Search users..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
 
-        <div className="flex-1 flex flex-col lg:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              placeholder="Search users..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
+              <Select value={roleFilter} onValueChange={setRoleFilter}>
+                <SelectTrigger className="w-full lg:w-40">
+                  <SelectValue placeholder="All Roles" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Roles</SelectItem>
+                  <SelectItem value="CA">CA</SelectItem>
+                  <SelectItem value="MR_STAFF">MR Staff</SelectItem>
+                  <SelectItem value="ADMIN">Admin</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as 'active' | 'inactive' | 'all')}>
+                <SelectTrigger className="w-full lg:w-40">
+                  <SelectValue placeholder="All Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={passwordStatusFilter} onValueChange={(value) => setPasswordStatusFilter(value as 'changed' | 'not_changed' | 'all')}>
+                <SelectTrigger className="w-full lg:w-40">
+                  <SelectValue placeholder="Password Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="changed">Changed</SelectItem>
+                  <SelectItem value="not_changed">Not Changed</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-
-          <Select value={roleFilter} onValueChange={setRoleFilter}>
-            <SelectTrigger className="w-full lg:w-40">
-              <SelectValue placeholder="All Roles" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Roles</SelectItem>
-              <SelectItem value="CA">CA</SelectItem>
-              <SelectItem value="MR_STAFF">MR Staff</SelectItem>
-              <SelectItem value="ADMIN">Admin</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as 'active' | 'inactive' | 'all')}>
-            <SelectTrigger className="w-full lg:w-40">
-              <SelectValue placeholder="All Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="inactive">Inactive</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Select value={passwordStatusFilter} onValueChange={(value) => setPasswordStatusFilter(value as 'changed' | 'not_changed' | 'all')}>
-            <SelectTrigger className="w-full lg:w-40">
-              <SelectValue placeholder="Password Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All</SelectItem>
-              <SelectItem value="changed">Changed</SelectItem>
-              <SelectItem value="not_changed">Not Changed</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Users Table */}
       <Card>
@@ -474,21 +600,7 @@ export default function UserManagementPage() {
           <CardDescription>Manage system users and their permissions</CardDescription>
         </CardHeader>
         <CardContent>
-          {loading ? (
-            <div className="space-y-4">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="flex items-center space-x-4">
-                  <Skeleton className="h-12 w-12 rounded-full" />
-                  <div className="space-y-2">
-                    <Skeleton className="h-4 w-[250px]" />
-                    <Skeleton className="h-4 w-[200px]" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <>
-              <Table>
+          <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>User</TableHead>
@@ -583,33 +695,31 @@ export default function UserManagementPage() {
                 </TableBody>
               </Table>
 
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="flex items-center justify-between mt-6">
-                  <div className="text-sm text-gray-500">
-                    Showing page {currentPage} of {totalPages}
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage(currentPage - 1)}
-                      disabled={currentPage === 1}
-                    >
-                      Previous
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage(currentPage + 1)}
-                      disabled={currentPage === totalPages}
-                    >
-                      Next
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </>
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between mt-6">
+              <div className="text-sm text-gray-500">
+                Showing page {currentPage} of {totalPages}
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(currentPage - 1)}
+                  disabled={currentPage === 1}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>
@@ -623,6 +733,22 @@ export default function UserManagementPage() {
               Create a new user account with the specified role.
             </DialogDescription>
           </DialogHeader>
+
+          {/* Default Password Notice */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+            <div className="flex items-start space-x-2">
+              <Info className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+              <div className="text-sm">
+                <p className="text-blue-900 font-medium">Default Password</p>
+                <p className="text-blue-800">
+                  New users will be created with the default password: <code className="bg-blue-100 px-1 py-0.5 rounded text-blue-900 font-mono text-xs">password</code>
+                </p>
+                <p className="text-blue-700 text-xs mt-1">
+                  Users should change their password on first login.
+                </p>
+              </div>
+            </div>
+          </div>
           <form onSubmit={createForm.handleSubmit((data) => {
             console.log('🔍 Form submitted with data:', data);
             console.log('🔍 Form errors:', createForm.formState.errors);

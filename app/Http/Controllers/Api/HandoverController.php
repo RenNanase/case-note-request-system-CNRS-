@@ -211,6 +211,7 @@ class HandoverController extends Controller
             // Update case note request
             $caseNoteRequest = $handover->caseNoteRequest;
             $caseNoteRequest->update([
+                'current_pic_user_id' => $handover->handed_over_to_user_id, // Ensure ownership stays with final CA
                 'handover_status' => 'acknowledged',
                 'handover_acknowledged_at' => now(),
             ]);
@@ -304,6 +305,7 @@ class HandoverController extends Controller
             // Update case note request
             $caseNoteRequest = $handover->caseNoteRequest;
             $caseNoteRequest->update([
+                'current_pic_user_id' => $handover->handed_over_to_user_id, // Ensure ownership stays with final CA
                 'handover_status' => 'completed',
                 'handover_completed_at' => now(),
             ]);

@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
 use App\Models\Patient;
+use App\Models\OpenedCaseNote;
 
 class PatientController extends Controller
 {
@@ -105,12 +106,34 @@ class PatientController extends Controller
                         }
                     }
                 } else {
-                    // Merge availability information for patients with no existing requests
-                    $patientData = array_merge($patientData, [
-                        'has_existing_requests' => false,
-                        'is_available' => true,
-                        'handover_status' => 'none',
-                    ]);
+                    // Check if patient has an active opened case note by MR Staff
+                    $openedCaseNote = OpenedCaseNote::getActiveOpenedCaseNote($patient->id);
+
+                    if ($openedCaseNote) {
+                        // Patient has an active opened case note by MR Staff
+                        $patientData = array_merge($patientData, [
+                            'has_existing_requests' => true,
+                            'is_available' => false,
+                            'handover_status' => 'mr_staff_opened',
+                            'restriction_type' => 'mr_staff_opened',
+                            'restriction_details' => [
+                                'department_name' => $openedCaseNote->department->name,
+                                'location_name' => $openedCaseNote->location->name,
+                                'doctor_name' => $openedCaseNote->doctor->name,
+                                'user_type_label' => $openedCaseNote->user_type_label,
+                                'remarks' => $openedCaseNote->remarks,
+                                'opened_by_name' => $openedCaseNote->openedBy->name,
+                                'opened_at' => $openedCaseNote->opened_at->toDateTimeString(),
+                            ]
+                        ]);
+                    } else {
+                        // Merge availability information for patients with no existing requests
+                        $patientData = array_merge($patientData, [
+                            'has_existing_requests' => false,
+                            'is_available' => true,
+                            'handover_status' => 'none',
+                        ]);
+                    }
                 }
 
                 return $patientData;

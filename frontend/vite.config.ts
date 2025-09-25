@@ -4,40 +4,47 @@ import path from 'path'
 
 
 export default defineConfig({
-    base: '/CNRS/build/', // Base path for network server subdirectory
     plugins: [react()],
-  resolve: {
-    alias: {
-      '@': path.resolve('./src'),
+    resolve: {
+        alias: {
+            '@': path.resolve('./src'),
+        },
     },
-  },
 
     server: {
         host: '0.0.0.0',
-        port: 5174,
+        port: 5173,
         strictPort: true,
+        open: false,
         hmr: {
-            host: '10.2.10.178',
-            protocol: 'ws',
-            port: 5174,
+            port: 5173,
         },
         cors: {
-            origin: ['http://10.2.10.178', 'http://10.2.10.178:5174'],
+            origin: ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://10.2.10.178'],
             methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-            allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
             credentials: true
         }
     },
     build: {
-        outDir: '../public/build',
+        outDir: '../public/frontend',
         assetsDir: 'assets',
         manifest: true,
         rollupOptions: {
             output: {
                 manualChunks: undefined,
-                assetFileNames: 'assets/[name]-[hash][extname]',
-                chunkFileNames: 'assets/[name]-[hash].js',
-                entryFileNames: 'assets/[name]-[hash].js',
+                // Use timestamp for better cache busting
+                assetFileNames: () => {
+                    const timestamp = Date.now();
+                    return `assets/[name]-[hash]-${timestamp}[extname]`;
+                },
+                chunkFileNames: () => {
+                    const timestamp = Date.now();
+                    return `assets/[name]-[hash]-${timestamp}.js`;
+                },
+                entryFileNames: () => {
+                    const timestamp = Date.now();
+                    return `assets/[name]-[hash]-${timestamp}.js`;
+                },
             },
         },
         minify: 'esbuild',

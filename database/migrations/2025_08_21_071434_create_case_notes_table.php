@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Schema\purpleprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('case_notes', function (Blueprint $table) {
+        Schema::create('case_notes', function (purpleprint $table) {
             $table->id();
             $table->foreignId('patient_id')->constrained('patients')->onDelete('restrict')->comment('Patient this case note belongs to');
             $table->string('physical_id', 50)->unique()->comment('Physical case note identifier/barcode');

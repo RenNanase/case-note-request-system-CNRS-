@@ -313,7 +313,7 @@ const MRStaffReturnedCaseNotesPage: React.FC = () => {
       <div className="container mx-auto p-6">
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
             <p className="text-gray-600">Loading returned case notes...</p>
           </div>
         </div>
@@ -344,7 +344,7 @@ const MRStaffReturnedCaseNotesPage: React.FC = () => {
 
         <div className="grid gap-4">
           {selectedSubmission.case_notes.map((caseNote) => (
-            <Card key={caseNote.id} className="border-l-4 border-l-blue-500">
+            <Card key={caseNote.id} className="border-l-4 border-l-purple-500">
               <CardContent className="p-4">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
@@ -479,12 +479,12 @@ const MRStaffReturnedCaseNotesPage: React.FC = () => {
           {returnSubmissions.map((submission) => (
             <Card
               key={submission.ca_user_id}
-              className="cursor-pointer hover:shadow-md transition-shadow border-l-4 border-l-blue-500"
+              className="cursor-pointer hover:shadow-md transition-shadow border-l-4 border-l-purple-500"
               onClick={() => handleSubmissionClick(submission)}
             >
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <User className="h-5 w-5 text-blue-600" />
+                  <User className="h-5 w-5 text-purple-600" />
                   {submission.ca_name}
                 </CardTitle>
               </CardHeader>

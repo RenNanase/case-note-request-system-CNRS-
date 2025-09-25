@@ -317,11 +317,11 @@ export default function RequestsPage() {
                 <p className="text-sm font-medium text-gray-600">
                   {hasRole('MR_STAFF') ? 'In Progress' : 'Approved'}
                 </p>
-                <p className="text-2xl font-bold text-blue-600">
+                <p className="text-2xl font-bold text-purple-600">
                   {requests.filter(r => ['approved', 'in_progress'].includes(r.status)).length}
                 </p>
               </div>
-              <CheckCircle className="h-8 w-8 text-blue-400" />
+              <CheckCircle className="h-8 w-8 text-purple-400" />
             </div>
           </CardContent>
         </Card>
@@ -400,7 +400,7 @@ export default function RequestsPage() {
                   variant="outline"
                   size="sm"
                   onClick={() => setSearchQuery('')}
-                  className="text-blue-600 border-blue-300 hover:bg-blue-50"
+                  className="text-purple-600 border-purple-300 hover:bg-purple-50"
                 >
                   <Activity className="h-4 w-4 mr-2" />
                   In Progress ({requests.filter(r => ['approved', 'in_progress'].includes(r.status)).length})
@@ -478,7 +478,7 @@ export default function RequestsPage() {
                 >
                   <div className="flex items-center space-x-4">
                     <Avatar className="h-12 w-12">
-                      <AvatarFallback className="bg-blue-100 text-blue-700">
+                      <AvatarFallback className="bg-purple-100 text-purple-700">
                         <FileText className="h-5 w-5" />
                       </AvatarFallback>
                     </Avatar>
@@ -486,7 +486,7 @@ export default function RequestsPage() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center space-x-3">
                         <h3
-                          className="text-sm font-medium text-gray-900 truncate cursor-pointer hover:text-blue-600 transition-colors"
+                          className="text-sm font-medium text-gray-900 truncate cursor-pointer hover:text-purple-600 transition-colors"
                           onClick={() => navigate(`/requests/${request.id}`)}
                           title="Click to view details"
                         >
@@ -600,11 +600,11 @@ export default function RequestsPage() {
                           <DropdownMenuItem
                             onClick={() => handleComplete(request.id)}
                             disabled={actionLoading === request.id}
-                            className="text-blue-600"
+                            className="text-purple-600"
                           >
                             {actionLoading === request.id ? (
                               <div className="flex items-center space-x-2">
-                                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+                                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-purple-600"></div>
                                 <span>Completing...</span>
                               </div>
                             ) : (
