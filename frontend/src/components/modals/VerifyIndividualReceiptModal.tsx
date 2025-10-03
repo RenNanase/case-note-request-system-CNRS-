@@ -126,7 +126,7 @@ export const VerifyIndividualReceiptModal: React.FC<VerifyIndividualReceiptModal
         toast({
           title: 'Verification Complete',
           description: response.message || 'Case notes verified successfully',
-          variant: 'default',
+          variant: 'success',
         });
         onSuccess();
         onClose();
@@ -295,7 +295,7 @@ export const VerifyIndividualReceiptModal: React.FC<VerifyIndividualReceiptModal
                 <Button
                   type="submit"
                   disabled={submitting}
-                  className="flex items-center space-x-2"
+                  className="flex items-center space-x-2 bg-green-600 hover:bg-green-700"
                 >
                   {submitting ? (
                     <>

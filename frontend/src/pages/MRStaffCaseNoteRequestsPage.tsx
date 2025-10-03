@@ -7,8 +7,9 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/contexts/ToastContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { requestsApi } from '@/api/requests';
 import type { CaseNoteRequest as RequestType } from '@/types/requests';
@@ -21,7 +22,8 @@ import {
   Clock,
   CheckCircle,
   XCircle,
-  Download
+  Download,
+  RefreshCw
 } from 'lucide-react';
 
 interface CaseNoteRequest {
@@ -87,6 +89,12 @@ const MRStaffCaseNoteRequestsPage: React.FC = () => {
   const [approvalAction, setApprovalAction] = useState<'approve' | 'reject'>('approve');
   const [approvalNotes, setApprovalNotes] = useState('');
   const [pdfLoading, setPdfLoading] = useState(false);
+
+  // On behalf approval state
+  const [isOnBehalfApproval, setIsOnBehalfApproval] = useState(false);
+  const [onBehalfOfUserId, setOnBehalfOfUserId] = useState<string>('');
+  const [caUsers, setCaUsers] = useState<any[]>([]);
+  const [loadingCaUsers, setLoadingCaUsers] = useState(false);
 
   // Check permissions
   useEffect(() => {
@@ -243,8 +251,16 @@ const MRStaffCaseNoteRequestsPage: React.FC = () => {
   useEffect(() => {
     if (hasRole('MR_STAFF')) {
       loadCaseNoteRequests();
+      loadCAUsers();
     }
   }, [hasRole]);
+
+  // Load CA users when on behalf approval is enabled
+  useEffect(() => {
+    if (isOnBehalfApproval && caUsers.length === 0 && !loadingCaUsers) {
+      loadCAUsers();
+    }
+  }, [isOnBehalfApproval, caUsers.length, loadingCaUsers]);
 
   // Filter CA groups based on search query
   const filteredCAGroups = caGroups.filter(group =>
@@ -284,9 +300,16 @@ const MRStaffCaseNoteRequestsPage: React.FC = () => {
       // Process each selected request
       const actionPromises = selectedRequests.map(requestId => {
         if (approvalAction === 'approve') {
-          return requestsApi.approveRequest(requestId, approvalNotes);
+          if (isOnBehalfApproval && onBehalfOfUserId) {
+            return requestsApi.approveRequestOnBehalf(requestId, {
+              remarks: approvalNotes,
+              on_behalf_of_user_id: parseInt(onBehalfOfUserId)
+            });
+          } else {
+            return requestsApi.approveRequest(requestId, { approved_by_notes: approvalNotes });
+          }
         } else {
-          return requestsApi.rejectRequest(requestId, approvalNotes);
+          return requestsApi.rejectRequest(requestId, { rejection_reason: approvalNotes });
         }
       });
 
@@ -298,7 +321,7 @@ const MRStaffCaseNoteRequestsPage: React.FC = () => {
         toast({
           title: `${approvalAction === 'approve' ? 'Approval' : 'Rejection'} Successful`,
           description: `Successfully processed ${successCount} case note(s)${failureCount > 0 ? `, ${failureCount} failed` : ''}`,
-          variant: 'default',
+          variant: approvalAction === 'approve' ? 'success' : 'destructive',
         });
 
         // Reset selection and close modal
@@ -375,7 +398,7 @@ const MRStaffCaseNoteRequestsPage: React.FC = () => {
       toast({
         title: 'PDF Downloaded',
         description: `Case note list for ${selectedCA.ca_name} has been downloaded successfully.`,
-        variant: 'default',
+        variant: 'success',
       });
 
     } catch (error) {
@@ -463,6 +486,37 @@ const MRStaffCaseNoteRequestsPage: React.FC = () => {
       }
     } catch (error) {
       console.error('Error refreshing CA group data:', error);
+    }
+  };
+
+  // Load CA users for on behalf approval
+  const loadCAUsers = async () => {
+    try {
+      setLoadingCaUsers(true);
+      console.log('Loading CA users...');
+      const response = await requestsApi.getCAUsers();
+      console.log('CA users response:', response);
+
+      if (response.success) {
+        setCaUsers(response.users || []);
+        console.log('CA users loaded:', response.users?.length || 0);
+      } else {
+        console.error('Failed to load CA users:', response.message);
+        toast({
+          title: 'Error',
+          description: response.message || 'Failed to load CA users',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Error loading CA users:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load CA users',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoadingCaUsers(false);
     }
   };
 
@@ -767,7 +821,7 @@ const MRStaffCaseNoteRequestsPage: React.FC = () => {
                       setApprovalAction('approve');
                       setShowApprovalDialog(true);
                     }}
-                    className="flex items-center space-x-2"
+                    className="flex items-center space-x-2 bg-green-600 hover:bg-green-700"
                   >
                     <CheckCircle className="h-4 w-4" />
                     <span>Approve Selected</span>
@@ -853,6 +907,91 @@ const MRStaffCaseNoteRequestsPage: React.FC = () => {
                   </div>
                 </div>
               </div>
+
+              {/* On Behalf Approval Section - Only for approval action */}
+              {approvalAction === 'approve' && (
+                <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="on-behalf-approval"
+                        checked={isOnBehalfApproval}
+                        onCheckedChange={(checked) => {
+                          setIsOnBehalfApproval(checked as boolean);
+                          if (!checked) {
+                            setOnBehalfOfUserId('');
+                          }
+                        }}
+                        disabled={submitting}
+                        className="border-green-300 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
+                      />
+                      <Label htmlFor="on-behalf-approval" className="text-sm font-semibold text-green-800">
+                        Approve on behalf of another user
+                      </Label>
+                    </div>
+
+                    {isOnBehalfApproval && (
+                      <div className="ml-6 space-y-3 p-3 bg-white border border-green-200 rounded-md">
+                        <Label htmlFor="on-behalf-user" className="text-sm font-medium text-green-700">
+                          Select User
+                        </Label>
+                        <Select
+                          value={onBehalfOfUserId}
+                          onValueChange={setOnBehalfOfUserId}
+                          disabled={submitting || loadingCaUsers}
+                        >
+                          <SelectTrigger className="border-green-300 focus:border-green-500 focus:ring-green-500">
+                            <SelectValue placeholder={
+                              loadingCaUsers
+                                ? "Loading CA users..."
+                                : caUsers.length === 0
+                                  ? "No CA users available"
+                                  : "Select a CA user"
+                            } />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {loadingCaUsers ? (
+                              <SelectItem value="" disabled>
+                                Loading CA users...
+                              </SelectItem>
+                            ) : caUsers.length === 0 ? (
+                              <SelectItem value="" disabled>
+                                No CA users available
+                              </SelectItem>
+                            ) : (
+                              caUsers.map((user) => (
+                                <SelectItem key={user.id} value={user.id.toString()}>
+                                  {user.name} ({user.email})
+                                </SelectItem>
+                              ))
+                            )}
+                          </SelectContent>
+                        </Select>
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs text-green-600">
+                            The case notes will be approved on behalf of the selected user.
+                          </p>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={loadCAUsers}
+                            disabled={loadingCaUsers}
+                            className="text-xs border-green-300 text-green-700 hover:bg-green-100"
+                          >
+                            {loadingCaUsers ? (
+                              <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                            ) : (
+                              <RefreshCw className="h-3 w-3 mr-1" />
+                            )}
+                            Refresh
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Notes Section */}
               <div className="space-y-3">

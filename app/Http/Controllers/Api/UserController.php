@@ -463,6 +463,48 @@ class UserController extends Controller
             'user' => $user->load(['roles'])
         ]);
     }
+
+    /**
+     * Get all CA users for on behalf verification
+     */
+    public function getCAUsers(): JsonResponse
+    {
+        $user = Auth::user();
+
+        // Only CA users and MR staff can access this endpoint
+        if (!$user->hasRole(['CA', 'MR_STAFF'], 'api')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only Clinic Assistants and MR Staff can access this endpoint'
+            ], 403);
+        }
+
+        try {
+            $caUsers = User::whereHas('roles', function ($query) {
+                $query->where('name', 'CA');
+            })
+            ->where('is_active', true)
+            ->select('id', 'name', 'email')
+            ->orderBy('name')
+            ->get();
+
+            return response()->json([
+                'success' => true,
+                'users' => $caUsers
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error fetching CA users:', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch CA users'
+            ], 500);
+        }
+    }
 }
 
 

@@ -21,8 +21,8 @@ class ResourceController extends Controller
             ->get()
             ->map(function($dept) {
                 return [
-                    'value' => $dept->id,
-                    'label' => $dept->full_name,
+                    'id' => $dept->id,
+                    'name' => $dept->full_name,
                     'code' => $dept->code,
                 ];
             });
@@ -34,20 +34,19 @@ class ResourceController extends Controller
     }
 
     /**
-     * Get doctors filtered by department
+     * Get all doctors (no department filtering since doctors are independent)
      */
     public function doctors(Request $request): JsonResponse
     {
-        $query = Doctor::active()->with('department');
-
-        if ($request->filled('department_id')) {
-            $query->byDepartment($request->department_id);
-        }
-
-        $doctors = $query->orderBy('name')
+        $doctors = Doctor::active()
+            ->orderBy('name')
             ->get()
             ->map(function($doctor) {
-                return $doctor->toSelectOption();
+                return [
+                    'id' => $doctor->id,
+                    'name' => $doctor->name,
+                    'is_active' => $doctor->is_active,
+                ];
             });
 
         return response()->json([
@@ -61,7 +60,7 @@ class ResourceController extends Controller
      */
     public function locations(Request $request): JsonResponse
     {
-        $query = Location::active();
+        $query = Location::query(); // Temporarily remove active filter for debugging
 
         if ($request->filled('type')) {
             $query->byType($request->type);
@@ -74,8 +73,22 @@ class ResourceController extends Controller
         $locations = $query->orderBy('name')
             ->get()
             ->map(function($location) {
-                return $location->toSelectOption();
+                return [
+                    'id' => $location->id,
+                    'name' => $location->full_name,
+                    'type' => $location->type_label,
+                ];
             });
+
+        // Debug logging
+        \Log::info('Locations API debug:', [
+            'total_count' => $locations->count(),
+            'locations' => $locations->toArray(),
+            'filters' => [
+                'type' => $request->type,
+                'building' => $request->building,
+            ]
+        ]);
 
         return response()->json([
             'success' => true,

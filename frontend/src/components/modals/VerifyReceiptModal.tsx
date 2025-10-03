@@ -96,7 +96,7 @@ export const VerifyReceiptModal: React.FC<VerifyReceiptModalProps> = ({
         toast({
           title: 'Receipt Verified',
           description: response.message || 'Batch receipt verified successfully',
-          variant: 'default',
+          variant: 'success',
         });
         onSuccess();
         onClose();
@@ -233,7 +233,7 @@ export const VerifyReceiptModal: React.FC<VerifyReceiptModalProps> = ({
                 <Button
                   type="submit"
                   disabled={submitting || receivedCount === undefined}
-                  className="flex items-center space-x-2"
+                  className="flex items-center space-x-2 bg-green-600 hover:bg-green-700"
                 >
                   {submitting ? (
                     <>

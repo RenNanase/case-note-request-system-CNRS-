@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/contexts/ToastContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { requestsApi } from '@/api/requests';
-import { Calendar, User, FileText, CheckCircle, XCircle, ArrowLeft } from 'lucide-react';
+import { Calendar, User, FileText, CheckCircle, XCircle, ArrowLeft, Loader2 } from 'lucide-react';
 
 interface ReturnedCaseNote {
   id: number;
@@ -53,6 +53,7 @@ const MRStaffReturnedCaseNotesPage: React.FC = () => {
   const [rejectionReason, setRejectionReason] = useState('');
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(false);
 
   // Debug user info
   useEffect(() => {
@@ -115,6 +116,30 @@ const MRStaffReturnedCaseNotesPage: React.FC = () => {
       setSelectedCaseNotes(prev => [...prev, caseNoteId]);
     } else {
       setSelectedCaseNotes(prev => prev.filter(id => id !== caseNoteId));
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    if (!selectedSubmission) return;
+    try {
+      setPdfLoading(true);
+      const ids = selectedCaseNotes.length > 0 ? selectedCaseNotes : selectedSubmission.case_notes.map(cn => cn.id);
+      const blob = await requestsApi.generateReturnedCaseNotesPdf(selectedSubmission.ca_user_id, ids);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const safeName = selectedSubmission.ca_name.replace(/[^a-zA-Z0-9_-]/g, '_');
+      const date = new Date().toISOString().split('T')[0];
+      a.href = url;
+      a.download = `Returned_Case_Notes_${safeName}_${date}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => { document.body.removeChild(a); window.URL.revokeObjectURL(url); }, 100);
+      toast({ title: 'PDF Downloaded', description: `Returned case notes for ${selectedSubmission.ca_name} downloaded.`, variant: 'success' });
+    } catch (e) {
+      console.error('Download returned case notes PDF failed', e);
+      toast({ title: 'Error', description: 'Failed to generate PDF. Please try again.', variant: 'destructive' });
+    } finally {
+      setPdfLoading(false);
     }
   };
 
@@ -269,6 +294,12 @@ const MRStaffReturnedCaseNotesPage: React.FC = () => {
             <p className="text-sm text-gray-500 mt-1">
               Submitted on {new Date(selectedSubmission.submission_date).toLocaleString()}
             </p>
+          </div>
+          <div className="mt-3 flex items-center gap-2">
+            <Button variant="outline" onClick={handleDownloadPdf} disabled={pdfLoading} className="flex items-center gap-2">
+              {pdfLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+              {pdfLoading ? 'Generating PDF...' : 'Download PDF'}
+            </Button>
           </div>
         </div>
 

@@ -18,9 +18,7 @@
   
 - **Comprehensive Permissions**:
   - Request management (create, view, approve, reject, handover, complete)
-  - Patient access (view, search)
-  - Reports (view, export)
-  - User management (manage users, audit logs)
+  - User management (manage users,logs)
   - Dashboard access (view stats, analytics)
 
 ### Frontend Authentication System ✅
@@ -31,23 +29,23 @@
 - **TypeScript Types** - Complete type safety for auth system
 - **shadcn/ui Components** - Professional UI components
 
-### Demo Users Created ✅
+### Users Created ✅
 ```
-CA (Clinic Assistant):     ca@cnrs.test / password
-MR Staff:                   mr@cnrs.test / password  
-Admin:                      admin@cnrs.test / password
-Additional test users:      ca2@cnrs.test, mr2@cnrs.test
+CA (Clinic Assistant):     ca / password
+MR Staff:                   mr / password  
+Admin:                      admin / password
+Additional test users:      ca2, mr2 / password
 ```
 
 ## 🎨 UI Features Implemented
 
 ### Login Page ✅
-- **Email Validation** - Real-time email checking with user preview
+
 - **Role Preview** - Shows user role and name when email is recognized
 - **Password Toggle** - Show/hide password functionality
 - **Error Handling** - Comprehensive error display and validation
 - **Demo Credentials** - Visible helper card with test accounts
-- **CNRS Branding** - Professional healthcare system appearance
+
 
 ### Dashboard Page ✅
 - **Role-Based Welcome** - Personalized messages per role
@@ -55,7 +53,7 @@ Additional test users:      ca2@cnrs.test, mr2@cnrs.test
 - **User Profile** - Avatar, dropdown menu with logout
 - **System Status** - Health indicators and operational status
 - **Feature Preview** - Lists accessible functionality per role
-- **Development Notice** - Clear indication of upcoming features
+
 
 ### Design System Applied ✅
 - **CNRS Color Palette** - Canvas background (#F7F1E3) and accent colors
@@ -69,7 +67,6 @@ Additional test users:      ca2@cnrs.test, mr2@cnrs.test
 ### Public Authentication Routes
 ```
 POST /api/auth/login           - User login with email/password
-POST /api/auth/check-email     - Check if email exists (UX enhancement)
 GET  /api/auth/roles           - Get available role descriptions
 GET  /api/health              - System health check
 ```
@@ -128,9 +125,9 @@ npm run dev
 ### 3. Test Login Flow
 1. **Visit** http://localhost:3000
 2. **Try demo credentials**:
-   - CA: `ca@cnrs.test` / `password`
-   - MR: `mr@cnrs.test` / `password`
-   - Admin: `admin@cnrs.test` / `password`
+   - CA: `ca` / `password`
+   - MR: `mr` / `password`
+   - Admin: `admin` / `password`
 3. **Observe role-based features** in dashboard
 4. **Test logout** functionality
 
@@ -152,7 +149,7 @@ curl -H "Authorization: Bearer TOKEN" \
 ## 💾 Database Schema
 
 ### Users Table
-- Enhanced with email verification
+
 - Integrated with Passport tokens
 - Connected to roles and permissions
 
@@ -202,7 +199,7 @@ curl -H "Authorization: Bearer TOKEN" \
 
 ## 🔄 Next Step: Data Model (Step 3)
 
-Ready to move to **Step 3** where we'll:
+Ready to move to **Step 3** where to:
 - Create patient, department, location, doctor models
 - Build case_notes and requests models with relationships
 - Implement request_events for timeline tracking

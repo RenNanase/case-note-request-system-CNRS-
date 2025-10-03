@@ -270,7 +270,7 @@ const CaseNoteTimelinePage: React.FC = () => {
       case 'handover_approved': return <CheckCircle className="h-4 w-4" />;
       case 'handover_rejected': return <XCircle className="h-4 w-4" />;
       case 'handed_over': return <ArrowRight className="h-4 w-4" />;
-      case 'acknowledged': return <Package className="h-4 w-4" />;
+      case 'Acknowledge': return <Package className="h-4 w-4" />;
       case 'received': return <CheckCircle className="h-4 w-4" />;
       case 'completed': return <CheckCircle className="h-4 w-4" />;
       case 'updated': return <AlertTriangle className="h-4 w-4" />;
@@ -294,7 +294,7 @@ const CaseNoteTimelinePage: React.FC = () => {
       case 'handover_receipt_verified': return 'text-green-600 bg-green-100';
       case 'returned_verified': return 'text-green-600 bg-green-100';
       case 'received': return 'text-green-600 bg-green-100';
-      case 'acknowledged': return 'text-green-600 bg-green-100';
+      case 'Acknowledge': return 'text-green-600 bg-green-100';
       case 'completed': return 'text-emerald-600 bg-emerald-100';
       
       // Rejected events (red)

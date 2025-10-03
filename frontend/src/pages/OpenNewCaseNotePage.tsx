@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Plus, FileText, Users, Building2, MapPin, User, MessageSquare, CheckCircle } from 'lucide-react';
+import { Plus, FileText, Users, Building2, MapPin, User, MessageSquare, CheckCircle, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -21,6 +21,7 @@ import PatientSearch from '@/components/patients/PatientSearch';
 import { resourcesApi } from '@/api/requests';
 import { openedCaseNotesApi } from '@/api/openedCaseNotes';
 import { useToast } from '@/contexts/ToastContext';
+import { useAuth } from '@/contexts/AuthContext';
 import type {
   Patient,
   Department,
@@ -50,6 +51,7 @@ const userTypeOptions = [
 ];
 
 export default function OpenNewCaseNotePage() {
+  const { hasRole } = useAuth();
   const { toast } = useToast();
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -119,6 +121,21 @@ export default function OpenNewCaseNotePage() {
     }
   };
 
+  // Check permissions
+  if (!hasRole('MR_STAFF')) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Card className="w-full max-w-md">
+          <CardContent className="text-center p-6">
+            <XCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Access Denied</h2>
+            <p className="text-gray-600">Only MR Staff can access this page.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   // Handle return & received action
   const handleReturnAndReceived = async (caseNoteId: number) => {
     try {
@@ -129,7 +146,7 @@ export default function OpenNewCaseNotePage() {
         toast({
           title: 'Success',
           description: 'Case note marked as returned and received',
-          variant: 'default',
+          variant: 'success',
         });
         loadOpenedCaseNotes(); // Reload the list
       } else {
@@ -163,7 +180,7 @@ export default function OpenNewCaseNotePage() {
         toast({
           title: 'Success',
           description: 'Case note opened successfully',
-          variant: 'default',
+          variant: 'success',
         });
         // Reset form to default values but keep the opened case notes list
         form.reset({
@@ -270,9 +287,9 @@ export default function OpenNewCaseNotePage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {departments.map((dept) => (
-                            <SelectItem key={dept.value} value={dept.value.toString()}>
-                              {dept.label}
+                          {departments.filter(dept => dept && dept.id != null).map((dept) => (
+                            <SelectItem key={dept.id} value={dept.id.toString()}>
+                              {dept.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -299,9 +316,9 @@ export default function OpenNewCaseNotePage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {locations.map((location) => (
-                            <SelectItem key={location.value} value={location.value.toString()}>
-                              {location.label}
+                          {locations.filter(location => location && location.id != null).map((location) => (
+                            <SelectItem key={location.id} value={location.id.toString()}>
+                              {location.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -328,9 +345,9 @@ export default function OpenNewCaseNotePage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {doctors.map((doctor) => (
-                            <SelectItem key={doctor.value} value={doctor.value.toString()}>
-                              {doctor.label}
+                          {doctors.filter(doctor => doctor && doctor.id != null).map((doctor) => (
+                            <SelectItem key={doctor.id} value={doctor.id.toString()}>
+                              {doctor.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -476,15 +493,15 @@ export default function OpenNewCaseNotePage() {
             ) : (
                <div className="space-y-3">
                  {openedCaseNotes.map((caseNote) => (
-                   <div key={caseNote.id} className="p-4 border rounded-lg bg-pink-50 border-pink-200">
+                   <div key={caseNote.id} className="p-4 border rounded-lg bg-green-50 border-green-200">
                      <div className="flex items-center justify-between">
                        <div>
-                         <h4 className="font-medium text-pink-900">{caseNote.patient_name}</h4>
-                         <p className="text-sm text-pink-700">{caseNote.patient_mrn}</p>
+                         <h4 className="font-medium text-green-900">{caseNote.patient_name}</h4>
+                         <p className="text-sm text-green-700">{caseNote.patient_mrn}</p>
                        </div>
-                       <Badge variant="outline" className="border-pink-300 text-pink-700 bg-pink-100">{caseNote.status}</Badge>
+                       <Badge variant="outline" className="border-green-300 text-green-700 bg-green-100">{caseNote.status}</Badge>
                      </div>
-                     <div className="mt-2 text-sm text-pink-700">
+                     <div className="mt-2 text-sm text-green-700">
                        <p>Department: {caseNote.department_name}</p>
                        <p>Location: {caseNote.location_name}</p>
                        <p>Doctor: {caseNote.doctor_name}</p>
@@ -492,7 +509,7 @@ export default function OpenNewCaseNotePage() {
                      </div>
                      {caseNote.remarks && (
                        <div className="mt-2">
-                         <p className="text-sm text-pink-700">
+                         <p className="text-sm text-green-700">
                            <span className="font-medium">Remarks:</span> {caseNote.remarks}
                          </p>
                        </div>

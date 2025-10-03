@@ -418,7 +418,7 @@ export function HandoverForm({
           </Card>
 
           {/* Handover Reason */}
-          <Card className="border-2 border-red-100 bg-gradient-to-br from-red-50 to-pink-50">
+          <Card className="border-2 border-red-100 bg-gradient-to-br from-red-50 to-green-50">
             <CardHeader className="pb-3">
               <div className="flex items-center space-x-2">
                 <FileText className="h-5 w-5 text-red-600" />

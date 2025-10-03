@@ -45,6 +45,9 @@ interface ApprovedCaseNote {
   received_by?: {
     name: string;
   };
+  verified_on_behalf_by?: {
+    name: string;
+  };
   priority: string;
   purpose: string;
   department?: {
@@ -236,7 +239,7 @@ const VerifyCaseNotesPage: React.FC = () => {
         toast({
           title: 'Success',
           description: `Successfully ${action}ed ${successCount} handover request(s)${failureCount > 0 ? `, ${failureCount} failed` : ''}`,
-          variant: 'default',
+          variant: 'success',
         });
 
         // Clear selections and reload data
@@ -292,7 +295,7 @@ const VerifyCaseNotesPage: React.FC = () => {
         toast({
           title: 'Success',
           description: `Successfully verified receipt of ${successCount} handover(s)${failureCount > 0 ? `, ${failureCount} failed` : ''}`,
-          variant: 'default',
+          variant: 'success',
         });
 
         // Clear selections and reload data
@@ -392,7 +395,7 @@ const VerifyCaseNotesPage: React.FC = () => {
         toast({
           title: 'Success',
           description: `Successfully verified ${selectedCaseNotes.size} case note(s) as received.`,
-          variant: 'default',
+          variant: 'success',
         });
 
         // Clear selections and reload data
@@ -452,7 +455,7 @@ const VerifyCaseNotesPage: React.FC = () => {
         toast({
           title: 'Success',
           description: `Successfully rejected ${selectedCaseNotes.size} case note(s) - returned to MR staff for re-request.`,
-          variant: 'default',
+          variant: 'success',
         });
 
         // Clear selections and reload data
@@ -539,9 +542,8 @@ const VerifyCaseNotesPage: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Verify Case Notes</h1>
-          <p className="text-gray-600 mt-2">
-            Manage case note verifications and handover requests
+          <h1 className="text-3xl font-bold text-gray-900">Acknowledge Received Case Notes</h1>
+            Manage case note acknowledgements and handover requests          <p className="text-gray-600 mt-2">
           </p>
         </div>
         <div className="flex gap-2">
@@ -561,16 +563,16 @@ const VerifyCaseNotesPage: React.FC = () => {
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="case-notes" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
-            Verify Case Notes
+            Verify Received Case Notes
           </TabsTrigger>
           <TabsTrigger value="handover-request-verification" className="flex items-center gap-2 relative">
             <MessageSquare className="h-4 w-4" />
-            Verify Handover Requests
+            Acknowledge Received Handover Case Note
             {handoverRequestsPendingVerification.length > 0 && (
               <>
                 {/* Red badge with count */}
-                <Badge 
-                  variant="destructive" 
+                <Badge
+                  variant="destructive"
                   className="ml-2 bg-red-500 hover:bg-red-600 text-white text-xs px-2 py-0.5 min-w-[20px] h-5 flex items-center justify-center"
                 >
                   {handoverRequestsPendingVerification.length}
@@ -812,7 +814,7 @@ const VerifyCaseNotesPage: React.FC = () => {
 
                                 {caseNote.is_received && (
                                   <div className="text-xs text-green-600 mt-1">
-                                    ✓ Received by {caseNote.received_by?.name || 'N/A'} on{' '}
+                                    ✓ Received by {caseNote.verified_on_behalf_by?.name || caseNote.received_by?.name || 'N/A'} on{' '}
                                     {caseNote.received_at ? new Date(caseNote.received_at).toLocaleDateString('en-US', {
                                       month: 'short',
                                       day: 'numeric',
@@ -963,7 +965,7 @@ const VerifyCaseNotesPage: React.FC = () => {
                       {formatDateDisplay(date)}
                     </CardTitle>
                     <CardDescription>
-                      {handovers.length} handover(s) acknowledged on this date
+                      {handovers.length} handover(s) Acknowledge on this date
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -1017,10 +1019,10 @@ const VerifyCaseNotesPage: React.FC = () => {
                               </div>
                             )}
 
-                            {handover.acknowledged_at && (
+                            {handover.Acknowledge_at && (
                               <div className="text-xs text-purple-600 mt-1">
-                                ✓ Acknowledged by {handover.handedOverTo.name} on{' '}
-                                {new Date(handover.acknowledged_at).toLocaleDateString('en-US', {
+                                ✓ Acknowledge by {handover.handedOverTo.name} on{' '}
+                                {new Date(handover.Acknowledge_at).toLocaleDateString('en-US', {
                                   month: 'short',
                                   day: 'numeric',
                                   year: 'numeric',
@@ -1209,7 +1211,7 @@ const VerifyCaseNotesPage: React.FC = () => {
                               </span>
                             </div>
                           </div>
-                          
+
                           <div className="space-y-3">
                             <div className="flex items-start gap-2">
                               <span className="text-sm font-medium text-gray-700 min-w-[80px]">Request #:</span>

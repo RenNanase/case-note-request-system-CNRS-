@@ -28,6 +28,11 @@ class RequestEvent extends Model
     const TYPE_RETURNED_VERIFIED = 'returned_verified';
     const TYPE_RETURNED_REJECTED = 'returned_rejected';
     const TYPE_HANDOVER_DATA_FIXED = 'handover_data_fixed';
+    const TYPE_FILING_SUBMITTED = 'filing_submitted';
+    const TYPE_FILING_APPROVED = 'filing_approved';
+    const TYPE_FILING_REJECTED = 'filing_rejected';
+    const TYPE_SENT_OUT = 'sent_out';
+    const TYPE_Acknowledge_RECEIVED = 'Acknowledge_received';
 
     protected $fillable = [
         'request_id',
@@ -125,6 +130,11 @@ class RequestEvent extends Model
             self::TYPE_VERIFIED_RECEIVED => 'Receipt Verified',
             self::TYPE_COMPLETED => 'Completed',
             self::TYPE_RETURNED => 'Returned',
+            self::TYPE_FILING_SUBMITTED => 'Filing Submitted',
+            self::TYPE_FILING_APPROVED => 'Filing Approved',
+            self::TYPE_FILING_REJECTED => 'Filing Rejected',
+            self::TYPE_SENT_OUT => 'Sent Out',
+            self::TYPE_Acknowledge_RECEIVED => 'Acknowledge Received',
             default => 'Unknown'
         };
     }

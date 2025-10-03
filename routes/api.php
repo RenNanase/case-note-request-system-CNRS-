@@ -65,6 +65,7 @@ Route::middleware('auth:api')->group(function () {
     Route::put('requests/{id}', [App\Http\Controllers\Api\RequestController::class, 'update']);
     Route::delete('requests/{id}', [App\Http\Controllers\Api\RequestController::class, 'destroy']);
     Route::post('requests/{id}/approve', [App\Http\Controllers\Api\RequestController::class, 'approve']);
+    Route::post('requests/{id}/approve-on-behalf', [App\Http\Controllers\Api\RequestController::class, 'approveOnBehalf']);
     Route::post('requests/{id}/reject', [App\Http\Controllers\Api\RequestController::class, 'reject']);
     Route::post('requests/{id}/complete', [App\Http\Controllers\Api\RequestController::class, 'complete']);
 
@@ -140,7 +141,7 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/handovers/{handoverId}/verify', [App\Http\Controllers\Api\HandoverController::class, 'verifyReceived']);
     Route::post('/handovers/{handoverId}/verify-receipt', [App\Http\Controllers\Api\HandoverController::class, 'verifyReceipt']);
     Route::get('/handovers/pending', [App\Http\Controllers\Api\HandoverController::class, 'getPendingHandovers']);
-    Route::get('/handovers/acknowledged', [App\Http\Controllers\Api\HandoverController::class, 'getAcknowledgedHandovers']);
+    Route::get('/handovers/Acknowledge', [App\Http\Controllers\Api\HandoverController::class, 'getAcknowledgeHandovers']);
     Route::get('/handovers/needing-verification', [App\Http\Controllers\Api\HandoverController::class, 'getHandoversNeedingVerification']);
     Route::get('/handovers/needing-acknowledgement', [App\Http\Controllers\Api\HandoverController::class, 'getHandoversNeedingAcknowledgement']);
     Route::get('/handovers/history', [App\Http\Controllers\Api\HandoverController::class, 'getHandoverHistory']);
@@ -150,6 +151,7 @@ Route::middleware('auth:api')->group(function () {
     // User routes (legacy compatibility)
     Route::get('/users', [App\Http\Controllers\Api\UserController::class, 'getUsersByRole']);
     Route::get('/profile', [App\Http\Controllers\Api\UserController::class, 'profile']);
+    Route::get('/users/ca-users', [App\Http\Controllers\Api\UserController::class, 'getCAUsers']);
 
     // Batch request routes
     Route::prefix('batch-requests')->group(function () {
@@ -175,6 +177,25 @@ Route::middleware('auth:api')->group(function () {
         // MR Staff Returned Case Notes routes
         Route::get('/returned-submissions', [App\Http\Controllers\Api\RequestController::class, 'getReturnedSubmissions']);
         Route::post('/verify-returned', [App\Http\Controllers\Api\RequestController::class, 'verifyReturnedCaseNotes']);
+
+        // Returned case notes PDF
+        Route::get('/returned/ca/{caId}/pdf', [App\Http\Controllers\Api\RequestController::class, 'generateReturnedCaseNotesPdf']);
+
+        // On behalf verification routes
+        Route::get('/approved-for-user/{userId}', [App\Http\Controllers\Api\CaseNoteVerificationController::class, 'getApprovedForUser']);
+        Route::post('/verify-on-behalf', [App\Http\Controllers\Api\CaseNoteVerificationController::class, 'verifyOnBehalf']);
+    });
+
+    // Send Out Case Notes routes
+    Route::prefix('send-out')->group(function () {
+        Route::get('/available-case-notes', [App\Http\Controllers\Api\SendOutCaseNoteController::class, 'getAvailableCaseNotes']);
+        Route::get('/ca-users', [App\Http\Controllers\Api\SendOutCaseNoteController::class, 'getCAUsers']);
+        Route::post('/send', [App\Http\Controllers\Api\SendOutCaseNoteController::class, 'sendOutCaseNotes']);
+        Route::get('/received', [App\Http\Controllers\Api\SendOutCaseNoteController::class, 'getReceivedCaseNotes']);
+        Route::get('/from-sender/{senderId}', [App\Http\Controllers\Api\SendOutCaseNoteController::class, 'getCaseNotesFromSender']);
+        Route::post('/acknowledge', [App\Http\Controllers\Api\SendOutCaseNoteController::class, 'acknowledgeCaseNotes']);
+        Route::get('/history', [App\Http\Controllers\Api\SendOutCaseNoteController::class, 'getSendOutHistory']);
+        Route::get('/details/{sendOutId}', [App\Http\Controllers\Api\SendOutCaseNoteController::class, 'getSendOutDetails']);
     });
 
     // Case note timeline routes
@@ -198,6 +219,28 @@ Route::middleware('auth:api')->group(function () {
     Route::get('/handover-requests/pending-verification', [App\Http\Controllers\Api\HandoverRequestController::class, 'getHandoverRequestsPendingVerification']);
     Route::post('/handover-requests/{handoverRequestId}/respond', [App\Http\Controllers\Api\HandoverRequestController::class, 'respondToHandoverRequest']);
     Route::post('/handover-requests/{handoverRequestId}/verify', [App\Http\Controllers\Api\HandoverRequestController::class, 'verifyHandoverRequest']);
+
+    // Filing Request routes
+    Route::prefix('filing-requests')->group(function () {
+        // Patient-based filing (NEW)
+        Route::get('/patients/search', [App\Http\Controllers\Api\FilingRequestController::class, 'searchPatientsForFiling']);
+        Route::post('/patients/submit', [App\Http\Controllers\Api\FilingRequestController::class, 'submitPatientFilingRequest']);
+
+        // CA routes
+        Route::get('/ca', [App\Http\Controllers\Api\FilingRequestController::class, 'getCAFilingRequests']);
+        Route::get('/available-case-notes', [App\Http\Controllers\Api\FilingRequestController::class, 'getAvailableCaseNotes']); // LEGACY
+        Route::post('/submit', [App\Http\Controllers\Api\FilingRequestController::class, 'submitFilingRequest']); // LEGACY
+
+        // MR routes
+        Route::get('/mr', [App\Http\Controllers\Api\FilingRequestController::class, 'getMRFilingRequests']);
+        Route::get('/by-ca/{caUserId}', [App\Http\Controllers\Api\FilingRequestController::class, 'getFilingRequestsByCA']);
+        Route::post('/{id}/approve', [App\Http\Controllers\Api\FilingRequestController::class, 'approveFilingRequest']);
+        Route::post('/{id}/reject', [App\Http\Controllers\Api\FilingRequestController::class, 'rejectFilingRequest']);
+        Route::get('/ca/{caId}/pdf', [App\Http\Controllers\Api\FilingRequestController::class, 'generateFilingRequestListPdf']);
+
+        // Common routes
+        Route::get('/{id}', [App\Http\Controllers\Api\FilingRequestController::class, 'getFilingRequestDetails']);
+    });
 });
 
 // Health check route (public)
@@ -219,6 +262,9 @@ Route::get('health', function () {
         'service' => 'CNRS API'
     ]);
 });
+
+
+
 
 
 

@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::table('case_note_handovers', function (purpleprint $table) {
             $table->text('receipt_verification_notes')->nullable()->after('acknowledgment_notes');
-            $table->timestamp('completed_at')->nullable()->after('acknowledged_at');
+            $table->timestamp('completed_at')->nullable()->after('Acknowledge_at');
         });
     }
 

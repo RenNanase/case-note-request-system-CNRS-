@@ -167,14 +167,14 @@ function CADashboard({ user, stats, loading, loadingProgress, executionTime, cac
 
           {/* Active Case Notes Card */}
           <Link to="/return-case-notes">
-            <Card className="cursor-pointer hover:shadow-lg transition-shadow border-pink-200 bg-pink-50 h-32">
+            <Card className="cursor-pointer hover:shadow-lg transition-shadow border-green-200 bg-green-50 h-32">
               <CardContent className="p-6 h-full flex flex-col justify-between">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-pink-700">Active </p>
-                    <p className="text-2xl font-bold text-pink-600">{stats.active_case_notes || 0}</p>
+                    <p className="text-sm font-medium text-green-700">Active </p>
+                    <p className="text-2xl font-bold text-green-600">{stats.active_case_notes || 0}</p>
                   </div>
-                  <FolderOpen className="h-8 w-8 text-pink-400" />
+                  <FolderOpen className="h-8 w-8 text-green-400" />
                 </div>
               </CardContent>
             </Card>

@@ -141,7 +141,7 @@ export function HandoverForm({
   // Filter locations based on selected department - memoized to prevent re-renders
   const filteredLocations = useMemo(() => {
     return locations.filter(location =>
-      !selectedDepartment || location.type === 'department' || location.label.includes(selectedDepartment)
+      !selectedDepartment || location.type === 'department' || location.name.includes(selectedDepartment)
     );
   }, [locations, selectedDepartment]);
 
@@ -361,8 +361,8 @@ export function HandoverForm({
                   </SelectTrigger>
                   <SelectContent className="z-[10000]">
                     {departments.map((dept) => (
-                      <SelectItem key={dept.value} value={dept.value.toString()}>
-                        {dept.label} ({dept.code})
+                      <SelectItem key={dept.id} value={dept.id.toString()}>
+                        {dept.name} ({dept.code})
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -418,7 +418,7 @@ export function HandoverForm({
           </Card>
 
           {/* Handover Reason */}
-          <Card className="border-2 border-red-100 bg-gradient-to-br from-red-50 to-pink-50">
+          <Card className="border-2 border-red-100 bg-gradient-to-br from-red-50 to-green-50">
             <CardHeader className="pb-3">
               <div className="flex items-center space-x-2">
                 <FileText className="h-5 w-5 text-red-600" />

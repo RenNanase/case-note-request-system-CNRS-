@@ -397,7 +397,7 @@ export default function LoginPage() {
               href="https://github.com/RenNanase"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-pink-600 hover:text-pink-800 hover:underline transition-colors"
+              className="inline-flex items-center gap-1 text-green-600 hover:text-green-800 hover:underline transition-colors"
             >
               RN
 

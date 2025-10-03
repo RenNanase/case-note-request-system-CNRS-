@@ -254,7 +254,7 @@ export default function LoginPage() {
     <div
       className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden"
       style={{
-        // Layer 1: soft white -> faint pink gradient for depth
+        // Layer 1: soft white -> faint green gradient for depth
         // Layer 2: radial fade to reduce pattern intensity at center
         // Layer 3: subtle honeycomb pattern
         backgroundImage: `linear-gradient(180deg, rgba(255,255,255,1), rgba(255,192,203,0.08)), radial-gradient(circle at 50% 40%, rgba(255,255,255,0.9), rgba(255,255,255,0.6) 35%, transparent 60%), url("data:image/svg+xml,${honeycombSvg}")`,
@@ -268,12 +268,12 @@ export default function LoginPage() {
         <div className="text-center">
           <h1 className="sr-only">CNRS Login</h1>
           <h2 className="text-2xl md:text-3xl font-extrabold text-black tracking-wide">CASE NOTE REQUEST SYSTEM</h2>
-          <div className="mt-2 h-1 w-24 mx-auto rounded-full bg-pink-600/80"></div>
+          <div className="mt-2 h-1 w-24 mx-auto rounded-full bg-purple-600/80"></div>
           <p className="mt-2 text-gray-700">From request to record · Tracked every step</p>
         </div>
 
         {/* Login Card */}
-        <Card className="shadow-xl border border-pink-100/40 bg-white/95 backdrop-blur-sm">
+        <Card className="shadow-xl border border-purple-100/40 bg-white/95 backdrop-blur-sm">
           <CardHeader className="space-y-1 pb-4">
             <CardTitle className="text-2xl text-center text-black">Sign In</CardTitle>
             <CardDescription className="text-center text-gray-600">
@@ -290,7 +290,7 @@ export default function LoginPage() {
                   type="text"
                   placeholder="Enter your username"
                   {...register('username')}
-                  className="h-11 border-gray-300 focus-visible:ring-pink-600"
+                  className="h-11 border-gray-300 focus-visible:ring-purple-600"
                   disabled={loading}
                 />
                 {errors.username && (
@@ -320,7 +320,7 @@ export default function LoginPage() {
                     type={showPassword ? 'text' : 'password'}
                     placeholder="Enter your password"
                     {...register('password')}
-                    className="h-11 pr-10 border-gray-300 focus-visible:ring-pink-600"
+                    className="h-11 pr-10 border-gray-300 focus-visible:ring-purple-600"
                     disabled={loading}
                   />
                   <Button
@@ -369,7 +369,7 @@ export default function LoginPage() {
               {/* Submit */}
               <Button
                 type="submit"
-                className="w-full h-11 bg-pink-600 hover:bg-pink-700 text-white"
+                className="w-full h-11 bg-purple-600 hover:bg-purple-700 text-white"
                 disabled={loading}
               >
                 {loading ? 'Signing in...' : 'Sign In'}
@@ -431,7 +431,7 @@ export default function LoginPage() {
               href="https://github.com/RenNanase"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-pink-600 hover:text-pink-700 hover:underline transition-colors"
+              className="inline-flex items-center gap-1 text-purple-600 hover:text-purple-700 hover:underline transition-colors"
             >
               REN
             </a>

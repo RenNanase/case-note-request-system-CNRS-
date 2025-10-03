@@ -5,13 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -34,26 +27,10 @@ import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 
-interface DepartmentOption {
-  value: number;
-  label: string;
-  code: string;
-}
-
-interface Department {
-  id: number;
-  name: string;
-  code: string;
-  is_active: boolean;
-  created_at?: string;
-  updated_at?: string;
-}
 
 interface Doctor {
   id: number;
   name: string;
-  department_id: number;
-  department: Department;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -70,7 +47,6 @@ const API_BASE_URL = '/CNRS/public/api/admin';
 // Form validation schema
 const doctorFormSchema = z.object({
   name: z.string().min(1, 'Doctor name is required'),
-  department_id: z.number().min(1, 'Department is required'),
 });
 
 type DoctorFormData = z.infer<typeof doctorFormSchema>;
@@ -80,7 +56,6 @@ const DoctorManagementPage = () => {
   const { toast } = useToast();
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [stats, setStats] = useState<DoctorStatistics | null>(null);
-  const [departments, setDepartments] = useState<DepartmentOption[]>([]);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -93,7 +68,6 @@ const DoctorManagementPage = () => {
     resolver: zodResolver(doctorFormSchema),
     defaultValues: {
       name: '',
-      department_id: 0,
     },
   });
 
@@ -119,7 +93,6 @@ const DoctorManagementPage = () => {
       setLoading(true);
       await Promise.all([
         loadDoctorStats(),
-        loadDepartments(),
         loadDoctors(),
       ]);
     } catch (error) {
@@ -173,30 +146,6 @@ const DoctorManagementPage = () => {
     }
   };
 
-  const loadDepartments = async () => {
-    try {
-      const response = await fetch(`/CNRS/public/api/resources/departments`, {
-        method: 'GET',
-        headers: getAuthHeaders(),
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch departments');
-      }
-
-      const data = await response.json();
-      if (data.success) {
-        setDepartments(data.departments || []);
-      }
-    } catch (error) {
-      if (error instanceof Error) {
-        setError(error.message);
-      } else {
-        setError('Failed to load departments');
-      }
-    }
-  };
 
   const loadDoctors = async () => {
     try {
@@ -275,7 +224,6 @@ const DoctorManagementPage = () => {
     setEditingDoctor(doctor);
     form.reset({
       name: doctor.name,
-      department_id: doctor.department_id,
     });
     setShowEditDialog(true);
   };
@@ -390,15 +338,15 @@ const DoctorManagementPage = () => {
       const responseData = await response.json();
       if (responseData.success) {
         setDoctors(prevDoctors => [responseData.data, ...prevDoctors]);
-        
+
         // Update stats
         await loadDoctorStats();
-        
+
         toast({
           title: 'Success',
           description: 'Doctor added successfully',
         });
-        
+
         setShowAddDialog(false);
         form.reset();
       }
@@ -419,7 +367,7 @@ const DoctorManagementPage = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Doctor Management</h1>
-            <p className="text-gray-600">Manage doctors and their departments</p>
+            <p className="text-gray-600">Manage doctors</p>
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -472,7 +420,7 @@ const DoctorManagementPage = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Doctor Management</h1>
-          <p className="text-gray-600">Manage doctors and their departments</p>
+          <p className="text-gray-600">Manage doctors</p>
         </div>
         <div className="flex space-x-2">
           <Button variant="outline" onClick={fetchData}>
@@ -558,7 +506,6 @@ const DoctorManagementPage = () => {
                 <thead className="[&_tr]:border-b">
                   <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
                     <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Name</th>
-                    <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Department</th>
                     <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Status</th>
                     <th className="h-12 px-4 text-right align-middle font-medium text-muted-foreground">Actions</th>
                   </tr>
@@ -574,7 +521,6 @@ const DoctorManagementPage = () => {
                     doctors.map((doctor) => (
                       <tr key={doctor.id} className="border-b transition-colors hover:bg-muted/50">
                         <td className="p-4 align-middle">{doctor.name}</td>
-                        <td className="p-4 align-middle">{doctor.department?.name || 'N/A'}</td>
                         <td className="p-4 align-middle">
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                             doctor.is_active
@@ -634,30 +580,6 @@ const DoctorManagementPage = () => {
                 <p className="text-sm text-red-500">{form.formState.errors.name.message}</p>
               )}
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="department">Department</Label>
-              <Select
-                onValueChange={(value) =>
-                  form.setValue('department_id', parseInt(value), { shouldValidate: true })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select department" />
-                </SelectTrigger>
-                <SelectContent>
-                  {departments.map((dept) => (
-                    <SelectItem key={dept.value} value={dept.value.toString()}>
-                      {dept.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {form.formState.errors.department_id && (
-                <p className="text-sm text-red-500">
-                  {form.formState.errors.department_id.message}
-                </p>
-              )}
-            </div>
             <DialogFooter>
               <Button
                 type="button"
@@ -694,31 +616,6 @@ const DoctorManagementPage = () => {
               />
               {form.formState.errors.name && (
                 <p className="text-sm text-red-500">{form.formState.errors.name.message}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-department">Department</Label>
-              <Select
-                onValueChange={(value) =>
-                  form.setValue('department_id', parseInt(value), { shouldValidate: true })
-                }
-                defaultValue={editingDoctor?.department_id.toString()}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select department" />
-                </SelectTrigger>
-                <SelectContent>
-                  {departments.map((dept) => (
-                    <SelectItem key={dept.value} value={dept.value.toString()}>
-                      {dept.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {form.formState.errors.department_id && (
-                <p className="text-sm text-red-500">
-                  {form.formState.errors.department_id.message}
-                </p>
               )}
             </div>
             <DialogFooter>

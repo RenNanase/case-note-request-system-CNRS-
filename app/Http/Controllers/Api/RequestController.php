@@ -43,21 +43,28 @@ class RequestController extends Controller
                           $subQ->where('requested_by_user_id', $user->id)
                                ->where('current_pic_user_id', $user->id); // Must still own it
                       })
+                      ->orWhere(function($subQ) use ($user) {
+                          // Show completed case notes that were originally requested by this user
+                          // This ensures completed case notes appear in history regardless of current ownership
+                          $subQ->where('requested_by_user_id', $user->id)
+                               ->where('status', 'completed');
+                      })
                       ->orWhereHas('handoverRequests', function($handoverQuery) use ($user) {
                           $handoverQuery->where('requested_by_user_id', $user->id)
                                        ->where('status', 'pending');
                       });
                 })
-                ->whereIn('status', ['approved', 'completed', 'in_progress', 'rejected']); // Include more statuses for comprehensive view including rejected
+                ->whereIn('status', ['approved', 'completed', 'in_progress', 'rejected', 'pending_return_verification']); // Include more statuses for comprehensive view including rejected and pending return verification
 
                 Log::info('CA user requesting all involved case notes data (My Case Notes page):', [
                     'user_id' => $user->id,
                     'user_email' => $user->email,
                     'query_conditions' => [
                         'current_pic_user_id' => $user->id,
-                        'requested_by_user_id' => $user->id,
+                        'requested_by_user_id_and_still_owns' => $user->id,
+                        'completed_case_notes_by_requester' => true,
                         'has_pending_handover_requests' => true,
-                        'status_in' => ['approved', 'completed', 'in_progress'],
+                        'status_in' => ['approved', 'completed', 'in_progress', 'rejected', 'pending_return_verification'],
                     ]
                 ]);
             } else {
@@ -586,6 +593,70 @@ class RequestController extends Controller
     }
 
     /**
+     * Approve a case note request on behalf of another user (MR Staff only)
+     */
+    public function approveOnBehalf(HttpRequest $httpRequest, $id): JsonResponse
+    {
+        $user = Auth::user();
+
+        // Manually find the request
+        $caseRequest = \App\Models\Request::find($id);
+
+        if (!$caseRequest) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Request not found'
+            ], 404);
+        }
+
+        if (!$user->hasRole(['MR_STAFF', 'ADMIN'], 'api')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You do not have permission to approve requests'
+            ], 403);
+        }
+
+        $validator = Validator::make($httpRequest->all(), [
+            'remarks' => 'nullable|string|max:1000',
+            'on_behalf_of_user_id' => 'required|integer|exists:users,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $onBehalfOfUserId = $httpRequest->on_behalf_of_user_id;
+
+        // Verify that the target user is a CA
+        $targetUser = \App\Models\User::find($onBehalfOfUserId);
+        if (!$targetUser || !$targetUser->hasRole('CA', 'api')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Target user must be a valid Clinic Assistant'
+            ], 400);
+        }
+
+        if (!$caseRequest->approveOnBehalf($user, $onBehalfOfUserId, $httpRequest->remarks)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Request cannot be approved in its current state'
+            ], 400);
+        }
+
+        $caseRequest->load(['patient', 'requestedBy', 'department', 'doctor', 'location', 'approvedBy', 'approvedOnBehalfBy', 'approvedOnBehalfOf']);
+
+        return response()->json([
+            'success' => true,
+            'message' => "Request approved successfully on behalf of {$targetUser->name}",
+            'request' => $caseRequest,
+        ]);
+    }
+
+    /**
      * Reject a case note request (MR Staff only)
      */
     public function reject(HttpRequest $httpRequest, $id): JsonResponse
@@ -609,11 +680,26 @@ class RequestController extends Controller
             ], 403);
         }
 
+        Log::info('MR Staff reject request debug:', [
+            'user_id' => $user->id,
+            'user_name' => $user->name,
+            'request_id' => $id,
+            'request_data' => $httpRequest->all(),
+            'has_reason' => $httpRequest->has('reason'),
+            'reason_value' => $httpRequest->get('reason')
+        ]);
+
         $validator = Validator::make($httpRequest->all(), [
             'reason' => 'required|string|max:1000',
         ]);
 
         if ($validator->fails()) {
+            Log::error('MR Staff reject validation failed:', [
+                'user_id' => $user->id,
+                'request_id' => $id,
+                'validation_errors' => $validator->errors()->toArray(),
+                'request_data' => $httpRequest->all()
+            ]);
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed',
@@ -1153,6 +1239,11 @@ class RequestController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
+            // Filter out case notes that are currently sent out and not yet Acknowledge
+            $caseNotes = $caseNotes->filter(function($caseNote) {
+                return $caseNote->canBeReturned();
+            });
+
             // Debug: Log what we found with user names for easier debugging
             $caseNotesSummary = $caseNotes->map(function($cn) use ($user) {
                 $requestedByUser = \App\Models\User::find($cn->requested_by_user_id);
@@ -1209,7 +1300,7 @@ class RequestController extends Controller
 
             return response()->json([
                 'success' => true,
-                'case_notes' => $caseNotes
+                'case_notes' => $caseNotes->values()->toArray()
             ]);
 
         } catch (\Exception $e) {
@@ -1242,15 +1333,25 @@ class RequestController extends Controller
                 ], 403);
             }
 
-            // Get all case notes with status 'pending_return_verification'
+            // Get all case notes that have been returned (either is_returned = true OR have return event)
             $returnedCaseNotes = \App\Models\Request::with([
                 'patient',
                 'department',
                 'doctor',
                 'returnedBy'
             ])
-            ->where('status', \App\Models\Request::STATUS_PENDING_RETURN_VERIFICATION)
-            ->where('is_returned', true)
+            ->where(function($query) {
+                $query->where('status', \App\Models\Request::STATUS_PENDING_RETURN_VERIFICATION)
+                      ->orWhere('status', \App\Models\Request::STATUS_APPROVED)
+                      ->orWhere('status', \App\Models\Request::STATUS_IN_PROGRESS);
+            })
+            ->where(function($query) {
+                $query->where('is_returned', true)
+                      ->orWhereHas('events', function($q) {
+                          $q->where('type', 'returned');
+                      });
+            })
+            ->where('status', '!=', \App\Models\Request::STATUS_COMPLETED) // Exclude already completed ones
             ->orderBy('returned_at', 'desc')
             ->get();
 
@@ -1316,6 +1417,44 @@ class RequestController extends Controller
     }
 
     /**
+     * Generate PDF for returned case notes for a given CA (MR Staff)
+     */
+    public function generateReturnedCaseNotesPdf(\Illuminate\Http\Request $request, $caId)
+    {
+        $user = Auth::user();
+        if (!$user->hasRole('MR_STAFF')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Access denied. Only MR Staff can generate PDFs.'
+            ], 403);
+        }
+
+        try {
+            $ids = $request->get('case_note_ids', []);
+            if (is_string($ids)) {
+                $ids = explode(',', $ids);
+            }
+            $ids = array_filter(array_map('intval', $ids));
+
+            $service = new \App\Services\ReturnedCaseNotesPdfService();
+            $pdf = $service->generateReturnedCaseNotesPdf((int)$caId, $ids);
+            $ca = \App\Models\User::find($caId);
+            $filename = $service->generateFilename($ca->name ?? 'Unknown');
+            return $pdf->download($filename);
+        } catch (\Exception $e) {
+            Log::error('Error generating returned case notes PDF:', [
+                'user_id' => $user->id ?? 'unknown',
+                'ca_id' => $caId,
+                'error' => $e->getMessage(),
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to generate PDF: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Verify or reject returned case notes by MR Staff
      */
     public function verifyReturnedCaseNotes(HttpRequest $request): JsonResponse
@@ -1353,9 +1492,19 @@ class RequestController extends Controller
             $rejectionReason = $request->rejection_reason;
 
             // Get the case notes to be processed
+            // Include case notes that either have is_returned = true OR have a return event
             $caseNotes = \App\Models\Request::whereIn('id', $caseNoteIds)
-                ->where('status', \App\Models\Request::STATUS_PENDING_RETURN_VERIFICATION)
-                ->where('is_returned', true)
+                ->where(function($query) {
+                    $query->where('status', \App\Models\Request::STATUS_PENDING_RETURN_VERIFICATION)
+                          ->orWhere('status', \App\Models\Request::STATUS_APPROVED)
+                          ->orWhere('status', \App\Models\Request::STATUS_IN_PROGRESS);
+                })
+                ->where(function($query) {
+                    $query->where('is_returned', true)
+                          ->orWhereHas('events', function($q) {
+                              $q->where('type', 'returned');
+                          });
+                })
                 ->get();
 
             if ($caseNotes->isEmpty()) {
@@ -1732,9 +1881,9 @@ class RequestController extends Controller
                 $description = "Case note handed over from {$from} to {$to}";
                 return $description;
 
-            case 'acknowledged':
-                $acknowledger = $metadata['acknowledged_by_name'] ?? $event->actor->name ?? 'Unknown';
-                return "Case note acknowledged by {$acknowledger}";
+            case 'Acknowledge':
+                $acknowledger = $metadata['Acknowledge_by_name'] ?? $event->actor->name ?? 'Unknown';
+                return "Case note Acknowledge by {$acknowledger}";
 
             case 'received':
                 $receiver = $metadata['received_by_name'] ?? $event->actor->name ?? 'Unknown';
@@ -1816,7 +1965,7 @@ class RequestController extends Controller
             'rejecter' => ['rejected_by_name'],
             'completer' => ['completed_by_name'],
             'receiver' => ['received_by_name'],
-            'acknowledger' => ['acknowledged_by_name'],
+            'acknowledger' => ['Acknowledge_by_name'],
             'from_user' => ['handed_over_from_user_name', 'requested_by_name'],
             'to_user' => ['handed_over_to_user_name', 'current_holder_name'],
             'department' => ['department_name'],

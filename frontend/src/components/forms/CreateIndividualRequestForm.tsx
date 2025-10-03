@@ -29,8 +29,7 @@ import type {
   Patient,
   Department,
   Doctor,
-  Location,
-  Priority
+  Location
 } from '@/types/requests';
 import { cn } from '@/lib/utils';
 
@@ -89,7 +88,7 @@ export const CreateIndividualRequestForm: React.FC<CreateIndividualRequestFormPr
   const [departments, setDepartments] = useState<Department[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
-  const [priorities, setPriorities] = useState<Priority[]>([]);
+  // const [priorities, setPriorities] = useState<Priority[]>([]);
 
   // Selected patient state
   const [selectedPatient, setSelectedPatient] = useState<Patient | undefined>(undefined);
@@ -123,7 +122,7 @@ export const CreateIndividualRequestForm: React.FC<CreateIndividualRequestFormPr
 
   const loadResources = async () => {
     try {
-      const [deptResponse, locResponse, priorityResponse, doctorsResponse] = await Promise.all([
+      const [deptResponse, locResponse, , doctorsResponse] = await Promise.all([
         resourcesApi.getDepartments(),
         resourcesApi.getLocations(),
         resourcesApi.getPriorities(),
@@ -132,7 +131,7 @@ export const CreateIndividualRequestForm: React.FC<CreateIndividualRequestFormPr
 
       if (deptResponse.success) setDepartments(deptResponse.departments);
       if (locResponse.success) setLocations(locResponse.locations);
-      if (priorityResponse.success) setPriorities(priorityResponse.priorities);
+      // if (priorityResponse.success) setPriorities(priorityResponse.priorities);
       if (doctorsResponse.success) setDoctors(doctorsResponse.doctors);
     } catch (error) {
       console.error('Error loading resources:', error);
@@ -182,7 +181,7 @@ export const CreateIndividualRequestForm: React.FC<CreateIndividualRequestFormPr
         toast({
           title: 'Success',
           description: 'Case note request created successfully!',
-          variant: 'default',
+          variant: 'success',
         });
         onSuccess?.();
       } else {
@@ -262,7 +261,7 @@ export const CreateIndividualRequestForm: React.FC<CreateIndividualRequestFormPr
     toast({
       title: 'Success',
       description: 'Handover request submitted successfully!',
-      variant: 'default',
+      variant: 'success',
     });
   };
 
@@ -379,8 +378,8 @@ export const CreateIndividualRequestForm: React.FC<CreateIndividualRequestFormPr
                           </FormControl>
                           <SelectContent>
                                                        {departments.map((dept) => (
-                             <SelectItem key={dept.value} value={dept.value.toString()}>
-                               {dept.label}
+                             <SelectItem key={dept.id} value={dept.id.toString()}>
+                               {dept.name}
                              </SelectItem>
                            ))}
                           </SelectContent>
@@ -410,11 +409,11 @@ export const CreateIndividualRequestForm: React.FC<CreateIndividualRequestFormPr
                           </FormControl>
                           <SelectContent>
                             <SelectItem value="none">No doctor specified</SelectItem>
-                                                         {doctors.map((doctor) => (
-                               <SelectItem key={doctor.value} value={doctor.value.toString()}>
-                                 {doctor.label}
-                               </SelectItem>
-                             ))}
+                                {doctors.map((doctor) => (
+                                <SelectItem key={doctor.id} value={doctor.id.toString()}>
+                                  {doctor.name}
+                                </SelectItem>
+                              ))}
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -442,11 +441,11 @@ export const CreateIndividualRequestForm: React.FC<CreateIndividualRequestFormPr
                           </FormControl>
                           <SelectContent>
                             <SelectItem value="none">No location specified</SelectItem>
-                                                         {locations.map((location) => (
-                               <SelectItem key={location.value} value={location.value.toString()}>
-                                 {location.label}
-                               </SelectItem>
-                             ))}
+                                {locations.map((location) => (
+                                <SelectItem key={location.id} value={location.id.toString()}>
+                                  {location.name}
+                                </SelectItem>
+                              ))}
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -546,14 +545,14 @@ export const CreateIndividualRequestForm: React.FC<CreateIndividualRequestFormPr
                                          <div>
                        <span className="font-medium text-gray-700">Department:</span>
                        <span className="ml-2 text-gray-900">
-                         {departments.find(d => d.value === watchedValues.department_id)?.label || 'Not selected'}
+                          {departments.find(d => d.id === watchedValues.department_id)?.name || 'Not selected'}
                        </span>
                      </div>
                      <div>
                        <span className="font-medium text-gray-700">Doctor:</span>
                        <span className="ml-2 text-gray-900">
                          {watchedValues.doctor_id && watchedValues.doctor_id > 0
-                           ? doctors.find(d => d.value === watchedValues.doctor_id)?.label || 'Not selected'
+                            ? doctors.find(d => d.id === watchedValues.doctor_id)?.name || 'Not selected'
                            : 'No doctor specified'
                          }
                        </span>
@@ -562,7 +561,7 @@ export const CreateIndividualRequestForm: React.FC<CreateIndividualRequestFormPr
                        <span className="font-medium text-gray-700">Location:</span>
                        <span className="ml-2 text-gray-900">
                          {watchedValues.location_id && watchedValues.location_id > 0
-                           ? locations.find(l => l.value === watchedValues.location_id)?.label || 'Not selected'
+                            ? locations.find(l => l.id === watchedValues.location_id)?.name || 'Not selected'
                            : 'No location specified'
                          }
                        </span>

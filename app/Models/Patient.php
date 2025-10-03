@@ -103,6 +103,42 @@ class Patient extends Model
 
     public function toSearchResult(): array
     {
+        // Get the most recent case note request for this patient
+        $latestRequest = $this->requests()
+            ->with(['department', 'location', 'currentPIC'])
+            ->whereIn('status', ['approved', 'completed'])
+            ->where('is_received', true)
+            ->orderBy('created_at', 'desc')
+            ->first();
+
+        // Check if patient has existing requests and availability
+        $hasExistingRequests = $this->requests()
+            ->whereIn('status', ['approved', 'completed'])
+            ->where('is_received', true)
+            ->exists();
+
+        $isAvailable = true;
+        $handoverStatus = null;
+        $currentHolder = null;
+        $caseNoteRequestId = null;
+
+        if ($hasExistingRequests && $latestRequest) {
+            $isAvailable = !$latestRequest->current_pic_user_id || 
+                          $latestRequest->handover_status === 'completed' ||
+                          $latestRequest->handover_status === 'mr_staff_opened';
+            
+            $handoverStatus = $latestRequest->handover_status;
+            $caseNoteRequestId = $latestRequest->id;
+            
+            if ($latestRequest->currentPIC) {
+                $currentHolder = [
+                    'id' => $latestRequest->currentPIC->id,
+                    'name' => $latestRequest->currentPIC->name,
+                    'email' => $latestRequest->currentPIC->email,
+                ];
+            }
+        }
+
         return [
             'id' => $this->id,
             'mrn' => $this->mrn,
@@ -112,6 +148,26 @@ class Patient extends Model
             'date_of_birth' => null, // Field not available in simplified structure
             'phone' => null, // Field not available in simplified structure
             'has_medical_alerts' => false, // Field not available, default to false
+            'has_existing_requests' => $hasExistingRequests,
+            'is_available' => $isAvailable,
+            'handover_status' => $handoverStatus,
+            'current_holder' => $currentHolder,
+            'case_note_request_id' => $caseNoteRequestId,
+            // Add current case note location and department info
+            'current_case_note' => $latestRequest ? [
+                'department' => $latestRequest->department ? [
+                    'id' => $latestRequest->department->id,
+                    'name' => $latestRequest->department->name,
+                ] : null,
+                'location' => $latestRequest->location ? [
+                    'id' => $latestRequest->location->id,
+                    'name' => $latestRequest->location->name,
+                ] : null,
+                'doctor' => $latestRequest->doctor ? [
+                    'id' => $latestRequest->doctor->id,
+                    'name' => $latestRequest->doctor->name,
+                ] : null,
+            ] : null,
         ];
     }
 }

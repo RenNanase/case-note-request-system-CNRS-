@@ -137,14 +137,10 @@ function ReturnCaseNoteDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async () => {
-    if (!returnNotes.trim()) {
-      alert('Please provide return notes before submitting.');
-      return;
-    }
-
+    // Return notes are now optional - no validation needed
     setIsSubmitting(true);
     try {
-      await onReturn(request.id, returnNotes.trim());
+      await onReturn(request.id, returnNotes.trim() || '');
       setReturnNotes('');
       onClose();
     } catch (error) {
@@ -214,8 +210,7 @@ function ReturnCaseNoteDialog({
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <label className="block text-sm font-medium text-gray-700">
-                Return Notes
-                {!isReReturn && <span className="text-red-500 ml-1">*</span>}
+                Return Notes <span className="text-gray-500 text-xs">(Optional)</span>
               </label>
               <span className="text-xs text-gray-500">
                 {returnNotes.length}/500
@@ -230,7 +225,7 @@ function ReturnCaseNoteDialog({
               value={returnNotes}
               onChange={(e) => setReturnNotes(e.target.value.slice(0, 500))}
               className="min-h-[120px] text-sm border-gray-300 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-              required={!isReReturn}
+              required={false}
             />
             <p className="text-xs text-gray-500">
               {isReReturn
@@ -267,7 +262,7 @@ function ReturnCaseNoteDialog({
           <Button
             type="button"
             onClick={handleSubmit}
-            disabled={isSubmitting || (!isReReturn && !returnNotes.trim())}
+            disabled={isSubmitting}
             className={`w-full ${isReReturn ? 'bg-orange-600 hover:bg-orange-700' : ''}`}
           >
             {isSubmitting ? (
@@ -331,9 +326,9 @@ export default function ReturnCaseNotesPage() {
         const response = await requestsApi.getReturnableCaseNotes();
         console.log('📡 API Response received:', response);
 
-        if (response.success && response.requests) {
-          // The backend now handles all the filtering logic, so we can use the requests directly
-          const returnableRequests = response.requests;
+        if (response.success && response.case_notes) {
+          // The backend now handles all the filtering logic, so we can use the case_notes directly
+          const returnableRequests = Array.isArray(response.case_notes) ? response.case_notes : [];
 
           console.log('📊 Backend filtered results:', {
             totalRequests: returnableRequests.length,
@@ -349,7 +344,7 @@ export default function ReturnCaseNotesPage() {
 
           // Log the results for debugging
           console.log('📊 Return Case Notes Results:', {
-            totalRequests: response.requests?.length || 0,
+            totalRequests: Array.isArray(response.case_notes) ? response.case_notes.length : 0,
             returnableRequests: returnableRequests.length,
             currentUserId: user.id,
             returnableRequestsDetails: returnableRequests.map(req => ({
@@ -398,9 +393,9 @@ export default function ReturnCaseNotesPage() {
             returned_by_user_id: req.returned_by_user_id
           })));
           setPendingReturnRequests(pendingReturnCaseNotes);
-        } else if (response.success && !response.requests) {
-          console.log('⚠️ API call successful but no requests data');
-          setError('No requests data received');
+        } else if (response.success && !response.case_notes) {
+          console.log('⚠️ API call successful but no case notes data');
+          setError('No case notes data received');
           setRequests([]);
           setPendingReturnRequests([]);
         } else {
@@ -427,8 +422,8 @@ export default function ReturnCaseNotesPage() {
 
   // Combine regular requests with pending return requests
   const allRequests = [
-    ...requests,
-    ...pendingReturnRequests.map((pendingRequest: CaseNoteRequest) => ({
+    ...(Array.isArray(requests) ? requests : []),
+    ...(Array.isArray(pendingReturnRequests) ? pendingReturnRequests.map((pendingRequest: CaseNoteRequest) => ({
       ...pendingRequest,
       // Mark as pending return for special handling
       is_pending_return: true,
@@ -437,14 +432,14 @@ export default function ReturnCaseNotesPage() {
       department: pendingRequest.department,
       doctor: pendingRequest.doctor,
       location: pendingRequest.location,
-    }))
+    })) : [])
   ];
 
   console.log('📊 Combined requests:', {
-    regularRequests: requests.length,
-    pendingReturnRequests: pendingReturnRequests.length,
+    regularRequests: Array.isArray(requests) ? requests.length : 0,
+    pendingReturnRequests: Array.isArray(pendingReturnRequests) ? pendingReturnRequests.length : 0,
     totalCombined: allRequests.length,
-    pendingReturnIds: pendingReturnRequests.map(req => req.id)
+    pendingReturnIds: Array.isArray(pendingReturnRequests) ? pendingReturnRequests.map(req => req.id) : []
   });
 
   // Filter requests based on search and filters
@@ -595,27 +590,20 @@ export default function ReturnCaseNotesPage() {
       return;
     }
 
-    if (!batchReturnNotes.trim()) {
-      toast({
-        title: 'Return Notes Required',
-        description: 'Please provide return notes for the batch.',
-        variant: 'destructive',
-      });
-      return;
-    }
+    // Batch return notes are now optional - no validation needed
 
     try {
       setBatchSubmitting(true);
       const response = await requestsApi.returnCaseNotes({
         case_note_ids: Array.from(selectedCaseNotes),
-        return_notes: batchReturnNotes.trim()
+        return_notes: batchReturnNotes.trim() || undefined
       });
 
       if (response.success) {
         toast({
           title: 'Success',
           description: `Successfully returned ${selectedCaseNotes.size} case note(s)`,
-          variant: 'default',
+          variant: 'success',
         });
 
         // Clear selections and close dialog
@@ -656,7 +644,7 @@ export default function ReturnCaseNotesPage() {
         toast({
           title: 'Success',
           description: 'Case note returned successfully',
-          variant: 'default',
+          variant: 'success',
         });
         // Refresh the list
         window.location.reload();
@@ -700,14 +688,7 @@ export default function ReturnCaseNotesPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <div className="flex items-center space-x-2 mb-2">
-            <Link to="/dashboard">
-              <Button variant="ghost" size="sm">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Dashboard
-              </Button>
-            </Link>
-          </div>
+          
           <h1 className="text-3xl font-bold text-gray-900">Return Case Notes</h1>
           <p className="text-gray-600 mt-2">
             Manage case note returns - return completed case notes, view return status, and handle rejected returns
@@ -1145,14 +1126,14 @@ export default function ReturnCaseNotesPage() {
             {/* Batch Return Notes Input */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Return Notes <span className="text-red-500">*</span>
+                Return Notes <span className="text-gray-500 text-xs">(Optional)</span>
               </label>
               <Textarea
                 placeholder="Provide notes for the batch return..."
                 value={batchReturnNotes}
                 onChange={(e) => setBatchReturnNotes(e.target.value)}
                 className="min-h-[100px]"
-                required
+                required={false}
               />
               <p className="text-xs text-gray-500 mt-1">
                 These notes will be applied to all selected case notes in this batch return.
@@ -1173,7 +1154,7 @@ export default function ReturnCaseNotesPage() {
             </Button>
             <Button
               onClick={handleBatchReturn}
-              disabled={batchSubmitting || !batchReturnNotes.trim()}
+              disabled={batchSubmitting}
               className="bg-green-600 hover:bg-green-700"
             >
               {batchSubmitting ? (

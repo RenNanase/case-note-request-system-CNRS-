@@ -273,9 +273,9 @@ export const requestsApi = {
     return response.data;
   },
 
-  // Get acknowledged handovers for current user (as receiver)
-  getAcknowledgedHandovers: async (): Promise<ApiResponse<any>> => {
-    const response = await apiClient.get('/handovers/acknowledged');
+  // Get Acknowledge handovers for current user (as receiver)
+  getAcknowledgeHandovers: async (): Promise<ApiResponse<any>> => {
+    const response = await apiClient.get('/handovers/Acknowledge');
     return response.data;
   },
 

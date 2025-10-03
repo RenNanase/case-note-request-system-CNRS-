@@ -9,7 +9,7 @@ Write-Host "[CLEAR] Clearing old frontend assets..." -ForegroundColor Yellow
 $assetsPath = "..\public\frontend\assets\*"
 if (Test-Path $assetsPath) {
     Remove-Item $assetsPath -Force
-    Write-Host "[OK] Old assets cleared" -ForegroundColor Green
+    Write-Host "[OK] Old assets cleared" -ForegroundColor green
 } else {
     Write-Host "[INFO] No old assets found" -ForegroundColor purple
 }
@@ -20,7 +20,7 @@ Write-Host "[BUILD] Building frontend with fresh cache-busting hashes..." -Foreg
 npm run build
 
 if ($LASTEXITCODE -eq 0) {
-    Write-Host "[SUCCESS] Frontend build completed successfully!" -ForegroundColor Green
+    Write-Host "[SUCCESS] Frontend build completed successfully!" -ForegroundColor green
     
     # List new assets
     Write-Host "[ASSETS] New assets generated:" -ForegroundColor Cyan
@@ -29,7 +29,7 @@ if ($LASTEXITCODE -eq 0) {
     }
     
     Write-Host ""
-    Write-Host "[COMPLETE] Cache clearing and rebuild complete!" -ForegroundColor Green
+    Write-Host "[COMPLETE] Cache clearing and rebuild complete!" -ForegroundColor green
     Write-Host "[TIP] Remember to hard-refresh your browser (Ctrl+F5 or Ctrl+Shift+R)" -ForegroundColor Yellow
     
 } else {

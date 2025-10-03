@@ -10,9 +10,9 @@ export interface HandoverCaseNote {
   handover_doctor_id?: number;
   handover_reason: string;
   additional_notes?: string;
-  status: 'pending' | 'acknowledged' | 'completed';
-  acknowledged_at?: string;
-  acknowledged_by_user_id?: number;
+  status: 'pending' | 'Acknowledge' | 'completed';
+  Acknowledge_at?: string;
+  Acknowledge_by_user_id?: number;
   acknowledgment_notes?: string;
   receipt_verification_notes?: string;
   completed_at?: string;

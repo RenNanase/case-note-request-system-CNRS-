@@ -24,6 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import PatientSearch from '@/components/patients/PatientSearch';
 import { HandoverRequestModal } from '@/components/modals/HandoverRequestModal';
 import { requestsApi, resourcesApi } from '@/api/requests';
@@ -339,7 +340,7 @@ export const BatchRequestForm: React.FC<BatchRequestFormProps> = ({
         toast({
           title: 'Success',
           description: `Batch request created successfully with ${data.case_notes.length} case notes!`,
-          variant: 'default',
+          variant: 'success',
         });
         onSuccess?.();
       } else {
@@ -569,9 +570,9 @@ export const BatchRequestForm: React.FC<BatchRequestFormProps> = ({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {departments.map((dept) => (
-                            <SelectItem key={dept.value} value={dept.value.toString()}>
-                              {dept.label} ({dept.code})
+                          {departments.filter(dept => dept && dept.id != null).map((dept) => (
+                            <SelectItem key={dept.id} value={(dept.id || 0).toString()}>
+                              {dept.name || 'Unknown'} ({dept.code || 'N/A'})
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -587,23 +588,17 @@ export const BatchRequestForm: React.FC<BatchRequestFormProps> = ({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Requesting Doctor</FormLabel>
-                      <Select
-                        onValueChange={(value) => field.onChange(value ? Number(value) : undefined)}
+                      <SearchableSelect
+                        options={doctors.filter(doctor => doctor && doctor.id != null).map((doctor) => ({
+                          value: (doctor.id || 0).toString(),
+                          label: doctor.name || 'Unknown',
+                          // Removed department since doctors are independent
+                        }))}
                         value={field.value?.toString() || ''}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a doctor" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {doctors.map((doctor) => (
-                            <SelectItem key={doctor.value} value={doctor.value.toString()}>
-                              {doctor.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        onValueChange={(value) => field.onChange(value ? Number(value) : undefined)}
+                        placeholder="Search and select a doctor..."
+                        label=""
+                      />
                       <FormMessage />
                     </FormItem>
                   )}
@@ -622,9 +617,9 @@ export const BatchRequestForm: React.FC<BatchRequestFormProps> = ({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {locations.map((location) => (
-                            <SelectItem key={location.value} value={location.value.toString()}>
-                              {location.label} ({location.type})
+                          {locations.filter(location => location && location.id != null).map((location) => (
+                            <SelectItem key={location.id} value={(location.id || 0).toString()}>
+                              {location.name || 'Unknown'} ({location.type || 'N/A'})
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -723,7 +718,7 @@ export const BatchRequestForm: React.FC<BatchRequestFormProps> = ({
           {/* Step 3: Review & Submit */}
           {currentStep === 3 && (
             <div className="space-y-6">
-              <Card className="bg-pink-50/30 border-pink-200">
+              <Card className="bg-green-50/30 border-green-200">
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
                     <CheckCircle2 className="h-5 w-5" />
@@ -735,7 +730,7 @@ export const BatchRequestForm: React.FC<BatchRequestFormProps> = ({
                 </CardHeader>
                 <CardContent className="space-y-6">
                   {/* Case Notes Summary */}
-                  <div className="bg-pink-50/30 border border-pink-200 rounded-lg p-4">
+                  <div className="bg-green-50/30 border border-green-200 rounded-lg p-4">
                     <h4 className="font-medium text-gray-900 mb-3 flex items-center">
                       <Users className="h-4 w-4 mr-2" />
                       Case Notes ({fields.length} patients)
@@ -775,12 +770,12 @@ export const BatchRequestForm: React.FC<BatchRequestFormProps> = ({
                       Department & Doctor
                     </h4>
                     <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-                      <p><span className="font-medium">Department:</span> {departments.find(d => d.value === getValues('department_id'))?.label}</p>
+                      <p><span className="font-medium">Department:</span> {departments.find(d => d.id === getValues('department_id'))?.name}</p>
                       {getValues('doctor_id') && (
-                        <p><span className="font-medium">Doctor:</span> {doctors.find(d => d.value === getValues('doctor_id'))?.label}</p>
+                        <p><span className="font-medium">Doctor:</span> {doctors.find(d => d.id === getValues('doctor_id'))?.name}</p>
                       )}
                       {getValues('location_id') && (
-                        <p><span className="font-medium">Location:</span> {locations.find(l => l.value === getValues('location_id'))?.label}</p>
+                        <p><span className="font-medium">Location:</span> {locations.find(l => l.id === getValues('location_id'))?.name}</p>
                       )}
                     </div>
                   </div>
@@ -794,7 +789,7 @@ export const BatchRequestForm: React.FC<BatchRequestFormProps> = ({
                       Request Details
                     </h4>
                     <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                      
+
                       <div>
                         <span className="font-medium">Needed by:</span>
                         <div className="mt-1 flex items-center text-gray-600">

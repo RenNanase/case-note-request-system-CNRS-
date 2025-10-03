@@ -46,13 +46,13 @@ class DoctorController extends Controller
     public function index(Request $request)
     {
         try {
-            $query = Doctor::with('department')
+            $query = Doctor::query()
                 ->when($request->search, function($q) use ($request) {
                     $q->where('name', 'like', "%{$request->search}%");
                 });
 
             $doctors = $query->orderBy('name')->paginate(15);
-            
+
             return response()->json([
                 'success' => true,
                 'data' => $doctors
@@ -77,7 +77,6 @@ class DoctorController extends Controller
         try {
             $validated = $request->validate([
                 'name' => 'required|string|max:255',
-                'department_id' => 'required|exists:departments,id',
             ]);
 
             $doctor = Doctor::create($validated);
@@ -85,7 +84,7 @@ class DoctorController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Doctor created successfully',
-                'data' => $doctor->load('department')
+                'data' => $doctor
             ], 201);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
@@ -111,8 +110,8 @@ class DoctorController extends Controller
     public function show(string $id)
     {
         try {
-            $doctor = Doctor::with('department')->findOrFail($id);
-            
+            $doctor = Doctor::findOrFail($id);
+
             return response()->json([
                 'success' => true,
                 'data' => $doctor
@@ -142,10 +141,9 @@ class DoctorController extends Controller
     {
         try {
             $doctor = Doctor::findOrFail($id);
-            
+
             $validated = $request->validate([
                 'name' => 'sometimes|required|string|max:255',
-                'department_id' => 'sometimes|required|exists:departments,id',
                 'is_active' => 'sometimes|boolean'
             ]);
 
@@ -154,7 +152,7 @@ class DoctorController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Doctor updated successfully',
-                'data' => $doctor->load('department')
+                'data' => $doctor
             ]);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
@@ -187,7 +185,7 @@ class DoctorController extends Controller
         try {
             $doctor = Doctor::findOrFail($id);
             $doctor->update(['is_active' => !$doctor->is_active]);
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'Doctor status updated successfully',
@@ -220,7 +218,7 @@ class DoctorController extends Controller
         try {
             $doctor = Doctor::findOrFail($id);
             $doctor->delete();
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'Doctor deleted successfully'

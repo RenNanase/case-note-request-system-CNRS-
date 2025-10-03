@@ -57,7 +57,7 @@ const getStatusBadge = (status: string, displayStatus?: string, isWaitingForAppr
   // Special styling for completed and handed over case notes
   if (isCompletedAndHandedOver) {
     return (
-      <Badge variant="outline" className="bg-pink-100 text-pink-800 border-pink-200">
+      <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200">
         <CheckCircle className="h-3 w-3" />
         <span>COMPLETED</span>
       </Badge>
@@ -110,7 +110,7 @@ const getInvolvementBadge = (requestedBy: number, currentPIC: number, userId: nu
   // Handle completed and handed over case notes
   if (status === 'completed' && requestedBy === userId && currentPIC !== userId) {
     return (
-      <Badge variant="outline" className="bg-pink-100 text-pink-800 border-pink-200">
+      <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200">
         <ArrowUpRight className="h-3 w-3 mr-1" />
         Returned & Completed
       </Badge>
@@ -138,7 +138,7 @@ const getInvolvementBadge = (requestedBy: number, currentPIC: number, userId: nu
     } else {
       // User created it but it's assigned to someone else (handed over)
       return (
-        <Badge variant="outline" className="bg-pink-100 text-pink-800 border-pink-200">
+        <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200">
           <ArrowUpRight className="h-3 w-3 mr-1" />
           Handed Over
         </Badge>
@@ -199,9 +199,7 @@ export default function MyRequestsPage() {
         });
 
         // Get individual requests that are waiting for MR staff approval
-        const individualResponse = await requestsApi.getIndividualRequests({
-          per_page: 1000
-        });
+        const individualResponse = await requestsApi.getIndividualRequests();
 
         if (response.success) {
           setRequests(response.requests.data);
@@ -317,12 +315,9 @@ export default function MyRequestsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <div className="flex items-center space-x-2 mb-2">
-
-          </div>
           <h1 className="text-3xl font-bold text-gray-900">My Case Notes</h1>
           <p className="text-gray-600 mt-2">
-            Track all case notes you've been involved with - created, assigned, handed over, or individual requests waiting for MR approval
+            Track all case notes you've been involved with - created, assigned, handed over, or batch requests waiting for MR approval
           </p>
         </div>
       </div>
@@ -330,14 +325,14 @@ export default function MyRequestsPage() {
 
 
       {/* Filters */}
-      <Card className="border-slate-200/60">
-        <CardHeader className="pb-4">
-          <CardTitle className="flex items-center space-x-2 text-lg">
-            <Filter className="h-5 w-5 text-gray-600" />
-            <span>Filters</span>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Filter className="h-5 w-5" />
+            Filters
           </CardTitle>
         </CardHeader>
-        <CardContent className="pt-0">
+        <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700">Search</label>
@@ -400,7 +395,7 @@ export default function MyRequestsPage() {
           <div className="flex items-center space-x-4 mt-2 text-sm text-gray-600">
             <div className="flex items-center space-x-2">
 
-              <span className="text-xs text-pink-600 bg-pink-100 px-1 py-0.5 rounded">✓</span>
+              <span className="text-xs text-green-600 bg-green-100 px-1 py-0.5 rounded">✓</span>
               <span>Returned & Completed (no longer active)</span>
             </div>
           </div>
@@ -454,9 +449,9 @@ export default function MyRequestsPage() {
                       request.requested_by_user_id === user?.id &&
                       request.current_pic_user_id !== user?.id;
 
-                    // Apply pink background for completed and handed over case notes
+                    // Apply green background for completed and handed over case notes
                     const rowClassName = isCompletedAndHandedOver
-                      ? "border-b border-gray-200 hover:bg-pink-50/50 bg-pink-50/20 transition-colors"
+                      ? "border-b border-gray-200 hover:bg-green-50/50 bg-green-50/20 transition-colors"
                       : "border-b border-gray-200 hover:bg-gray-50/50 transition-colors";
 
                     return (
@@ -474,7 +469,7 @@ export default function MyRequestsPage() {
                           <div className="flex items-center space-x-2">
                             <p className="font-semibold text-gray-900">{request.patient?.name || 'N/A'}</p>
                             {isCompletedAndHandedOver && (
-                              <span className="text-xs text-pink-600 bg-pink-100 px-2 py-1 rounded-full font-medium" title="Completed and handed over - no longer active">
+                              <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded-full font-medium" title="Completed and handed over - no longer active">
                                 ✓
                               </span>
                             )}

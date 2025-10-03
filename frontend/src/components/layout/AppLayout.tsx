@@ -18,6 +18,7 @@ import {
   User,
   RotateCcw,
   Package,
+  Send,
   Search,
   Plus
 } from 'lucide-react';
@@ -54,13 +55,16 @@ const breadcrumbMap: Record<string, string> = {
   '/requests/search': 'Search Requests',
 //   '/individual-requests': 'Request Case Notes',
   '/batch-requests': 'Batch Case Notes',
-  '/verify-case-notes': 'Verify Case Notes',
+  '/verify-case-notes': 'Acknowledge Case Notes',
+  '/verify-on-behalf': 'Acknowledge On Behalf',
+  '/request-filing': 'Request Filing',
   '/return-case-notes': 'Return Case Notes',
   '/mrs-case-note-requests': 'MR Staff Case Note Requests',
   '/mrs-returned-case-notes': 'Returned Case Notes',
   '/case-note-timeline': 'Case Note Timeline',
   '/case-note-tracking': 'Case Note Tracking',
   '/open-new-case-note': 'Open New Case Note',
+  '/mr-filing-request': 'Filing Request',
   '/admin/patients': 'Patient Management',
   '/admin/doctors': 'Doctor Management',
   '/users': 'User Management',
@@ -154,7 +158,7 @@ export default function AppLayout() {
     },
 
     {
-      name: 'MR Staff Case Note Requests',
+      name: 'Case Note Requests',
       href: '/mrs-case-note-requests',
       icon: FileText,
       roles: ['MR_STAFF']
@@ -184,6 +188,12 @@ export default function AppLayout() {
       roles: ['MR_STAFF']
     },
     {
+      name: 'Filing Request',
+      href: '/mr-filing-request',
+      icon: Package,
+      roles: ['MR_STAFF']
+    },
+    {
       name: 'My Case Notes',
       href: '/my-requests',
       icon: FileText,
@@ -202,9 +212,21 @@ export default function AppLayout() {
       roles: ['CA']
     },
     {
-      name: 'Verify Case Notes',
+      name: 'Acknowledge  Received Case Notes',
       href: '/verify-case-notes',
       icon: CheckSquare,
+      roles: ['CA']
+    },
+    {
+      name: 'Acknowledge On Behalf',
+      href: '/verify-on-behalf',
+      icon: Users,
+      roles: ['CA']
+    },
+    {
+      name: 'Request Filing',
+      href: '/request-filing',
+      icon: Package,
       roles: ['CA']
     },
     {
@@ -213,6 +235,13 @@ export default function AppLayout() {
       icon: RotateCcw,
       roles: ['CA'],
       badge: dashboardStats?.rejected_returns_count > 0 ? dashboardStats.rejected_returns_count : undefined
+    },
+    {
+      name: 'Send Out Case Notes',
+      href: '/send-out-case-notes',
+      icon: Send,
+      roles: ['CA'],
+      badge: dashboardStats?.unAcknowledge_sendouts_count > 0 ? dashboardStats.unAcknowledge_sendouts_count : undefined
     },
     {
       name: 'Handover Requests',
@@ -376,6 +405,21 @@ export default function AppLayout() {
               });
             }
 
+            // Add dynamic badge for Send Out Case Notes based on unAcknowledge sendouts count
+            const unAcknowledgeSendoutsCount = dashboardStats?.unAcknowledge_sendouts_count || 0;
+            const showSendOutBadge = item.href === '/send-out-case-notes' && hasRole('CA') && unAcknowledgeSendoutsCount > 0;
+
+            // Debug logging for send-out badge
+            if (item.href === '/send-out-case-notes' && hasRole('CA')) {
+              console.log('🔍 Send Out Case Notes badge debug:', {
+                dashboardStats: dashboardStats,
+                unAcknowledge_sendouts_count: dashboardStats?.unAcknowledge_sendouts_count,
+                unAcknowledgeSendoutsCount: unAcknowledgeSendoutsCount,
+                showSendOutBadge: showSendOutBadge,
+                hasRole_CA: hasRole('CA')
+              });
+            }
+
             return (
               <Link
                 key={item.name}
@@ -436,8 +480,21 @@ export default function AppLayout() {
                   </div>
                 )}
 
+                {/* Notification badge for Send Out Case Notes */}
+                {showSendOutBadge && (
+                  <div className="flex items-center space-x-2">
+                    <div className="relative">
+                      <div className="h-2 w-2 bg-blue-500 rounded-full animate-pulse"></div>
+                      <div className="absolute -inset-1 h-4 w-4 bg-blue-500 rounded-full opacity-30 animate-ping"></div>
+                    </div>
+                    <Badge variant="destructive" className="ml-1 text-xs bg-blue-500 text-white">
+                      {unAcknowledgeSendoutsCount}
+                    </Badge>
+                  </div>
+                )}
+
                 {/* Regular badge for other items */}
-                {item.badge && Number(item.badge) > 0 && !showVerificationBadge && !showHandoverBadge && !showRejectedReturnsBadge && (
+                {item.badge && Number(item.badge) > 0 && !showVerificationBadge && !showHandoverBadge && !showRejectedReturnsBadge && !showSendOutBadge && (
                   <Badge variant="secondary" className="ml-2 text-xs">
                     {item.badge}
                   </Badge>

@@ -15,12 +15,16 @@ import AdminCaseNoteSearchPage from '@/pages/AdminCaseNoteSearchPage';
 import { BatchRequestsPage } from '@/pages/BatchRequestsPage';
 import IndividualRequestsPage from '@/pages/IndividualRequestsPage';
 import VerifyCaseNotesPage from '@/pages/VerifyCaseNotesPage';
+import VerifyOnBehalfPage from '@/pages/VerifyOnBehalfPage';
+import RequestFilingPage from '@/pages/RequestFilingPage';
 import ReturnCaseNotesPage from '@/pages/ReturnCaseNotesPage';
+import SendOutCaseNotesPage from '@/pages/SendOutCaseNotesPage';
 import MRStaffCaseNoteRequestsPage from '@/pages/MRStaffCaseNoteRequestsPage';
 import MRStaffReturnedCaseNotesPage from '@/pages/MRStaffReturnedCaseNotesPage';
 import CaseNoteTimelinePage from '@/pages/CaseNoteTimelinePage';
 import CaseNoteTrackingPage from '@/pages/CaseNoteTrackingPage';
 import OpenNewCaseNotePage from '@/pages/OpenNewCaseNotePage';
+import MRFilingRequestPage from '@/pages/MRFilingRequestPage';
 import HandoverRequestsPage from '@/pages/HandoverRequestsPage';
 import DoctorManagementPage from '@/pages/DoctorManagementPage';
 import UserManagementPage from '@/pages/UserManagementPage';
@@ -94,12 +98,16 @@ function AppContent() {
           <Route path="individual-requests" element={<IndividualRequestsPage />} />
           <Route path="individual-requests/:id" element={<IndividualRequestsPage />} />
           <Route path="verify-case-notes" element={<VerifyCaseNotesPage />} />
+          <Route path="verify-on-behalf" element={<VerifyOnBehalfPage />} />
+          <Route path="request-filing" element={<RequestFilingPage />} />
           <Route path="return-case-notes" element={<ReturnCaseNotesPage />} />
+          <Route path="send-out-case-notes" element={<SendOutCaseNotesPage />} />
           <Route path="mrs-case-note-requests" element={<MRStaffCaseNoteRequestsPage />} />
           <Route path="mrs-returned-case-notes" element={<MRStaffReturnedCaseNotesPage />} />
           <Route path="case-note-timeline" element={<CaseNoteTimelinePage />} />
           <Route path="case-note-tracking" element={<CaseNoteTrackingPage />} />
           <Route path="open-new-case-note" element={<OpenNewCaseNotePage />} />
+          <Route path="mr-filing-request" element={<MRFilingRequestPage />} />
           <Route path="handover-requests" element={<HandoverRequestsPage />} />
           <Route index element={<Navigate to="/dashboard" replace />} />
         </Route>

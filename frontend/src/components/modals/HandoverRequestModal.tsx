@@ -170,7 +170,7 @@ export function HandoverRequestModal({
                   {patient.current_holder?.name || 'Unknown'}
                 </span>
               </div>
-              
+
             </div>
           </div>
 
@@ -213,8 +213,8 @@ export function HandoverRequestModal({
                         </FormControl>
                         <SelectContent>
                           {departments.map((dept) => (
-                            <SelectItem key={dept.value} value={dept.value.toString()}>
-                              {dept.label}
+                            <SelectItem key={dept.id} value={dept.id.toString()}>
+                              {dept.name} ({dept.code})
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -238,8 +238,8 @@ export function HandoverRequestModal({
                         </FormControl>
                         <SelectContent>
                           {locations.map((loc) => (
-                            <SelectItem key={loc.value} value={loc.value.toString()}>
-                              {loc.label}
+                            <SelectItem key={loc.id} value={loc.id.toString()}>
+                              {loc.name} ({loc.type})
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -264,8 +264,8 @@ export function HandoverRequestModal({
                       </FormControl>
                       <SelectContent>
                         {doctors.map((doc) => (
-                          <SelectItem key={doc.value} value={doc.value.toString()}>
-                            {doc.label}
+                          <SelectItem key={doc.id} value={doc.id.toString()}>
+                            {doc.name}
                           </SelectItem>
                         ))}
                       </SelectContent>

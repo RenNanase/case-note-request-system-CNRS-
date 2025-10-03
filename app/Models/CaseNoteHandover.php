@@ -17,7 +17,7 @@ class CaseNoteHandover extends Model
 
     // Handover status constants
     const STATUS_PENDING = 'pending';
-    const STATUS_ACKNOWLEDGED = 'acknowledged';
+    const STATUS_Acknowledge = 'Acknowledge';
     const STATUS_COMPLETED = 'completed';
 
     protected $fillable = [
@@ -30,15 +30,15 @@ class CaseNoteHandover extends Model
         'handover_reason',
         'additional_notes',
         'status',
-        'acknowledged_at',
-        'acknowledged_by_user_id',
+        'Acknowledge_at',
+        'Acknowledge_by_user_id',
         'acknowledgment_notes',
         'verified_at',
         'receipt_verification_notes',
     ];
 
     protected $casts = [
-        'acknowledged_at' => 'datetime',
+        'Acknowledge_at' => 'datetime',
         'completed_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
@@ -51,7 +51,7 @@ class CaseNoteHandover extends Model
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['status', 'handover_reason', 'acknowledged_at', 'acknowledgment_notes'])
+            ->logOnly(['status', 'handover_reason', 'Acknowledge_at', 'acknowledgment_notes'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs();
     }
@@ -89,9 +89,9 @@ class CaseNoteHandover extends Model
         return $this->belongsTo(Doctor::class, 'handover_doctor_id');
     }
 
-    public function acknowledgedBy(): BelongsTo
+    public function AcknowledgeBy(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'acknowledged_by_user_id');
+        return $this->belongsTo(User::class, 'Acknowledge_by_user_id');
     }
 
     /**
@@ -102,9 +102,9 @@ class CaseNoteHandover extends Model
         return $query->where('status', self::STATUS_PENDING);
     }
 
-    public function scopeAcknowledged(Builder $query): Builder
+    public function scopeAcknowledge(Builder $query): Builder
     {
-        return $query->where('status', self::STATUS_ACKNOWLEDGED);
+        return $query->where('status', self::STATUS_Acknowledge);
     }
 
     public function scopeCompleted(Builder $query): Builder
@@ -125,31 +125,31 @@ class CaseNoteHandover extends Model
     /**
      * Helper methods
      */
-    public function canBeAcknowledged(): bool
+    public function canBeAcknowledge(): bool
     {
         return $this->status === self::STATUS_PENDING;
     }
 
     public function canBeCompleted(): bool
     {
-        return $this->status === self::STATUS_ACKNOWLEDGED;
+        return $this->status === self::STATUS_Acknowledge;
     }
 
     public function acknowledge(User $user, ?string $notes = null): bool
     {
-        if (!$this->canBeAcknowledged()) {
+        if (!$this->canBeAcknowledge()) {
             return false;
         }
 
         $this->update([
-            'status' => self::STATUS_ACKNOWLEDGED,
-            'acknowledged_at' => now(),
-            'acknowledged_by_user_id' => $user->id,
+            'status' => self::STATUS_Acknowledge,
+            'Acknowledge_at' => now(),
+            'Acknowledge_by_user_id' => $user->id,
             'acknowledgment_notes' => $notes,
         ]);
 
         // Log the acknowledgment
-        $this->logActivity('acknowledged', $user, $notes);
+        $this->logActivity('Acknowledge', $user, $notes);
 
         return true;
     }
@@ -191,7 +191,7 @@ class CaseNoteHandover extends Model
     {
         return [
             self::STATUS_PENDING => 'Pending',
-            self::STATUS_ACKNOWLEDGED => 'Acknowledged',
+            self::STATUS_Acknowledge => 'Acknowledge',
             self::STATUS_COMPLETED => 'Completed',
         ];
     }

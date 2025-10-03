@@ -193,7 +193,7 @@ const HandoverCaseNotesPage: React.FC = () => {
     caseNote.status === 'approved' &&
     caseNote.is_received === true &&
     caseNote.handover_status !== 'pending_acknowledgement' &&
-    caseNote.handover_status !== 'acknowledged'
+    caseNote.handover_status !== 'Acknowledge'
   );
 
   // Handle case note selection
@@ -255,7 +255,7 @@ const HandoverCaseNotesPage: React.FC = () => {
         toast({
           title: 'Handover Successful',
           description: `Case note successfully handed over to ${recipientName}`,
-          variant: 'default',
+          variant: 'success',
         });
 
         // Reset selection and reload case notes
@@ -375,11 +375,10 @@ const HandoverCaseNotesPage: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Handover Case Notes</h1>
-          <p className="text-gray-600 mt-1">
+          <p className="text-gray-600 mt-2">
             Transfer case notes to other Clinic Assistants
           </p>
         </div>
-
       </div>
 
 
@@ -638,7 +637,7 @@ const HandoverCaseNotesPage: React.FC = () => {
             <p>This section will show the status of all case notes you've handed over.</p>
             <p className="text-sm mt-2">
               • Pending Acknowledgement = Waiting for receiving CA to acknowledge<br/>
-              • Acknowledged = Receiving CA confirmed they received it<br/>
+              • Acknowledge = Receiving CA confirmed they received it<br/>
               • Overdue = Receiving CA did not acknowledge within 6 hours
             </p>
           </div>

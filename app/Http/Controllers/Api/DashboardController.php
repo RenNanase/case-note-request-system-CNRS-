@@ -62,11 +62,11 @@ class DashboardController extends Controller
 
             // Clear any existing cache for this user to ensure fresh data
             Cache::forget($cacheKey);
-            
+
             // Clear all dashboard-related cache keys for this user
             Cache::forget("dashboard_stats_{$user->id}_CA");
             Cache::forget("dashboard_stats_{$user->id}");
-            
+
             // Temporarily disable caching to debug verification badge issue
             // Cache::put($cacheKey, $stats, 30);
 
@@ -274,6 +274,12 @@ class DashboardController extends Controller
             ->where('is_received', true)
             ->count();
 
+        // Get unAcknowledge send-outs count - send-outs received by this CA that haven't been Acknowledge yet
+        $unAcknowledgeSendoutsCount = DB::table('send_out_case_notes')
+            ->where('sent_to_user_id', $user->id)
+            ->where('status', \App\Models\SendOutCaseNote::STATUS_PENDING)
+            ->count();
+
         // Debug logging for rejected returns - check all possible rejected returns for this user
         $debugAllRejectedReturns = DB::table('requests')
             ->where('is_rejected_return', true)
@@ -330,6 +336,9 @@ class DashboardController extends Controller
             // Rejected returns count
             'rejected_returns_count' => $rejectedReturnsCount,
 
+            // UnAcknowledge send-outs count
+            'unAcknowledge_sendouts_count' => $unAcknowledgeSendoutsCount,
+
             // Legacy compatibility
             'total' => $stats->total_requests ?? 0,
             'pending' => $stats->pending_requests ?? 0,
@@ -364,6 +373,24 @@ class DashboardController extends Controller
             ])
             ->first();
 
+        // Count case notes that have not been returned to MR
+        $notReturnedCount = CaseNoteRequest::where(function($query) {
+            $query->where('status', CaseNoteRequest::STATUS_APPROVED)
+                  ->orWhere('status', CaseNoteRequest::STATUS_IN_PROGRESS);
+        })
+        ->where(function($query) {
+            // Case notes that are not returned (either is_returned = false or no return event)
+            $query->where('is_returned', false)
+                  ->orWhereNull('is_returned');
+        })
+        ->whereDoesntHave('events', function($q) {
+            $q->where('type', 'returned');
+        })
+        ->count();
+
+        // Count rejected case notes
+        $rejectedCount = CaseNoteRequest::where('status', CaseNoteRequest::STATUS_REJECTED)->count();
+
         return [
             'total' => $stats->total ?? 0,
             'pending' => $stats->pending ?? 0,
@@ -377,6 +404,8 @@ class DashboardController extends Controller
             'pending_review' => $stats->pending ?? 0,
             'in_progress_count' => $stats->in_progress ?? 0,
             'completed_count' => $stats->completed ?? 0,
+            'not_returned_count' => $notReturnedCount,
+            'rejected_count' => $rejectedCount,
         ];
     }
 

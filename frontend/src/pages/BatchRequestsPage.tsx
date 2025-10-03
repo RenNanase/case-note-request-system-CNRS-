@@ -96,7 +96,7 @@ export const BatchRequestsPage: React.FC = () => {
       const response = await requestsApi.getBatchRequests();
 
       if (response && response.success) {
-        const requests = response.batch_requests || [];
+        const requests = (response as any).batch_requests || [];
         setBatchRequests(requests);
 
         // Minimize all cards by default
@@ -259,7 +259,7 @@ export const BatchRequestsPage: React.FC = () => {
             toast({
               title: 'Success',
               description: 'Batch request created successfully',
-              variant: 'default',
+              variant: 'success',
             });
           }}
           onCancel={() => setShowCreateForm(false)}
@@ -269,9 +269,15 @@ export const BatchRequestsPage: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto py-6">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Case Note Requests</h1>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Case Note Requests</h1>
+          <p className="text-gray-600 mt-2">
+            Create and manage batch case note requests
+          </p>
+        </div>
         {hasRole('CA') && (
           <Button onClick={() => setShowCreateForm(true)}>
             <Plus className="h-4 w-4 mr-2" />
@@ -282,9 +288,11 @@ export const BatchRequestsPage: React.FC = () => {
 
       {/* Error Display */}
       {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-red-800">{error}</p>
-        </div>
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="p-4">
+            <p className="text-red-800">{error}</p>
+          </CardContent>
+        </Card>
       )}
 
 

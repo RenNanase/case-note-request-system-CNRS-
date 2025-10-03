@@ -469,7 +469,7 @@ const HandoverRequestsPage: React.FC = () => {
                           variant="outline"
                           size="sm"
                           onClick={() => handleRespondToRequest(request)}
-                          className="text-green-600 border-green-600 hover:bg-green-50"
+                          className="bg-green-600 hover:bg-green-700 text-white border-green-600"
                         >
                           <CheckCircle className="h-4 w-4 mr-1" />
                           Approve

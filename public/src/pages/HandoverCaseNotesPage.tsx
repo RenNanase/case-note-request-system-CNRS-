@@ -193,7 +193,7 @@ const HandoverCaseNotesPage: React.FC = () => {
     caseNote.status === 'approved' &&
     caseNote.is_received === true &&
     caseNote.handover_status !== 'pending_acknowledgement' &&
-    caseNote.handover_status !== 'acknowledged'
+    caseNote.handover_status !== 'Acknowledge'
   );
 
   // Handle case note selection
@@ -638,7 +638,7 @@ const HandoverCaseNotesPage: React.FC = () => {
             <p>This section will show the status of all case notes you've handed over.</p>
             <p className="text-sm mt-2">
               • Pending Acknowledgement = Waiting for receiving CA to acknowledge<br/>
-              • Acknowledged = Receiving CA confirmed they received it<br/>
+              • Acknowledge = Receiving CA confirmed they received it<br/>
               • Overdue = Receiving CA did not acknowledge within 6 hours
             </p>
           </div>

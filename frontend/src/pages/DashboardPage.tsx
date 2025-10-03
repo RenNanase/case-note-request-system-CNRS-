@@ -11,13 +11,15 @@ import {
   ArrowRightLeft,
   Shield,
   XCircle,
-  FolderOpen
+  FolderOpen,
+  Package
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { DashboardLoadingProgress } from '@/components/DashboardLoadingProgress';
+
 
 import { useAuth } from '@/contexts/AuthContext';
 import { requestsApi } from '@/api/requests';
@@ -64,6 +66,9 @@ function CADashboard({ user, stats, loading, loadingProgress, executionTime, cac
         executionTime={executionTime}
         cached={cached}
       />
+
+
+
 
       {/* Banner notification for pending verifications */}
       {stats && stats.pending_verifications > 0 && (
@@ -118,6 +123,32 @@ function CADashboard({ user, stats, loading, loadingProgress, executionTime, cac
               <Link to="/return-case-notes">
                 <Button variant="outline" size="sm" className="border-red-300 text-red-700 hover:bg-red-100">
                   Re-return Now
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Banner notification for unAcknowledge send-outs */}
+      {stats && stats.unAcknowledge_sendouts_count > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+          <div className="flex items-center space-x-3">
+            <div className="flex-shrink-0">
+              <Package className="h-6 w-6 text-blue-600" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-sm font-medium text-blue-800">
+                You have received send-out case notes that need acknowledgement
+              </h3>
+              <p className="text-sm text-blue-700 mt-1">
+                {stats.unAcknowledge_sendouts_count} send-out case note{stats.unAcknowledge_sendouts_count > 1 ? 's' : ''} {stats.unAcknowledge_sendouts_count === 1 ? 'has' : 'have'} been sent to you and {stats.unAcknowledge_sendouts_count === 1 ? 'needs' : 'need'} to be Acknowledge.
+              </p>
+            </div>
+            <div className="flex-shrink-0">
+              <Link to="/send-out-case-notes">
+                <Button variant="outline" size="sm" className="border-blue-300 text-blue-700 hover:bg-blue-100">
+                  Acknowledge Now
                 </Button>
               </Link>
             </div>
@@ -271,15 +302,15 @@ function CADashboard({ user, stats, loading, loadingProgress, executionTime, cac
 
           {/* Active Case Notes Card */}
           <Link to="/return-case-notes" className="group">
-            <Card className="cursor-pointer h-28 bg-white border shadow-sm hover:shadow-md hover:border-pink-300 transition-all duration-200 group-hover:scale-105">
+            <Card className="cursor-pointer h-28 bg-white border shadow-sm hover:shadow-md hover:border-green-300 transition-all duration-200 group-hover:scale-105">
               <CardContent className="p-6 h-full">
                 <div className="flex items-center justify-between h-full">
                   <div className="space-y-1">
-                    <p className="text-sm font-medium text-gray-600 group-hover:text-pink-600 transition-colors">Active Cases</p>
+                    <p className="text-sm font-medium text-gray-600 group-hover:text-green-600 transition-colors">Active Cases</p>
                     <p className="text-2xl font-bold text-gray-900">{stats.active_case_notes || 0}</p>
                   </div>
-                  <div className="p-3 bg-pink-50 rounded-lg group-hover:bg-pink-100 transition-colors">
-                    <FolderOpen className="h-6 w-6 text-pink-600" />
+                  <div className="p-3 bg-green-50 rounded-lg group-hover:bg-green-100 transition-colors">
+                    <FolderOpen className="h-6 w-6 text-green-600" />
                   </div>
                 </div>
               </CardContent>
@@ -319,7 +350,7 @@ function MRStaffDashboard({ user, stats, recentRequests, loading }: any) {
           ))}
         </div>
       ) : stats ? (
-        <div className="grid grid-cols-4 gap-4 overflow-x-auto hide-scrollbar animate-in fade-in duration-300">
+        <div className="grid grid-cols-5 gap-4 overflow-x-auto hide-scrollbar animate-in fade-in duration-300">
           <Card className="h-28 bg-white border shadow-sm hover:shadow-md transition-all duration-200 hover:scale-105">
             <CardContent className="p-6 h-full">
               <div className="flex items-center justify-between h-full">
@@ -348,15 +379,15 @@ function MRStaffDashboard({ user, stats, recentRequests, loading }: any) {
             </CardContent>
           </Card>
 
-          <Card className="h-28 bg-white border shadow-sm hover:shadow-md hover:border-purple-300 transition-all duration-200 hover:scale-105">
+          <Card className="h-28 bg-white border shadow-sm hover:shadow-md hover:border-red-300 transition-all duration-200 hover:scale-105">
             <CardContent className="p-6 h-full">
               <div className="flex items-center justify-between h-full">
                 <div className="space-y-1">
-                  <p className="text-sm font-medium text-gray-600">Active</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.approved + stats.in_progress}</p>
+                  <p className="text-sm font-medium text-gray-600">Not Returned to MR</p>
+                  <p className="text-2xl font-bold text-red-600">{stats.not_returned_count || 0}</p>
                 </div>
-                <div className="p-3 bg-purple-50 rounded-lg">
-                  <Activity className="h-6 w-6 text-purple-600" />
+                <div className="p-3 bg-red-50 rounded-lg">
+                  <AlertTriangle className="h-6 w-6 text-red-600" />
                 </div>
               </div>
             </CardContent>
@@ -375,11 +406,25 @@ function MRStaffDashboard({ user, stats, recentRequests, loading }: any) {
               </div>
             </CardContent>
           </Card>
+
+          <Card className="h-28 bg-white border shadow-sm hover:shadow-md hover:border-orange-300 transition-all duration-200 hover:scale-105">
+            <CardContent className="p-6 h-full">
+              <div className="flex items-center justify-between h-full">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-gray-600">Rejected</p>
+                  <p className="text-2xl font-bold text-orange-600">{stats.rejected_count || 0}</p>
+                </div>
+                <div className="p-3 bg-orange-50 rounded-lg">
+                  <XCircle className="h-6 w-6 text-orange-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       ) : null}
 
-      <div className="space-y-6">
-        {/* Overdue Requests Alert */}
+    <div className="space-y-6">
+        {/* Overdue Requests Alert
         {stats && stats.overdue > 0 && (
           <Card className="border-red-200 bg-red-50">
             <CardHeader className="pb-3">
@@ -397,7 +442,7 @@ function MRStaffDashboard({ user, stats, recentRequests, loading }: any) {
               </Button>
             </CardContent>
           </Card>
-        )}
+        )} */}
 
         {/* MR Staff Recent Requests */}
         <div className="grid grid-cols-1 gap-6">
@@ -591,13 +636,13 @@ export default function DashboardPage() {
           console.log('Dashboard stats received at:', new Date(timestamp).toISOString(), dashboardStats);
           console.log('Pending handover verifications:', dashboardStats.pending_handover_verifications);
           console.log('Last update was:', lastStatsUpdate ? new Date(lastStatsUpdate).toISOString() : 'never');
-          
+
           // Ensure pending_handover_verifications is properly handled
           if (dashboardStats.pending_handover_verifications === undefined || dashboardStats.pending_handover_verifications === null) {
             console.warn('pending_handover_verifications is undefined/null, setting to 0');
             dashboardStats.pending_handover_verifications = 0;
           }
-          
+
           // Set stats with timestamp tracking
           setStats(dashboardStats);
           setLastStatsUpdate(timestamp);

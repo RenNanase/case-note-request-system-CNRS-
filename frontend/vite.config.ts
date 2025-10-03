@@ -4,6 +4,7 @@ import path from 'path'
 
 
 export default defineConfig({
+    base: '/CNRS/', // Add base path for network deployment
     plugins: [react()],
     resolve: {
         alias: {

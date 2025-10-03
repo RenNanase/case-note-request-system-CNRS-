@@ -44,6 +44,8 @@ class Request extends Model
         'needed_date',
         'approved_at',
         'approved_by_user_id',
+        'approved_on_behalf_by_user_id',
+        'approved_on_behalf_of_user_id',
         'approval_remarks',
         'completed_at',
         'completed_by_user_id',
@@ -56,6 +58,7 @@ class Request extends Model
         'received_at',
         'received_by_user_id',
         'reception_notes',
+        'verified_on_behalf_by_user_id',
         // Rejection fields
         'rejection_reason',
         'rejected_at',
@@ -66,6 +69,9 @@ class Request extends Model
         'returned_by_user_id',
         'return_notes',
         'is_rejected_return',
+        // Send out fields
+        'is_sent_out',
+        'send_out_id',
     ];
 
     protected $casts = [
@@ -74,6 +80,7 @@ class Request extends Model
         'completed_at' => 'datetime',
         'metadata' => 'array',
         'created_at' => 'datetime',
+        'is_sent_out' => 'boolean',
         'updated_at' => 'datetime',
         'deleted_at' => 'datetime',
         'received_at' => 'datetime',
@@ -100,11 +107,17 @@ class Request extends Model
                 $doctorName = $doctor ? $doctor->name : null;
             }
 
+            // Create a descriptive reason that includes doctor name if available
+            $reason = 'Case note request created';
+            if ($doctorName) {
+                $reason = "Case note request created for {$doctorName}";
+            }
+
             $request->events()->create([
                 'type' => 'created',
                 'actor_user_id' => $request->requested_by_user_id,
                 'occurred_at' => $request->created_at,
-                'reason' => 'Case note request created',
+                'reason' => $reason,
                 'metadata' => [
                     'request_number' => $request->request_number,
                     'purpose' => $request->purpose,
@@ -192,6 +205,21 @@ class Request extends Model
         return $this->belongsTo(User::class, 'received_by_user_id');
     }
 
+    public function verifiedOnBehalfBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'verified_on_behalf_by_user_id');
+    }
+
+    public function approvedOnBehalfBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_on_behalf_by_user_id');
+    }
+
+    public function approvedOnBehalfOf(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_on_behalf_of_user_id');
+    }
+
     public function rejectedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'rejected_by_user_id');
@@ -202,6 +230,11 @@ class Request extends Model
         return $this->belongsTo(User::class, 'returned_by_user_id');
     }
 
+    public function sendOutCaseNote(): BelongsTo
+    {
+        return $this->belongsTo(SendOutCaseNote::class, 'send_out_id');
+    }
+
     public function handoverRequests(): HasMany
     {
         return $this->hasMany(HandoverRequest::class, 'case_note_id');
@@ -210,6 +243,22 @@ class Request extends Model
     public function notifications(): HasMany
     {
         return $this->hasMany(Notification::class, 'related_request_id');
+    }
+
+    /**
+     * Check if this case note is included in any filing request
+     */
+    public function isInFilingRequest(): bool
+    {
+        return FilingRequest::whereJsonContains('case_note_ids', $this->id)->exists();
+    }
+
+    /**
+     * Get filing requests that include this case note
+     */
+    public function getFilingRequests()
+    {
+        return FilingRequest::whereJsonContains('case_note_ids', $this->id)->get();
     }
 
     /**
@@ -344,6 +393,45 @@ class Request extends Model
         return true;
     }
 
+    public function approveOnBehalf(User $approvingUser, int $onBehalfOfUserId, ?string $remarks = null): bool
+    {
+        if (!$this->can_be_approved) {
+            return false;
+        }
+
+        $onBehalfOfUser = User::find($onBehalfOfUserId);
+        if (!$onBehalfOfUser) {
+            return false;
+        }
+
+        $this->update([
+            'status' => self::STATUS_APPROVED,
+            'approved_at' => now(),
+            'approved_by_user_id' => $onBehalfOfUserId, // The original requester
+            'approved_on_behalf_by_user_id' => $approvingUser->id, // Who actually approved
+            'approved_on_behalf_of_user_id' => $onBehalfOfUserId, // For whom it was approved
+            'approval_remarks' => $remarks,
+        ]);
+
+        $this->events()->create([
+            'type' => 'approved',
+            'actor_user_id' => $approvingUser->id,
+            'reason' => "Approved on behalf of {$onBehalfOfUser->name}. " . ($remarks ?? ''),
+            'occurred_at' => now(),
+            'metadata' => [
+                'approved_by_name' => $approvingUser->name,
+                'on_behalf_of_user_id' => $onBehalfOfUserId,
+                'on_behalf_of_user_name' => $onBehalfOfUser->name,
+                'approval_remarks' => $remarks,
+                'old_status' => 'pending',
+                'new_status' => 'approved',
+                'is_on_behalf_approval' => true,
+            ]
+        ]);
+
+        return true;
+    }
+
     public function reject(User $user, string $reason): bool
     {
         if (!$this->can_be_approved) {
@@ -457,10 +545,69 @@ class Request extends Model
     }
 
     /**
+     * Mark case note as received on behalf of another user
+     */
+    public function markAsReceivedOnBehalf(int $verifiedByUserId, int $onBehalfOfUserId, ?string $notes = null): void
+    {
+        $this->update([
+            'is_received' => true,
+            'received_at' => now(),
+            'received_by_user_id' => $onBehalfOfUserId, // The original requester
+            'verified_on_behalf_by_user_id' => $verifiedByUserId, // Who actually verified
+            'reception_notes' => $notes
+        ]);
+
+        // Create timeline event
+        $verifyingUser = User::find($verifiedByUserId);
+        $onBehalfOfUser = User::find($onBehalfOfUserId);
+
+        $this->events()->create([
+            'type' => RequestEvent::TYPE_VERIFIED_RECEIVED,
+            'actor_user_id' => $verifiedByUserId,
+            'reason' => "Case note verified as received by {$verifyingUser->name} on behalf of {$onBehalfOfUser->name}",
+            'occurred_at' => now(),
+            'metadata' => [
+                'verified_by_user_id' => $verifiedByUserId,
+                'verified_by_user_name' => $verifyingUser->name,
+                'on_behalf_of_user_id' => $onBehalfOfUserId,
+                'on_behalf_of_user_name' => $onBehalfOfUser->name,
+                'received_at' => now()->toDateTimeString(),
+                'reception_notes' => $notes,
+                'is_on_behalf_verification' => true,
+            ]
+        ]);
+    }
+
+    /**
      * Check if case note can be marked as received
      */
     public function canBeReceived(): bool
     {
         return $this->status === self::STATUS_APPROVED && !$this->is_received;
+    }
+
+    /**
+     * Check if the case note can be returned to MR
+     */
+    public function canBeReturned(): bool
+    {
+        // Check if case note is in a returnable state
+        if ($this->status !== self::STATUS_APPROVED ||
+            !$this->is_received ||
+            $this->is_returned ||
+            $this->is_rejected_return) {
+            return false;
+        }
+
+        // Check if case note is currently sent out and not yet Acknowledge
+        $pendingSendOut = \App\Models\SendOutCaseNote::where('status', \App\Models\SendOutCaseNote::STATUS_PENDING)
+            ->whereJsonContains('case_note_ids', $this->id)
+            ->exists();
+
+        if ($pendingSendOut) {
+            return false;
+        }
+
+        return true;
     }
 }

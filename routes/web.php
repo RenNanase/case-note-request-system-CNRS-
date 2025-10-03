@@ -29,13 +29,37 @@ Route::get('/public/login', function () {
     ]);
 });
 
-// Handle all /public/* routes for React routing
-Route::get('/public/{any?}', function ($any = null) {
-    // Skip asset files - let Apache serve them
-    if (str_starts_with($any, 'assets/') || str_contains($any, '.')) {
+// Serve frontend assets directly with correct MIME types
+Route::get('/public/frontend/assets/{file}', function ($file) {
+    $path = public_path("frontend/assets/{$file}");
+
+    if (!file_exists($path)) {
         abort(404);
     }
-    
+
+    $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+    $mimeType = match($extension) {
+        'css' => 'text/css',
+        'js' => 'application/javascript',
+        'svg' => 'image/svg+xml',
+        'png' => 'image/png',
+        'jpg', 'jpeg' => 'image/jpeg',
+        default => 'application/octet-stream'
+    };
+
+    return response()->file($path, [
+        'Content-Type' => $mimeType,
+        'Cache-Control' => 'no-cache, no-store, must-revalidate'
+    ]);
+})->where('file', '.*');
+
+// Handle all /public/* routes for React routing
+Route::get('/public/{any?}', function ($any = null) {
+    // Skip asset files - now handled by the route above
+    if (str_starts_with($any, 'frontend/assets/')) {
+        abort(404);
+    }
+
     return response()->file(public_path('frontend/index.html'), [
         'Cache-Control' => 'no-cache, no-store, must-revalidate',
         'Pragma' => 'no-cache',
@@ -49,7 +73,7 @@ Route::get('/debug', function () {
     $manifestPath = public_path('frontend/.vite/manifest.json');
     $exists = file_exists($frontendPath);
     $manifestExists = file_exists($manifestPath);
-    
+
     $manifest = null;
     if ($manifestExists) {
         $manifest = json_decode(file_get_contents($manifestPath), true);
@@ -94,7 +118,7 @@ Route::get('/{any?}', function ($any = null) {
     }
 
     // Skip asset files completely - let Apache handle them
-    if (str_starts_with($any, 'build/') || 
+    if (str_starts_with($any, 'build/') ||
         str_starts_with($any, 'frontend/') ||
         str_starts_with($any, 'assets.php')) {
         abort(404);

@@ -16,7 +16,6 @@ class Doctor extends Model
 
     protected $fillable = [
         'name',
-        'department_id',
         'is_active',
     ];
 
@@ -33,18 +32,14 @@ class Doctor extends Model
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['name', 'department_id', 'is_active'])
+            ->logOnly(['name', 'is_active'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs();
     }
 
     /**
-     * Relationships
+     * Relationships - Doctors are now independent of departments
      */
-    public function department(): BelongsTo
-    {
-        return $this->belongsTo(Department::class);
-    }
 
     public function requests(): HasMany
     {
@@ -69,10 +64,7 @@ class Doctor extends Model
         return $query->where('is_active', false);
     }
 
-    public function scopeByDepartment(Builder $query, int $departmentId): Builder
-    {
-        return $query->where('department_id', $departmentId);
-    }
+    // Removed scopeByDepartment - doctors are independent of departments
 
     public function scopeSearch(Builder $query, string $search): Builder
     {
@@ -105,8 +97,7 @@ class Doctor extends Model
         return [
             'value' => $this->id,
             'label' => $this->display_name,
-            'department' => $this->department ? $this->department->name : null,
-            'department_code' => $this->department ? $this->department->code : null,
+            // No department dependency - doctors are independent
         ];
     }
 }

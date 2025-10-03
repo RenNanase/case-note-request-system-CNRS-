@@ -201,24 +201,24 @@ export default function PatientSearch({
 
       {/* Selected Patient Display */}
       {selectedPatient && (
-        <Card className="mt-2 border-pink-200 bg-pink-50">
+        <Card className="mt-2 border-green-200 bg-green-50">
           <CardContent className="p-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <Avatar className="h-10 w-10">
-                  <AvatarFallback className="bg-pink-100 text-pink-700">
+                  <AvatarFallback className="bg-green-100 text-green-700">
                     <User className="h-5 w-5" />
                   </AvatarFallback>
                 </Avatar>
                 <div>
                   <div className="flex items-center space-x-2">
-                    <h3 className="font-medium text-pink-900">{selectedPatient.name}</h3>
-                    <CheckCircle2 className="h-4 w-4 text-pink-600" />
+                    <h3 className="font-medium text-green-900">{selectedPatient.name}</h3>
+                    <CheckCircle2 className="h-4 w-4 text-green-600" />
                   </div>
-                    <div className="flex items-center space-x-4 text-sm text-pink-700">
+                    <div className="flex items-center space-x-4 text-sm text-green-700">
                         <span>MRN: {selectedPatient.mrn}</span>
                     </div>
-                    <div className="flex items-center space-x-4 text-sm text-pink-700">
+                    <div className="flex items-center space-x-4 text-sm text-green-700">
                         <span>NRIC/PASSPORT: {selectedPatient.nric}</span>
                     </div>
                   {selectedPatient.has_medical_alerts && (
@@ -235,7 +235,7 @@ export default function PatientSearch({
                 size="sm"
                 onClick={handleClear}
                 disabled={disabled}
-                className="text-pink-600 hover:text-pink-800"
+                className="text-green-600 hover:text-green-800"
               >
                 Change
               </Button>
@@ -285,7 +285,7 @@ export default function PatientSearch({
                         "w-full px-4 py-3 text-left hover:bg-gray-50 focus:bg-gray-50 focus:outline-none transition-colors",
                         focusedIndex === index && "bg-blue-50",
                         patient.has_existing_requests && !patient.is_available && "cursor-not-allowed hover:bg-gray-100",
-                        patient.has_existing_requests && !patient.is_available && "bg-pink-50 border-l-4 border-l-red-300"
+                        patient.has_existing_requests && !patient.is_available && "bg-green-50 border-l-4 border-l-red-300"
                       )}
                     >
                       <div className="flex items-center space-x-3">

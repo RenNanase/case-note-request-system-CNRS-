@@ -142,7 +142,7 @@ export interface CaseNoteRequest {
 
   // Handover fields
   current_pic_user_id?: number | null;
-  handover_status?: 'none' | 'pending' | 'acknowledged' | 'completed' | 'approved_pending_verification' | 'verified' | 'rejected';
+  handover_status?: 'none' | 'pending' | 'Acknowledge' | 'completed' | 'approved_pending_verification' | 'verified' | 'rejected';
   current_pic?: {
     id: number;
     name: string;

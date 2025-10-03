@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -18,7 +18,21 @@ import {
   Edit,
   Trash2,
   Download,
-  Printer
+  Printer,
+  ChevronDown,
+  ChevronUp,
+  ChevronRight,
+  MoreVertical,
+  Copy,
+  ExternalLink,
+  Mail,
+  MessageSquare,
+  Share2,
+  Tag,
+  UserPlus,
+  AlertCircle,
+  Loader2,
+  RefreshCw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -39,17 +53,112 @@ import { requestsApi } from '@/api/requests';
 import { useAuth } from '@/contexts/AuthContext';
 import type { CaseNoteRequest, RequestEvent } from '@/types/requests';
 
-export default function RequestDetailsPage() {
+type UserRole = 'ADMIN' | 'MR_STAFF' | 'CA' | 'DOCTOR';
+
+// Extend the CaseNoteRequest interface to include events and make request_number required
+interface ExtendedCaseNoteRequest extends Omit<CaseNoteRequest, 'events' | 'request_number'> {
+  events?: RequestEvent[];
+  request_number: string;
+}
+
+// Types are now imported from @/types/requests
+
+// Status badge component
+const getStatusBadge = (status: string) => {
+  const statusColors = {
+    'pending': {
+      icon: Clock,
+      className: 'bg-yellow-100 text-yellow-800 border-yellow-200 hover:bg-yellow-100',
+      text: 'PENDING'
+    },
+    'approved': {
+      icon: CheckCircle,
+      className: 'bg-green-100 text-green-800 border-green-200 hover:bg-green-100',
+      text: 'APPROVED'
+    },
+    'in_progress': {
+      icon: Clock,
+      className: 'bg-purple-100 text-purple-800 border-purple-200 hover:bg-purple-100',
+      text: 'IN PROGRESS'
+    },
+    'completed': {
+      icon: CheckCircle,
+      className: 'bg-emerald-100 text-emerald-800 border-emerald-200 hover:bg-emerald-100',
+      text: 'COMPLETED'
+    },
+    'rejected': {
+      icon: XCircle,
+      className: 'bg-red-100 text-red-800 border-red-200 hover:bg-red-100',
+      text: 'REJECTED'
+    },
+    'returned': {
+      icon: AlertTriangle,
+      className: 'bg-orange-100 text-orange-800 border-orange-200 hover:bg-orange-100',
+      text: 'RETURNED'
+    }
+  };
+
+  const config = statusColors[status as keyof typeof statusColors] || statusColors.pending;
+  const Icon = config.icon;
+
+  return (
+    <Badge
+      variant="outline"
+      className={`inline-flex items-center space-x-1.5 px-2.5 py-1 text-xs font-medium ${config.className}`}
+    >
+      <Icon className="h-3 w-3" />
+      <span>{config.text}</span>
+    </Badge>
+  );
+};
+
+const RequestDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const location = useLocation();
-  const { hasPermission, hasRole, user } = useAuth();
-
-  const [request, setRequest] = useState<CaseNoteRequest | null>(null);
+  const location = useLocation() as { state?: { from?: string; message?: string } };
+  const { user, hasRole } = useAuth();
+  const [request, setRequest] = useState<ExtendedCaseNoteRequest | null>(null);
   const [timeline, setTimeline] = useState<RequestEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  // Check if user has permission
+  const hasPermission = (permission: string): boolean => {
+    if (!user) return false;
+    // Add your permission logic here
+    return hasRole('ADMIN') || hasRole('MR_STAFF');
+  };
+  // State for expanded sections
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    patient: true,
+    request: true,
+    timeline: true
+  });
+
+  const canEdit = useCallback((): boolean => {
+    if (!user || !request) return false;
+    return (
+      hasRole('ADMIN') ||
+      (hasRole('CA') && request.status === 'pending' && request.requested_by_user_id === user.id)
+    );
+  }, [user, request, hasRole]);
+
+  const canApproveReject = useCallback(() => {
+    if (!user) return false;
+    return hasRole('ADMIN') || hasRole('MR_STAFF');
+  }, [user, hasRole]);
+
+  const canComplete = useCallback(() => {
+    if (!user || !request) return false;
+    return (
+      hasRole('ADMIN') ||
+      hasRole('MR_STAFF') ||
+      (hasRole('CA') &&
+       (request.status === 'approved' || request.status === 'in_progress') &&
+       request.current_pic_user_id === user.id)
+    );
+  }, [user, request, hasRole]);
 
   // Modal states
   const [showRejectModal, setShowRejectModal] = useState(false);
@@ -61,57 +170,26 @@ export default function RequestDetailsPage() {
     const loadRequest = async () => {
       if (!id) return;
 
-      console.log('🔍 RequestDetailsPage: Loading request with ID:', id);
-      console.log('🔍 RequestDetailsPage: Current user:', user);
-      console.log('🔍 RequestDetailsPage: User ID type:', typeof user?.id);
-      console.log('🔍 RequestDetailsPage: User roles:', user?.roles);
-      console.log('🔍 RequestDetailsPage: User permissions:', user?.permissions);
-
       setLoading(true);
       setError(null);
 
       try {
         const response = await requestsApi.getRequest(parseInt(id));
-        console.log('🔍 RequestDetailsPage: API response:', response);
-
         if (response.success) {
           setRequest(response.request);
-          setTimeline(response.timeline || []);
-          console.log('🔍 RequestDetailsPage: Request loaded successfully:', response.request);
         } else {
           setError('Failed to load request details');
         }
       } catch (error: any) {
-        console.error('🔍 RequestDetailsPage: Load request error:', error);
-        console.error('🔍 RequestDetailsPage: Error response:', error.response);
-        console.error('🔍 RequestDetailsPage: Error status:', error.response?.status);
-        console.error('🔍 RequestDetailsPage: Error data:', error.response?.data);
-
-        // Handle specific error types with role-aware messages
-        if (error.response?.status === 403) {
-          if (hasRole('CA')) {
-            setError('You do not have permission to view this request. You can only view requests that you submitted.');
-          } else if (hasRole('MR_STAFF')) {
-            setError('You do not have permission to view this request. Please contact your administrator if you believe this is an error.');
-          } else if (hasRole('ADMIN')) {
-            setError('You do not have permission to view this request. Please check your administrative privileges.');
-          } else {
-            setError('You do not have permission to view this request.');
-          }
-        } else if (error.response?.status === 404) {
-          setError('Request not found. It may have been deleted or you may not have access to it.');
-        } else if (error.response?.data?.message) {
-          setError(error.response.data.message);
-        } else {
-          setError('Error loading request details. Please try again.');
-        }
+        console.error('Load request error:', error);
+        setError('Error loading request details. Please try again.');
       } finally {
         setLoading(false);
       }
     };
 
     loadRequest();
-  }, [id, user, hasRole]);
+  }, [id]);
 
   // Handle request actions
   const handleApprove = async () => {
@@ -125,7 +203,6 @@ export default function RequestDetailsPage() {
         const updatedResponse = await requestsApi.getRequest(parseInt(id));
         if (updatedResponse.success) {
           setRequest(updatedResponse.request);
-          setTimeline(updatedResponse.timeline || []);
         }
       }
     } catch (error) {
@@ -157,7 +234,7 @@ export default function RequestDetailsPage() {
     setActionLoading('reject');
 
     try {
-      const response = await requestsApi.rejectRequest(parseInt(id), rejectReason.trim());
+      const response = await requestsApi.rejectRequest(parseInt(id), { rejection_reason: rejectReason.trim() });
       if (response.success) {
         // Close modal
         setShowRejectModal(false);
@@ -167,7 +244,6 @@ export default function RequestDetailsPage() {
         const updatedResponse = await requestsApi.getRequest(parseInt(id));
         if (updatedResponse.success) {
           setRequest(updatedResponse.request);
-          setTimeline(updatedResponse.timeline || []);
         }
       }
     } catch (error) {
@@ -188,7 +264,6 @@ export default function RequestDetailsPage() {
         const updatedResponse = await requestsApi.getRequest(parseInt(id));
         if (updatedResponse.success) {
           setRequest(updatedResponse.request);
-          setTimeline(updatedResponse.timeline || []);
         }
       }
     } catch (error) {
@@ -198,50 +273,9 @@ export default function RequestDetailsPage() {
     }
   };
 
-  // Status badge colors
-  const getStatusBadge = (status: string) => {
-    const statusColors = {
-      'pending': { variant: 'secondary' as const, icon: Clock, color: 'text-yellow-600', bgColor: undefined },
-      'approved': { variant: 'default' as const, icon: CheckCircle, color: 'text-white', bgColor: 'bg-green-600 border-green-700' },
-      'in_progress': { variant: 'default' as const, icon: Play, color: 'text-purple-600', bgColor: undefined },
-      'completed': { variant: 'default' as const, icon: CheckCircle2, color: 'text-green-600', bgColor: undefined },
-      'rejected': { variant: 'destructive' as const, icon: XCircle, color: 'text-white', bgColor: 'bg-red-600 border-red-700' }
-    };
-
-    const config = statusColors[status as keyof typeof statusColors] || statusColors.pending;
-    const Icon = config.icon;
-
-    return (
-      <Badge
-        variant={config.variant}
-        className={`flex items-center space-x-1 ${config.bgColor || ''}`}
-      >
-        <Icon className="h-3 w-3" />
-        <span>{status.replace('_', ' ').toUpperCase()}</span>
-      </Badge>
-    );
-  };
-
-  // Priority badge colors
-  const getPriorityBadge = (priority: string) => {
-    const priorityColors = {
-      'urgent': { variant: 'outline' as const, className: 'border-red-300 text-red-700 bg-red-50' },
-      'high': { variant: 'outline' as const, className: 'border-orange-300 text-orange-700 bg-orange-50' },
-      'normal': { variant: 'outline' as const, className: 'border-purple-300 text-purple-700 bg-purple-50' },
-      'low': { variant: 'outline' as const, className: 'border-gray-300 text-gray-700 bg-gray-50' }
-    };
-
-    const config = priorityColors[priority.toLowerCase() as keyof typeof priorityColors] || priorityColors.normal;
-
-    return (
-      <Badge variant={config.variant} className={config.className}>
-        {priority.toUpperCase()}
-      </Badge>
-    );
-  };
-
-  // Format date
+  // Format date with time
   const formatDate = (dateString: string) => {
+    if (!dateString) return '';
     return new Date(dateString).toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric',
@@ -252,8 +286,9 @@ export default function RequestDetailsPage() {
     });
   };
 
-  // Format relative time
+  // Format relative time (e.g., '2 hours ago')
   const formatRelativeTime = (dateString: string) => {
+    if (!dateString) return '';
     const date = new Date(dateString);
     const now = new Date();
     const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
@@ -264,221 +299,427 @@ export default function RequestDetailsPage() {
     const diffInDays = Math.floor(diffInHours / 24);
     if (diffInDays < 7) return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`;
 
-    return formatDate(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
   };
+
+  // Format created at date
+  const formattedDate = request?.created_at
+    ? new Date(request.created_at).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    : 'N/A';
+
+  // Handle print
+  const handlePrint = () => {
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      // Get the current date and time
+      const now = new Date();
+      const formattedDate = now.toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+
+      // Create print content
+      let printContent = `
+        <html>
+          <head>
+            <title>Request #${request?.request_number || 'Details'}</title>
+            <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+            <style>
+              @media print {
+                @page { margin: 1cm; }
+                body { font-family: Arial, sans-serif; }
+                .no-print { display: none; }
+                .print-section { margin-bottom: 1.5rem; }
+                .print-header { margin-bottom: 1.5rem; }
+                .print-title { font-size: 1.5rem; font-weight: bold; margin-bottom: 1rem; }
+                .print-subtitle { font-size: 1.1rem; color: #4b5563; margin-bottom: 1.5rem; }
+                .print-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+                .print-divider { border-top: 1px solid #e5e7eb; margin: 1rem 0; }
+              }
+            </style>
+          </head>
+          <body class="p-6">
+            <div class="print-header">
+              <h1 class="print-title">Case Note Request Details</h1>
+              <div class="print-subtitle">Generated on ${formattedDate}</div>
+              <div class="print-divider"></div>
+            </div>
+
+            <div class="print-grid">
+              <!-- Patient Details -->
+              <div class="print-section">
+                <h2 class="font-semibold text-lg mb-3">Patient Information</h2>
+                <div class="space-y-2">
+                  <div><span class="text-gray-600">Name:</span> ${request?.patient?.name || 'N/A'}</div>
+                  <div><span class="text-gray-600">MRN:</span> ${request?.patient?.mrn || 'N/A'}</div>
+                  <div><span class="text-gray-600">DOB:</span> ${request?.patient?.date_of_birth || 'N/A'}</div>
+                  <div><span class="text-gray-600">Gender:</span> ${request?.patient?.gender || 'N/A'}</div>
+                </div>
+              </div>
+
+              <!-- Request Details -->
+              <div class="print-section">
+                <h2 class="font-semibold text-lg mb-3">Request Information</h2>
+                <div class="space-y-2">
+                  <div><span class="text-gray-600">Request #:</span> ${request?.request_number || 'N/A'}</div>
+                  <div><span class="text-gray-600">Status:</span> ${request?.status ? request.status.replace('_', ' ').toUpperCase() : 'N/A'}</div>
+                  <div><span class="text-gray-600">Created:</span> ${formattedDate}</div>
+                  <div><span class="text-gray-600">Department:</span> ${request?.department?.name || 'N/A'}</div>
+            </div>
+          </body>
+        </html>
+      `;
+
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+
+      // Wait for content to load before printing
+      printWindow.onload = function() {
+        setTimeout(() => {
+          printWindow.print();
+          printWindow.close();
+        }, 500);
+      };
+    } else {
+      // Fallback to default print if popup is blocked
+      window.print();
+    }
+  };
+
+  // Handle export
+  const handleExport = async (format: 'pdf' | 'excel') => {
+    if (!id || !request) return;
+
+    try {
+      setActionLoading(`export-${format}`);
+      const response = await requestsApi.exportRequest(parseInt(id), format);
+
+      if (!response?.data) {
+        throw new Error('No data received');
+      }
+
+      // Create a blob URL for the downloaded file
+      const blob = new Blob([response.data as unknown as BlobPart], {
+        type: 'application/octet-stream'
+      });
+
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `request-${request?.request_number || id}.${format}`;
+      document.body.appendChild(a);
+      a.click();
+
+      // Clean up
+      setTimeout(() => {
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      }, 100);
+
+    } catch (error) {
+      console.error('Export error:', error);
+      // You might want to show a toast notification here
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Toggle section visibility
+  const toggleSection = useCallback((section: string) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  }, []);
 
   if (loading) {
     return (
-      <div className="max-w-6xl mx-auto space-y-6">
-        <div className="flex items-center space-x-4">
-          <Skeleton className="h-10 w-32" />
-          <Skeleton className="h-10 w-48" />
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
-            <Skeleton className="h-64" />
-            <Skeleton className="h-48" />
-          </div>
-          <div className="space-y-6">
-            <Skeleton className="h-48" />
-            <Skeleton className="h-64" />
-          </div>
-        </div>
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Loading Request Details</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <Skeleton className="h-6 w-1/3" />
+              <Skeleton className="h-4 w-1/2" />
+              <Skeleton className="h-4 w-2/3" />
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
-  if (error || !request) {
-    const isPermissionError = error?.includes('permission') || error?.includes('403');
-
+  if (!request) {
     return (
-      <div className="max-w-6xl mx-auto">
-        <div className="text-center py-12">
-          <AlertTriangle className="h-16 w-16 text-red-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            {isPermissionError ? 'Access Denied' : 'Request Not Found'}
-          </h2>
-          <p className="text-gray-600 mb-6 max-w-md mx-auto">
-            {error || 'The request you are looking for does not exist or you do not have permission to view it.'}
-          </p>
-
-          {isPermissionError && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6 max-w-md mx-auto">
-              <p className="text-sm text-yellow-800">
-                {hasRole('CA') ? (
-                  <>
-                    <strong>Note:</strong> As a Clinic Assistant, you can only view requests that you submitted.
-                    If you believe this is your request, please contact your administrator.
-                  </>
-                ) : hasRole('MR_STAFF') ? (
-                  <>
-                    <strong>Note:</strong> As Medical Records Staff, you should be able to view all case note requests.
-                    If you're still getting this error, please contact your administrator.
-                  </>
-                ) : hasRole('ADMIN') ? (
-                  <>
-                    <strong>Note:</strong> As an Administrator, you should have access to all requests.
-                    Please check your permissions or contact the system administrator.
-                  </>
-                ) : (
-                  <>
-                    <strong>Note:</strong> You do not have the necessary permissions to view this request.
-                    Please contact your administrator for access.
-                  </>
-                )}
-              </p>
-            </div>
-          )}
-
-          <div className="flex justify-center space-x-4">
-            <Button onClick={() => navigate('/requests')} variant="outline">
-              Back to Requests
-            </Button>
-            {!isPermissionError && (
-              <Button onClick={() => window.location.reload()}>
-                Try Again
-              </Button>
-            )}
-          </div>
-        </div>
+      <div className="space-y-6">
+        <Alert>
+          <AlertDescription>Request not found or you do not have access.</AlertDescription>
+        </Alert>
+        <Button variant="outline" onClick={() => navigate(-1)}>Back to List</Button>
       </div>
     );
   }
 
   return (
-    <div className="max-w-6xl mx-auto">
-      {/* Header */}
-      <div className="mb-8">
-        {/* Breadcrumb Navigation */}
-        <Breadcrumb
-          items={[
-            { label: 'Requests', href: '/requests' },
-            { label: `Request #${request.request_number}`, current: true }
-          ]}
-          className="mb-4"
-        />
+    <div className="space-y-6">
 
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-4">
-            <Button
-              variant="ghost"
-              onClick={() => navigate('/requests')}
-              className="flex items-center space-x-2"
+
+      {/* Main content */}
+      <div className="grid gap-6">
+        {/* Patient and Request Details */}
+        <div className="grid gap-6 md:grid-cols-2">
+          {/* Patient Details Card */}
+          <Card>
+            <CardHeader
+              className="border-b cursor-pointer flex flex-row items-center justify-between"
+              onClick={() => toggleSection('patient')}
             >
-              <ArrowLeft className="h-4 w-4" />
-              <span>Back to Requests</span>
+              <CardTitle className="text-lg font-semibold flex items-center">
+                <User className="h-5 w-5 mr-2 text-primary" />
+                Patient Details
+              </CardTitle>
+              {expandedSections.patient ?
+                <ChevronUp className="h-5 w-5 text-muted-foreground" /> :
+                <ChevronDown className="h-5 w-5 text-muted-foreground" />
+              }
+            </CardHeader>
+            {expandedSections.patient && (
+              <CardContent className="pt-6 space-y-4">
+                <div className="grid grid-cols-3 gap-4">
+                  <span className="text-sm text-muted-foreground">Name</span>
+                  <span className="text-sm font-medium col-span-2">
+                    {request?.patient?.name || 'N/A'}
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <span className="text-sm text-muted-foreground">MRN</span>
+                  <span className="text-sm font-medium col-span-2">
+                    {request?.patient?.mrn || 'N/A'}
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <span className="text-sm text-muted-foreground">Date of Birth</span>
+                  <span className="text-sm font-medium col-span-2">
+                    {request?.patient?.date_of_birth || 'N/A'}
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <span className="text-sm text-muted-foreground">Gender</span>
+                  <span className="text-sm font-medium col-span-2">
+                    {request?.patient?.gender || 'N/A'}
+                  </span>
+                </div>
+              </CardContent>
+            )}
+          </Card>
+
+          {/* Request Details Card */}
+          <Card>
+            <CardHeader
+              className="border-b cursor-pointer flex flex-row items-center justify-between"
+              onClick={() => toggleSection('request')}
+            >
+              <CardTitle className="text-lg font-semibold flex items-center">
+                <FileText className="h-5 w-5 mr-2 text-primary" />
+                Request Details
+              </CardTitle>
+              {expandedSections.request ?
+                <ChevronUp className="h-5 w-5 text-muted-foreground" /> :
+                <ChevronDown className="h-5 w-5 text-muted-foreground" />
+              }
+            </CardHeader>
+            {expandedSections.request && (
+              <CardContent className="pt-6 space-y-4">
+                <div className="grid grid-cols-3 gap-4">
+                  <span className="text-sm text-muted-foreground">Request #</span>
+                  <span className="text-sm font-medium col-span-2">
+                    {request?.request_number || 'N/A'}
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <span className="text-sm text-muted-foreground">Status</span>
+                  <span className="col-span-2">
+                    {getStatusBadge(request.status)}
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <span className="text-sm text-muted-foreground">Created</span>
+                  <span className="text-sm font-medium col-span-2">
+                    {formattedDate}
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <span className="text-sm text-muted-foreground">Department</span>
+                  <span className="text-sm font-medium col-span-2">
+                    {request.department?.name || 'N/A'}
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <span className="text-sm text-muted-foreground">Doctor</span>
+                  <span className="text-sm font-medium col-span-2">
+                    {request.doctor?.name || 'N/A'}
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <span className="text-sm text-muted-foreground">Location</span>
+                  <span className="text-sm font-medium col-span-2">
+                    {request.location?.name || 'N/A'}
+                  </span>
+                </div>
+                {request.notes && (
+                  <div className="grid grid-cols-3 gap-4">
+                    <span className="text-sm text-muted-foreground">Notes</span>
+                    <span className="text-sm font-medium col-span-2 whitespace-pre-line">
+                      {request.notes}
+                    </span>
+                  </div>
+                )}
+              </CardContent>
+            )}
+          </Card>
+        </div>
+
+        {/* Timeline Card */}
+        <Card>
+          <CardHeader
+            className="border-b cursor-pointer flex flex-row items-center justify-between"
+            onClick={() => toggleSection('timeline')}
+          >
+            <CardTitle className="text-lg font-semibold flex items-center">
+              <History className="h-5 w-5 mr-2 text-primary" />
+              Activity Timeline
+            </CardTitle>
+            {expandedSections.timeline ?
+              <ChevronUp className="h-5 w-5 text-muted-foreground" /> :
+              <ChevronDown className="h-5 w-5 text-muted-foreground" />
+            }
+          </CardHeader>
+          {expandedSections.timeline && (
+            <CardContent className="pt-6">
+              <div className="space-y-8">
+                {request.events?.length > 0 ? (
+                  request.events.map((event, index) => (
+                    <div key={`${event.id}-${index}`} className="flex items-start">
+                      <div className="flex flex-col items-center mr-4">
+                        <div className={`h-3 w-3 rounded-full ${
+                          event.type === 'created' ? 'bg-blue-500' :
+                          event.type === 'status_changed' ? 'bg-purple-500' :
+                          event.type === 'completed' ? 'bg-green-500' :
+                          event.type === 'rejected' ? 'bg-red-500' : 'bg-gray-500'
+                        }`}></div>
+                        {index < request.events.length - 1 && (
+                          <div className="w-0.5 h-10 bg-gray-200 mt-1"></div>
+                        )}
+                      </div>
+                      <div className="flex-1 pb-6">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-medium">
+                            {event.description}
+                          </p>
+                          <span className="text-xs text-muted-foreground">
+                            {formatRelativeTime(event.created_at)}
+                          </span>
+                        </div>
+                        {event.metadata && (
+                          <div className="mt-2 text-sm text-muted-foreground">
+                            {event.metadata.notes && (
+                              <p className="italic">"{event.metadata.notes}"</p>
+                            )}
+                            {event.metadata.reason && (
+                              <p className="text-red-600">Reason: {event.metadata.reason}</p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No activity recorded yet
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          )}
+        </Card>
+
+        {/* Action Buttons */}
+        <div className="flex justify-end space-x-3 pt-4">
+          {request.status === 'pending' && canApproveReject() && (
+            <>
+              <Button
+                variant="default"
+                onClick={handleApprove}
+                disabled={actionLoading === 'approve'}
+              >
+                {actionLoading === 'approve' ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                )}
+                Approve
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleReject}
+                disabled={actionLoading === 'reject'}
+              >
+                {actionLoading === 'reject' ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <XCircle className="h-4 w-4 mr-2" />
+                )}
+                Reject
+              </Button>
+            </>
+          )}
+
+          {(request.status === 'approved' || request.status === 'in_progress') && canComplete() && (
+            <Button
+              onClick={handleComplete}
+              disabled={actionLoading === 'complete'}
+            >
+              {actionLoading === 'complete' ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <CheckCircle2 className="h-4 w-4 mr-2" />
+              )}
+              Mark as Complete
             </Button>
+          )}
 
-            <div className="flex items-center space-x-3">
-              <h1 className="text-3xl font-bold text-gray-900">
-                Request #{request.request_number}
-              </h1>
-              {getStatusBadge(request.status)}
-              {getPriorityBadge(request.priority)}
+          {request.status === 'returned' && canEdit() && (
+            <Button
+              variant="outline"
+              onClick={() => request && navigate(`/requests/${request.id}/edit`)}
+              className="bg-blue-50 text-blue-700 hover:bg-blue-100"
+            >
+              <Edit className="h-4 w-4 mr-2" />
+              Update Request
+            </Button>
+          )}
 
-              {/* Role indicator */}
-              {hasRole('MR_STAFF') && (
-                <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
-                  MR Staff View
-                </Badge>
-              )}
-              {hasRole('CA') && (
-                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                  My Request
-                </Badge>
-              )}
-              {hasRole('ADMIN') && (
-                <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
-                  Admin View
-                </Badge>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline">
-                  Actions
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => window.print()}>
-                  <Printer className="h-4 w-4 mr-2" />
-                  Print
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Download className="h-4 w-4 mr-2" />
-                  Export PDF
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-
-                {/* MR Staff Actions - Approve/Reject/Complete */}
-                {hasRole('MR_STAFF') && hasPermission('approve_requests') && (
-                  <>
-                    {request.status === 'pending' && (
-                      <>
-                        <DropdownMenuItem onClick={handleApprove} disabled={actionLoading === 'approve'}>
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                          {actionLoading === 'approve' ? 'Approving...' : 'Approve Request'}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={handleReject} disabled={actionLoading === 'reject'}>
-                          <XCircle className="h-4 w-4 mr-2" />
-                          {actionLoading === 'reject' ? 'Rejecting...' : 'Reject Request'}
-                        </DropdownMenuItem>
-                      </>
-                    )}
-                    {(request.status === 'approved' || request.status === 'in_progress') && (
-                      <DropdownMenuItem onClick={handleComplete} disabled={actionLoading === 'complete'}>
-                        <CheckCircle2 className="h-4 w-4 mr-2" />
-                        {actionLoading === 'complete' ? 'Completing...' : 'Mark Complete'}
-                      </DropdownMenuItem>
-                    )}
-                  </>
-                )}
-
-                {/* Admin Actions - Full control */}
-                {hasRole('ADMIN') && (
-                  <>
-                    {request.status === 'pending' && (
-                      <>
-                        <DropdownMenuItem onClick={handleApprove} disabled={actionLoading === 'approve'}>
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                          {actionLoading === 'approve' ? 'Approving...' : 'Approve Request'}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={handleReject} disabled={actionLoading === 'reject'}>
-                          <XCircle className="h-4 w-4 mr-2" />
-                          {actionLoading === 'reject' ? 'Rejecting...' : 'Reject Request'}
-                        </DropdownMenuItem>
-                      </>
-                    )}
-                    {(request.status === 'approved' || request.status === 'in_progress') && (
-                      <DropdownMenuItem onClick={handleComplete} disabled={actionLoading === 'complete'}>
-                        <CheckCircle2 className="h-4 w-4 mr-2" />
-                        {actionLoading === 'complete' ? 'Completing...' : 'Mark Complete'}
-                      </DropdownMenuItem>
-                    )}
-                  </>
-                )}
-
-                {/* CA Actions - Edit/Delete own requests */}
-                {hasRole('CA') && request.status === 'pending' && request.requested_by_user_id === user?.id && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => navigate(`/requests/${id}/edit`)}>
-                      <Edit className="h-4 w-4 mr-2" />
-                      Edit Request
-                    </DropdownMenuItem>
-                    <DropdownMenuItem className="text-red-600">
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Delete Request
-                    </DropdownMenuItem>
-                  </>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+          <Button
+            variant="outline"
+            onClick={() => navigate(-1)}
+          >
+            Back to List
+          </Button>
         </div>
 
         {/* Success message from navigation */}
@@ -689,7 +930,7 @@ export default function RequestDetailsPage() {
                   <Alert>
                     <CheckCircle className="h-4 w-4" />
                     <AlertDescription>
-                      Your request has been approved! The case note is being retrieved and will be delivered to the specified location.
+                      Your request has been approved! The case note is being retrieved and can be collected at the Medical Report Department
                     </AlertDescription>
                   </Alert>
                 )}
@@ -724,7 +965,7 @@ export default function RequestDetailsPage() {
                         case 'handover_receipt_verified': return 'bg-green-500';
                         case 'returned_verified': return 'bg-green-500';
                         case 'received': return 'bg-green-500';
-                        case 'acknowledged': return 'bg-green-500';
+                        case 'Acknowledge': return 'bg-green-500';
                         case 'completed': return 'bg-emerald-500';
 
                         // Rejected events (red)
@@ -877,7 +1118,7 @@ export default function RequestDetailsPage() {
                 {getStatusBadge(request.status)}
               </div>
 
-         
+
 
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-500">Created</span>
@@ -908,18 +1149,17 @@ export default function RequestDetailsPage() {
             <CardContent className="space-y-4">
               <div>
                 <label className="text-sm font-medium text-gray-500">Request Number</label>
-                <p className="text-gray-900 font-mono">{request.request_number}</p>
+                <p className="text-gray-900 font-mono">{request?.request_number || 'N/A'}</p>
               </div>
 
               <div>
                 <label className="text-sm font-medium text-gray-500">Requested By</label>
                 <p className="text-gray-900">{request.requested_by?.name}</p>
-                <p className="text-sm text-gray-500">{request.requested_by?.email}</p>
               </div>
 
               {request.approved_by && (
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Approved By</label>
+                  <label className="text-sm font-medium text-gray-500">Received By</label>
                   <p className="text-gray-900">{request.approved_by.name}</p>
                 </div>
               )}
@@ -943,7 +1183,7 @@ export default function RequestDetailsPage() {
                 <Button
                   onClick={handleApprove}
                   disabled={actionLoading === 'approve'}
-                  className="w-full"
+                  className="w-full bg-green-600 hover:bg-green-700"
                   variant="default"
                 >
                   {actionLoading === 'approve' ? (
@@ -1065,4 +1305,7 @@ export default function RequestDetailsPage() {
       )}
     </div>
   );
-}
+}; // End of RequestDetailsPage component
+
+export default RequestDetailsPage;
+

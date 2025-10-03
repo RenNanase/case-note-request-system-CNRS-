@@ -724,7 +724,7 @@ export default function RequestDetailsPage() {
                         case 'handover_receipt_verified': return 'bg-green-500';
                         case 'returned_verified': return 'bg-green-500';
                         case 'received': return 'bg-green-500';
-                        case 'acknowledged': return 'bg-green-500';
+                        case 'Acknowledge': return 'bg-green-500';
                         case 'completed': return 'bg-emerald-500';
 
                         // Rejected events (red)

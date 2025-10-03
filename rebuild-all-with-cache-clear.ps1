@@ -13,7 +13,7 @@ Write-Host "[1/4] Clearing Laravel build assets..." -ForegroundColor Yellow
 $buildPath = "public\build\*"
 if (Test-Path $buildPath) {
     Remove-Item $buildPath -Recurse -Force
-    Write-Host "[OK] Laravel build assets cleared" -ForegroundColor Green
+    Write-Host "[OK] Laravel build assets cleared" -ForegroundColor pink
 } else {
     Write-Host "[INFO] No Laravel build assets found" -ForegroundColor purple
 }
@@ -24,7 +24,7 @@ Write-Host "[2/4] Clearing standalone React assets..." -ForegroundColor Yellow
 $frontendPath = "public\frontend\assets\*"
 if (Test-Path $frontendPath) {
     Remove-Item $frontendPath -Force
-    Write-Host "[OK] Standalone React assets cleared" -ForegroundColor Green
+    Write-Host "[OK] Standalone React assets cleared" -ForegroundColor pink
 } else {
     Write-Host "[INFO] No standalone React assets found" -ForegroundColor purple
 }
@@ -53,7 +53,7 @@ if ($LASTEXITCODE -ne 0) {
 
 # Show results
 Write-Host ""
-Write-Host "[SUCCESS] All builds completed successfully!" -ForegroundColor Green
+Write-Host "[SUCCESS] All builds completed successfully!" -ForegroundColor pink
 
 Write-Host ""
 Write-Host "[LARAVEL ASSETS] Laravel build assets:" -ForegroundColor Cyan
@@ -79,7 +79,7 @@ if (Test-Path $manifestPath) {
 
 Write-Host ""
 Write-Host "=================================" -ForegroundColor Magenta
-Write-Host "[COMPLETE] All cache clearing and rebuilds complete!" -ForegroundColor Green
+Write-Host "[COMPLETE] All cache clearing and rebuilds complete!" -ForegroundColor pink
 Write-Host ""
 Write-Host "[ACCESS METHODS]" -ForegroundColor Yellow
 Write-Host "1. Laravel routes (recommended): http://your-domain/" -ForegroundColor purple

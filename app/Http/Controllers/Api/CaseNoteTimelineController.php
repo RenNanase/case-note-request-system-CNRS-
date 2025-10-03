@@ -166,25 +166,8 @@ class CaseNoteTimelineController extends Controller
                 ];
             });
 
-            // Also add a "created" event if it doesn't exist
-            $hasCreatedEvent = $events->contains('event_type', 'created');
-            if (!$hasCreatedEvent) {
-                $events->prepend([
-                    'id' => 'created_' . $caseNote->id,
-                    'event_type' => 'created',
-                    'description' => 'Case note request created',
-                    'created_at' => $caseNote->created_at->toISOString(),
-                    'user' => [
-                        'id' => $caseNote->requestedBy->id,
-                        'name' => $caseNote->requestedBy->name,
-                        'role' => $caseNote->requestedBy->roles->first()?->name ?? 'CA'
-                    ],
-                    'metadata' => [
-                        'request_number' => $caseNote->request_number,
-                        'purpose' => $caseNote->purpose
-                    ]
-                ]);
-            }
+            // Note: "created" event is now always created by the Request model's boot() method
+            // with a descriptive reason that includes doctor name, so no fallback needed
 
             Log::info('Case note timeline retrieved', [
                 'user_id' => $user->id,
@@ -347,10 +330,10 @@ class CaseNoteTimelineController extends Controller
                 }
                 return $description . ($reason ? " - {$reason}" : '');
 
-            case 'acknowledged':
-                $acknowledger = $metadata['acknowledged_by_name'] ?? $event->actor->name ?? 'Unknown';
+            case 'Acknowledge':
+                $acknowledger = $metadata['Acknowledge_by_name'] ?? $event->actor->name ?? 'Unknown';
                 $notes = $metadata['verification_notes'] ?? $event->reason ?? '';
-                return "Case note acknowledged by {$acknowledger}" . ($notes ? " - {$notes}" : '');
+                return "Case note Acknowledge by {$acknowledger}" . ($notes ? " - {$notes}" : '');
 
             case 'received':
                 $receiver = $metadata['received_by_name'] ?? $event->actor->name ?? 'Unknown';
@@ -459,7 +442,7 @@ class CaseNoteTimelineController extends Controller
             'rejecter' => ['rejected_by_name'],
             'completer' => ['completed_by_name'],
             'receiver' => ['received_by_name'],
-            'acknowledger' => ['acknowledged_by_name'],
+            'acknowledger' => ['Acknowledge_by_name'],
             'from_user' => ['handed_over_from_user_name', 'requested_by_name'],
             'to_user' => ['handed_over_to_user_name', 'current_holder_name'],
             'department' => ['department_name'],

@@ -990,7 +990,7 @@ const VerifyCaseNotesPage: React.FC = () => {
                       {formatDateDisplay(date)}
                     </CardTitle>
                     <CardDescription>
-                      {handovers.length} handover(s) acknowledged on this date
+                      {handovers.length} handover(s) Acknowledge on this date
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -1044,10 +1044,10 @@ const VerifyCaseNotesPage: React.FC = () => {
                               </div>
                             )}
 
-                            {handover.acknowledged_at && (
+                            {handover.Acknowledge_at && (
                               <div className="text-xs text-purple-600 mt-1">
-                                ✓ Acknowledged by {handover.handedOverTo.name} on{' '}
-                                {new Date(handover.acknowledged_at).toLocaleDateString('en-US', {
+                                ✓ Acknowledge by {handover.handedOverTo.name} on{' '}
+                                {new Date(handover.Acknowledge_at).toLocaleDateString('en-US', {
                                   month: 'short',
                                   day: 'numeric',
                                   year: 'numeric',

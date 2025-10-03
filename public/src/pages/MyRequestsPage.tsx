@@ -47,7 +47,7 @@ const getStatusBadge = (status: string, displayStatus?: string, isWaitingForAppr
   // Special styling for completed and handed over case notes
   if (isCompletedAndHandedOver) {
     return (
-      <Badge variant="outline" className="bg-pink-100 text-pink-800 border-pink-200">
+      <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200">
         <CheckCircle className="h-3 w-3" />
         <span>COMPLETED</span>
       </Badge>
@@ -100,7 +100,7 @@ const getInvolvementBadge = (requestedBy: number, currentPIC: number, userId: nu
   // Handle completed and handed over case notes
   if (status === 'completed' && requestedBy === userId && currentPIC !== userId) {
     return (
-      <Badge variant="outline" className="bg-pink-100 text-pink-800 border-pink-200">
+      <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200">
         <ArrowUpRight className="h-3 w-3 mr-1" />
         Returned & Completed
       </Badge>
@@ -128,7 +128,7 @@ const getInvolvementBadge = (requestedBy: number, currentPIC: number, userId: nu
     } else {
       // User created it but it's assigned to someone else (handed over)
       return (
-        <Badge variant="outline" className="bg-pink-100 text-pink-800 border-pink-200">
+        <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200">
           <ArrowUpRight className="h-3 w-3 mr-1" />
           Handed Over
         </Badge>
@@ -390,7 +390,7 @@ export default function MyRequestsPage() {
           <div className="flex items-center space-x-4 mt-2 text-sm text-gray-600">
             <div className="flex items-center space-x-2">
 
-              <span className="text-xs text-pink-600 bg-pink-100 px-1 py-0.5 rounded">✓</span>
+              <span className="text-xs text-green-600 bg-green-100 px-1 py-0.5 rounded">✓</span>
               <span>Returned & Completed (no longer active)</span>
             </div>
           </div>
@@ -449,9 +449,9 @@ export default function MyRequestsPage() {
                       request.requested_by_user_id === user?.id &&
                       request.current_pic_user_id !== user?.id;
 
-                    // Apply pink background for completed and handed over case notes
+                    // Apply green background for completed and handed over case notes
                     const rowClassName = isCompletedAndHandedOver
-                      ? "border-b hover:bg-pink-50 bg-pink-25"
+                      ? "border-b hover:bg-green-50 bg-green-25"
                       : "border-b hover:bg-gray-50";
 
                     return (
@@ -469,7 +469,7 @@ export default function MyRequestsPage() {
                           <div className="flex items-center space-x-2">
                             <p className="font-medium text-gray-900">{request.patient?.name || 'N/A'}</p>
                             {isCompletedAndHandedOver && (
-                              <span className="text-xs text-pink-600 bg-pink-100 px-1 py-0.5 rounded" title="Completed and handed over - no longer active">
+                              <span className="text-xs text-green-600 bg-green-100 px-1 py-0.5 rounded" title="Completed and handed over - no longer active">
                                 ✓
                               </span>
                             )}

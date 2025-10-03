@@ -149,7 +149,7 @@ const VerifyHandoverCaseNotesPage: React.FC = () => {
       if (successCount > 0) {
         toast({
           title: 'Acknowledgment Successful',
-          description: `Successfully acknowledged ${successCount} case note(s)${failureCount > 0 ? `, ${failureCount} failed` : ''}`,
+          description: `Successfully Acknowledge ${successCount} case note(s)${failureCount > 0 ? `, ${failureCount} failed` : ''}`,
           variant: 'default',
         });
 

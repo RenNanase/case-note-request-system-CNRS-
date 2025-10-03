@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, User, AlertCircle, Clock, CheckCircle2, XCircle } from 'lucide-react';
+import { Search, User, AlertCircle, Clock, CheckCircle2, XCircle, Building2, MapPin } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -71,7 +71,7 @@ export default function PatientSearch({
     console.log('🔑 Auth token exists:', !!localStorage.getItem('cnrs_token'));
 
         try {
-      const response = await patientsApi.searchPatients(searchQuery);
+      const response = await patientsApi.search(searchQuery);
       console.log('✅ Patient search response:', response);
       console.log('✅ Response type:', typeof response);
       console.log('✅ Response keys:', Object.keys(response));
@@ -206,24 +206,24 @@ export default function PatientSearch({
 
       {/* Selected Patient Display */}
       {selectedPatient && (
-        <Card className="mt-2 border-pink-200 bg-pink-50">
+        <Card className="mt-2 border-green-200 bg-green-50">
           <CardContent className="p-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <Avatar className="h-10 w-10">
-                  <AvatarFallback className="bg-pink-100 text-pink-700">
+                  <AvatarFallback className="bg-green-100 text-green-700">
                     <User className="h-5 w-5" />
                   </AvatarFallback>
                 </Avatar>
                 <div>
                   <div className="flex items-center space-x-2">
-                    <h3 className="font-medium text-pink-900">{selectedPatient.name}</h3>
-                    <CheckCircle2 className="h-4 w-4 text-pink-600" />
+                    <h3 className="font-medium text-green-900">{selectedPatient.name}</h3>
+                    <CheckCircle2 className="h-4 w-4 text-green-600" />
                   </div>
-                    <div className="flex items-center space-x-4 text-sm text-pink-700">
+                    <div className="flex items-center space-x-4 text-sm text-green-700">
                         <span>MRN: {selectedPatient.mrn}</span>
                     </div>
-                    <div className="flex items-center space-x-4 text-sm text-pink-700">
+                    <div className="flex items-center space-x-4 text-sm text-green-700">
                         <span>NRIC/PASSPORT: {selectedPatient.nric}</span>
                     </div>
                   {selectedPatient.has_medical_alerts && (
@@ -240,7 +240,7 @@ export default function PatientSearch({
                 size="sm"
                 onClick={handleClear}
                 disabled={disabled}
-                className="text-pink-600 hover:text-pink-800"
+                className="text-green-600 hover:text-green-800"
               >
                 Change
               </Button>
@@ -388,6 +388,41 @@ export default function PatientSearch({
                                     </p>
                                     <p className="mt-1 text-green-700">
                                       <strong>Note:</strong> CA cannot request handover or request this case note.
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Current Case Note Location Banner */}
+                            {!patient.is_available && patient.has_existing_requests && patient.current_case_note && (
+                              <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-md">
+                                <div className="flex items-start space-x-2">
+                                  <MapPin className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                                  <div className="text-xs text-blue-800">
+                                    <p className="font-medium">Current Case Note Location</p>
+                                    <div className="mt-1 space-y-1">
+                                      {patient.current_case_note.department && (
+                                        <div className="flex items-center space-x-1">
+                                          <Building2 className="w-3 h-3 text-blue-600" />
+                                          <span><strong>Department:</strong> {patient.current_case_note.department.name}</span>
+                                        </div>
+                                      )}
+                                      {patient.current_case_note.location && (
+                                        <div className="flex items-center space-x-1">
+                                          <MapPin className="w-3 h-3 text-blue-600" />
+                                          <span><strong>Location:</strong> {patient.current_case_note.location.name}</span>
+                                        </div>
+                                      )}
+                                      {patient.current_case_note.doctor && (
+                                        <div className="flex items-center space-x-1">
+                                          <User className="w-3 h-3 text-blue-600" />
+                                          <span><strong>Doctor:</strong> {patient.current_case_note.doctor.name}</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                    <p className="mt-1 text-blue-700">
+                                      <strong>Note:</strong> This case note is currently unavailable. You can request handover from the current holder.
                                     </p>
                                   </div>
                                 </div>

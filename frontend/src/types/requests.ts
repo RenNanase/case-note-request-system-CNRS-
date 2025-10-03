@@ -4,9 +4,10 @@ export interface Patient {
   id: number;
   name: string;
   mrn: string;
+  date_of_birth?: string | null;
+  gender?: string;
   nric?: string | null;
   nationality_id?: string | null;
-  date_of_birth?: string | null;
   phone?: string | null;
   has_medical_alerts?: boolean;
   has_existing_requests?: boolean;
@@ -28,23 +29,38 @@ export interface Patient {
     email: string;
   };
   case_note_request_id?: number;
+  current_case_note?: {
+    department?: {
+      id: number;
+      name: string;
+    };
+    location?: {
+      id: number;
+      name: string;
+    };
+    doctor?: {
+      id: number;
+      name: string;
+    };
+  };
 }
 
 export interface Department {
-  value: number;
-  label: string;
+  id: number;
+  name: string;
   code: string;
 }
 
 export interface Doctor {
-  value: number;
-  label: string;
-  department: string;
+  id: number;
+  name: string;
+  // Doctors are now independent of departments
+  is_active?: boolean;
 }
 
 export interface Location {
-  value: number;
-  label: string;
+  id: number;
+  name: string;
   type: string;
 }
 
@@ -58,11 +74,18 @@ export interface Status {
   label: string;
 }
 
+export interface RequestEventUser {
+  id: number;
+  name: string;
+}
+
 export interface RequestEvent {
   id: number;
   type: string;
   type_label: string;
   description: string;
+  created_at: string;
+  user?: RequestEventUser;
   actor: string;
   location?: string;
   person?: string;
@@ -76,12 +99,15 @@ export interface CaseNoteRequest {
   id: number;
   request_number: string;
   patient_id: number;
+  notes?: string;
+  status: string;
+  created_at: string;
+  patient?: Patient;
   requested_by_user_id: number;
   department_id: number;
   doctor_id?: number;
   location_id?: number;
   priority: string;
-  status: string;
   purpose: string;
   remarks?: string;
   needed_date: string;
@@ -128,6 +154,15 @@ export interface CaseNoteRequest {
     email: string;
   };
 
+  // Send out related properties
+  is_Acknowledge?: boolean;
+  department_name?: string;
+  doctor_name?: string;
+  send_out_number?: string;
+  sent_at?: string;
+  patient_name?: string;
+  patient_mrn?: string;
+
   // Rejection fields (when returned by CA)
   rejection_reason?: string;
   rejected_at?: string;
@@ -152,7 +187,7 @@ export interface CaseNoteRequest {
 
   // Handover fields
   current_pic_user_id?: number | null;
-  handover_status?: 'none' | 'pending' | 'acknowledged' | 'completed' | 'approved_pending_verification' | 'verified' | 'rejected';
+  handover_status?: 'none' | 'pending' | 'Acknowledge' | 'completed' | 'approved_pending_verification' | 'verified' | 'rejected';
   current_pic?: {
     id: number;
     name: string;
@@ -239,6 +274,8 @@ export interface DashboardStats {
   pending_review?: number;
   in_progress_count?: number;
   completed_count?: number;
+  not_returned_count?: number;
+  rejected_count?: number;
 
   // Admin-specific stats
   total_users?: number;

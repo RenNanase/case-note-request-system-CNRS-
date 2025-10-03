@@ -20,7 +20,7 @@ class HandoverController extends Controller
 {
     // Handover status constants
     const STATUS_PENDING = 'pending';
-    const STATUS_ACKNOWLEDGED = 'acknowledged';
+    const STATUS_Acknowledge = 'Acknowledge';
     const STATUS_COMPLETED = 'completed';
     const STATUS_OVERDUE = 'overdue';
     const STATUS_ESCALATED = 'escalated';
@@ -203,8 +203,8 @@ class HandoverController extends Controller
 
             // Update handover status
             $handover->update([
-                'status' => self::STATUS_ACKNOWLEDGED,
-                'acknowledged_at' => now(),
+                'status' => self::STATUS_Acknowledge,
+                'Acknowledge_at' => now(),
                 'verification_notes' => $request->verification_notes,
             ]);
 
@@ -212,8 +212,8 @@ class HandoverController extends Controller
             $caseNoteRequest = $handover->caseNoteRequest;
             $caseNoteRequest->update([
                 'current_pic_user_id' => $handover->handed_over_to_user_id, // Ensure ownership stays with final CA
-                'handover_status' => 'acknowledged',
-                'handover_acknowledged_at' => now(),
+                'handover_status' => 'Acknowledge',
+                'handover_Acknowledge_at' => now(),
             ]);
 
             // Create timeline event for verification
@@ -284,11 +284,11 @@ class HandoverController extends Controller
             ], 403);
         }
 
-        // Check if handover has been acknowledged by the recipient
-        if ($handover->status !== self::STATUS_ACKNOWLEDGED) {
+        // Check if handover has been Acknowledge by the recipient
+        if ($handover->status !== self::STATUS_Acknowledge) {
             return response()->json([
                 'success' => false,
-                'message' => 'Handover must be acknowledged by the recipient before you can verify receipt'
+                'message' => 'Handover must be Acknowledge by the recipient before you can verify receipt'
             ], 400);
         }
 
@@ -414,9 +414,9 @@ class HandoverController extends Controller
     }
 
     /**
-     * Get acknowledged handovers for current user (as receiver)
+     * Get Acknowledge handovers for current user (as receiver)
      */
-    public function getAcknowledgedHandovers(): JsonResponse
+    public function getAcknowledgeHandovers(): JsonResponse
     {
         $user = Auth::user();
 
@@ -427,7 +427,7 @@ class HandoverController extends Controller
             ], 403);
         }
 
-        $acknowledgedHandovers = CaseNoteHandover::with([
+        $AcknowledgeHandovers = CaseNoteHandover::with([
             'caseNoteRequest.patient',
             'caseNoteRequest.department',
             'handedOverBy',
@@ -435,17 +435,17 @@ class HandoverController extends Controller
             'location'
         ])
         ->where('handed_over_to_user_id', $user->id)
-        ->where('status', self::STATUS_ACKNOWLEDGED)
-        ->orderBy('acknowledged_at', 'desc')
+        ->where('status', self::STATUS_Acknowledge)
+        ->orderBy('Acknowledge_at', 'desc')
         ->get()
         ->map(function ($handover) {
-            $handover->time_since_acknowledgment = $handover->acknowledged_at->diffForHumans();
+            $handover->time_since_acknowledgment = $handover->Acknowledge_at->diffForHumans();
             return $handover;
         });
 
         return response()->json([
             'success' => true,
-            'handovers' => $acknowledgedHandovers,
+            'handovers' => $AcknowledgeHandovers,
         ]);
     }
 
@@ -548,7 +548,7 @@ class HandoverController extends Controller
                     'verified_by_user_name' => $verifiedByUser->name,
                     'verification_notes' => $handover->verification_notes,
                     'verified_at' => now()->toDateTimeString(),
-                    'handover_status' => self::STATUS_ACKNOWLEDGED,
+                    'handover_status' => self::STATUS_Acknowledge,
                 ]
             ]);
         } catch (\Exception $e) {
@@ -628,8 +628,8 @@ class HandoverController extends Controller
         switch ($status) {
             case self::STATUS_PENDING:
                 return 'Pending';
-            case self::STATUS_ACKNOWLEDGED:
-                return 'Acknowledged';
+            case self::STATUS_Acknowledge:
+                return 'Acknowledge';
             case self::STATUS_COMPLETED:
                 return 'Completed';
             case self::STATUS_OVERDUE:
@@ -729,11 +729,11 @@ class HandoverController extends Controller
             'handoverDoctor'
         ])
         ->where('handed_over_by_user_id', $user->id)
-        ->where('status', self::STATUS_ACKNOWLEDGED)
-        ->orderBy('acknowledged_at', 'desc')
+        ->where('status', self::STATUS_Acknowledge)
+        ->orderBy('Acknowledge_at', 'desc')
         ->get()
         ->groupBy(function ($handover) {
-            return $handover->acknowledged_at->format('Y-m-d');
+            return $handover->Acknowledge_at->format('Y-m-d');
         });
 
         return response()->json([

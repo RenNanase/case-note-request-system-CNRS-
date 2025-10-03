@@ -105,7 +105,7 @@ class ImportProgress extends Model
     {
         return match($this->status) {
             self::STATUS_PENDING => 'bg-yellow-100 text-yellow-800',
-            self::STATUS_PROCESSING => 'bg-purple-100 text-purple-800',
+            self::STATUS_PROCESSING => 'bg-green-100 text-green-800',
             self::STATUS_COMPLETED => 'bg-green-100 text-green-800',
             self::STATUS_FAILED => 'bg-red-100 text-red-800',
             self::STATUS_CANCELLED => 'bg-gray-100 text-gray-800',

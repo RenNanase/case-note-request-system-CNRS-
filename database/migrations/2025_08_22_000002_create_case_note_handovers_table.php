@@ -20,9 +20,9 @@ return new class extends Migration
             $table->foreignId('location_id')->nullable()->constrained()->onDelete('set null'); // New location
             $table->text('handover_reason'); // Why the handover is needed
             $table->text('additional_notes')->nullable(); // Any additional information
-            $table->enum('status', ['pending', 'acknowledged', 'completed'])->default('pending');
-            $table->timestamp('acknowledged_at')->nullable(); // When MR Staff acknowledged
-            $table->foreignId('acknowledged_by_user_id')->nullable()->constrained('users')->onDelete('set null'); // MR Staff who acknowledged
+            $table->enum('status', ['pending', 'Acknowledge', 'completed'])->default('pending');
+            $table->timestamp('Acknowledge_at')->nullable(); // When MR Staff Acknowledge
+            $table->foreignId('Acknowledge_by_user_id')->nullable()->constrained('users')->onDelete('set null'); // MR Staff who Acknowledge
             $table->text('acknowledgment_notes')->nullable(); // MR Staff notes
             $table->timestamps();
             $table->softDeletes();
@@ -47,7 +47,7 @@ return new class extends Migration
             $table->dropForeign(['handed_over_to_user_id']);
             $table->dropForeign(['department_id']);
             $table->dropForeign(['location_id']);
-            $table->dropForeign(['acknowledged_by_user_id']);
+            $table->dropForeign(['Acknowledge_by_user_id']);
         });
 
         Schema::dropIfExists('case_note_handovers');

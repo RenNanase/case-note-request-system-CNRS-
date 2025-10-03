@@ -97,14 +97,18 @@ export default function PatientImportComponent({ onImportComplete }: PatientImpo
     setResult(null);
 
     try {
-      const response = await adminPatientsApi.importExcel(file);
+      // Create FormData and append the file with the correct field name
+      const formData = new FormData();
+      formData.append('excel_file', file);
+
+      const response = await adminPatientsApi.importExcel(formData);
       if (response.success) {
         setResult({
           success: true,
           message: response.message || 'Import completed successfully',
-          statistics: response.data?.statistics,
-          failures: response.data?.failures,
-          errors: response.data?.errors
+          statistics: response.statistics,
+          failures: response.failures,
+          errors: response.errors
         });
         onImportComplete();
       } else {

@@ -1,7 +1,7 @@
 # Simple CRNS Deployment Guide
 
 ## Overview
-This guide shows how to deploy CRNS to your network server at `http://10.2.10.178/crns/` WITHOUT interfering with other projects like MTCT system.
+This guide shows how to deploy CRNS to the network server at `http://10.2.10.178/crns/` WITHOUT interfering with other projects like MTCT system.
 
 ## Key Principle
 **CRNS will be completely self-contained in the `/crns/` subdirectory and won't touch any other projects on your server.**
