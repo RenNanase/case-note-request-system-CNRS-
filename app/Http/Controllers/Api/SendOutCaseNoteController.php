@@ -261,8 +261,13 @@ class SendOutCaseNoteController extends Controller
                 $doctor = $doctorId ? Doctor::find($doctorId) : null;
 
                 foreach ($caseNotes as $caseNote) {
-                    // Create timeline event for each case note
+                    // Mark as sent out and link to send out record
+                    $caseNote->update([
+                        'is_sent_out' => true,
+                        'send_out_id' => $sendOut->id,
+                    ]);
 
+                    // Create timeline event for each case note
                     $caseNote->events()->create([
                         'type' => 'sent_out',
                         'actor_user_id' => $user->id,
@@ -596,10 +601,17 @@ class SendOutCaseNoteController extends Controller
                             ]);
                         }
 
-                        // Create timeline events for each newly acknowledged case note
+                        // Transfer ownership and create timeline events for each newly acknowledged case note
                         foreach ($newlyAcknowledged as $caseNoteId) {
                             $caseNote = Request::find($caseNoteId);
                             if ($caseNote) {
+                                // Transfer current PIC to the acknowledging user and clear send-out flags
+                                $caseNote->update([
+                                    'current_pic_user_id' => $user->id,
+                                    'is_sent_out' => false,
+                                    'send_out_id' => null,
+                                ]);
+
                                 // Get sender information from the send-out record
                                 $sender = $sendOut->sentBy;
 

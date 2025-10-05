@@ -391,6 +391,21 @@ class DashboardController extends Controller
         // Count rejected case notes
         $rejectedCount = CaseNoteRequest::where('status', CaseNoteRequest::STATUS_REJECTED)->count();
 
+        // Counts for MR notifications
+        $mrPendingCaseNotesCount = (int) DB::table('requests')
+            ->where('status', CaseNoteRequest::STATUS_PENDING)
+            ->count();
+
+        // Filing requests pending approval
+        $mrPendingFilingRequestsCount = (int) DB::table('filing_requests')
+            ->where('status', 'pending')
+            ->count();
+
+        // Returned case notes pending verification by MR
+        $mrReturnedCaseNotesPendingVerificationCount = (int) DB::table('requests')
+            ->where('status', CaseNoteRequest::STATUS_PENDING_RETURN_VERIFICATION)
+            ->count();
+
         return [
             'total' => $stats->total ?? 0,
             'pending' => $stats->pending ?? 0,
@@ -406,6 +421,11 @@ class DashboardController extends Controller
             'completed_count' => $stats->completed ?? 0,
             'not_returned_count' => $notReturnedCount,
             'rejected_count' => $rejectedCount,
+
+            // MR notification counters
+            'mr_pending_case_notes_count' => $mrPendingCaseNotesCount,
+            'mr_pending_filing_requests_count' => $mrPendingFilingRequestsCount,
+            'mr_returned_case_notes_pending_verification_count' => $mrReturnedCaseNotesPendingVerificationCount,
         ];
     }
 

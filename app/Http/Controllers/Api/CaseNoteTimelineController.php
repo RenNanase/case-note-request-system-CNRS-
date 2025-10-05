@@ -20,7 +20,8 @@ class CaseNoteTimelineController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole('MR_STAFF', 'api')) {
+        // Allow MR staff and CA users to view a case note's timeline
+        if (!($user->hasRole('MR_STAFF') || $user->hasRole('CA'))) {
             return response()->json([
                 'success' => false,
                 'message' => 'Only Medical Records Staff can access this endpoint'

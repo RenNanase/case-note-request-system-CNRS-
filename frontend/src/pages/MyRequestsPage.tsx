@@ -439,7 +439,7 @@ export default function MyRequestsPage() {
                     <th className="text-left py-4 px-6 font-semibold text-gray-900 text-sm">MRN</th>
                     <th className="text-left py-4 px-6 font-semibold text-gray-900 text-sm">Status</th>
                     <th className="text-left py-4 px-6 font-semibold text-gray-900 text-sm">Involvement</th>
-                    <th className="text-left py-4 px-6 font-semibold text-gray-900 text-sm">Actions</th>
+                    {/* <th className="text-left py-4 px-6 font-semibold text-gray-900 text-sm">Actions</th> */}
                   </tr>
                 </thead>
                 <tbody>
@@ -517,7 +517,7 @@ export default function MyRequestsPage() {
                           request.status
                         )}
                       </td>
-                      <td className="py-4 px-6">
+                      {/* <td className="py-4 px-6">
                         <div className="flex space-x-2">
                           <Link to={`/requests/${request.id}`}>
                             <Button variant="outline" size="sm" className="text-xs">
@@ -526,7 +526,7 @@ export default function MyRequestsPage() {
                             </Button>
                           </Link>
                         </div>
-                      </td>
+                      </td> */}
                     </tr>
                   );
                 })}

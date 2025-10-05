@@ -177,6 +177,47 @@ const RequestDetailsPage: React.FC = () => {
         const response = await requestsApi.getRequest(parseInt(id));
         if (response.success) {
           setRequest(response.request);
+
+          // Load timeline events to match MR-side timeline view
+          try {
+            const timelineResp = await requestsApi.getCaseNoteTimeline(response.request.id);
+            const rawEvents = (timelineResp as any)?.events || [];
+            // Normalize events to expected MR-style shape
+            const normalized = rawEvents.map((ev: any) => ({
+              id: ev.id,
+              type: ev.type || ev.event_type || 'unknown',
+              description: ev.description || ev.reason || ev.message || '',
+              occurred_at: ev.occurred_at || ev.created_at || ev.timestamp || ev.updated_at,
+              metadata: ev.metadata || {}
+            }));
+
+            if (normalized.length > 0) {
+              setTimeline(normalized);
+            } else {
+              // Fallback: use events embedded in request (if provided by details API)
+              const embedded = (response.request as any)?.events || [];
+              const normalizedEmbedded = embedded.map((ev: any) => ({
+                id: ev.id,
+                type: ev.type || ev.event_type || 'unknown',
+                description: ev.description || ev.reason || '',
+                occurred_at: ev.occurred_at || ev.created_at,
+                metadata: ev.metadata || {}
+              }));
+              setTimeline(normalizedEmbedded);
+            }
+          } catch (e) {
+            console.error('Error loading timeline:', e);
+            // Fallback on error as well
+            const embedded = (response.request as any)?.events || [];
+            const normalizedEmbedded = embedded.map((ev: any) => ({
+              id: ev.id,
+              type: ev.type || ev.event_type || 'unknown',
+              description: ev.description || ev.reason || '',
+              occurred_at: ev.occurred_at || ev.created_at,
+              metadata: ev.metadata || {}
+            }));
+            setTimeline(normalizedEmbedded);
+          }
         } else {
           setError('Failed to load request details');
         }
@@ -481,246 +522,11 @@ const RequestDetailsPage: React.FC = () => {
 
       {/* Main content */}
       <div className="grid gap-6">
-        {/* Patient and Request Details */}
-        <div className="grid gap-6 md:grid-cols-2">
-          {/* Patient Details Card */}
-          <Card>
-            <CardHeader
-              className="border-b cursor-pointer flex flex-row items-center justify-between"
-              onClick={() => toggleSection('patient')}
-            >
-              <CardTitle className="text-lg font-semibold flex items-center">
-                <User className="h-5 w-5 mr-2 text-primary" />
-                Patient Details
-              </CardTitle>
-              {expandedSections.patient ?
-                <ChevronUp className="h-5 w-5 text-muted-foreground" /> :
-                <ChevronDown className="h-5 w-5 text-muted-foreground" />
-              }
-            </CardHeader>
-            {expandedSections.patient && (
-              <CardContent className="pt-6 space-y-4">
-                <div className="grid grid-cols-3 gap-4">
-                  <span className="text-sm text-muted-foreground">Name</span>
-                  <span className="text-sm font-medium col-span-2">
-                    {request?.patient?.name || 'N/A'}
-                  </span>
-                </div>
-                <div className="grid grid-cols-3 gap-4">
-                  <span className="text-sm text-muted-foreground">MRN</span>
-                  <span className="text-sm font-medium col-span-2">
-                    {request?.patient?.mrn || 'N/A'}
-                  </span>
-                </div>
-                <div className="grid grid-cols-3 gap-4">
-                  <span className="text-sm text-muted-foreground">Date of Birth</span>
-                  <span className="text-sm font-medium col-span-2">
-                    {request?.patient?.date_of_birth || 'N/A'}
-                  </span>
-                </div>
-                <div className="grid grid-cols-3 gap-4">
-                  <span className="text-sm text-muted-foreground">Gender</span>
-                  <span className="text-sm font-medium col-span-2">
-                    {request?.patient?.gender || 'N/A'}
-                  </span>
-                </div>
-              </CardContent>
-            )}
-          </Card>
+        {/* Removed duplicate Patient/Request details cards (using consolidated layout below) */}
 
-          {/* Request Details Card */}
-          <Card>
-            <CardHeader
-              className="border-b cursor-pointer flex flex-row items-center justify-between"
-              onClick={() => toggleSection('request')}
-            >
-              <CardTitle className="text-lg font-semibold flex items-center">
-                <FileText className="h-5 w-5 mr-2 text-primary" />
-                Request Details
-              </CardTitle>
-              {expandedSections.request ?
-                <ChevronUp className="h-5 w-5 text-muted-foreground" /> :
-                <ChevronDown className="h-5 w-5 text-muted-foreground" />
-              }
-            </CardHeader>
-            {expandedSections.request && (
-              <CardContent className="pt-6 space-y-4">
-                <div className="grid grid-cols-3 gap-4">
-                  <span className="text-sm text-muted-foreground">Request #</span>
-                  <span className="text-sm font-medium col-span-2">
-                    {request?.request_number || 'N/A'}
-                  </span>
-                </div>
-                <div className="grid grid-cols-3 gap-4">
-                  <span className="text-sm text-muted-foreground">Status</span>
-                  <span className="col-span-2">
-                    {getStatusBadge(request.status)}
-                  </span>
-                </div>
-                <div className="grid grid-cols-3 gap-4">
-                  <span className="text-sm text-muted-foreground">Created</span>
-                  <span className="text-sm font-medium col-span-2">
-                    {formattedDate}
-                  </span>
-                </div>
-                <div className="grid grid-cols-3 gap-4">
-                  <span className="text-sm text-muted-foreground">Department</span>
-                  <span className="text-sm font-medium col-span-2">
-                    {request.department?.name || 'N/A'}
-                  </span>
-                </div>
-                <div className="grid grid-cols-3 gap-4">
-                  <span className="text-sm text-muted-foreground">Doctor</span>
-                  <span className="text-sm font-medium col-span-2">
-                    {request.doctor?.name || 'N/A'}
-                  </span>
-                </div>
-                <div className="grid grid-cols-3 gap-4">
-                  <span className="text-sm text-muted-foreground">Location</span>
-                  <span className="text-sm font-medium col-span-2">
-                    {request.location?.name || 'N/A'}
-                  </span>
-                </div>
-                {request.notes && (
-                  <div className="grid grid-cols-3 gap-4">
-                    <span className="text-sm text-muted-foreground">Notes</span>
-                    <span className="text-sm font-medium col-span-2 whitespace-pre-line">
-                      {request.notes}
-                    </span>
-                  </div>
-                )}
-              </CardContent>
-            )}
-          </Card>
-        </div>
+        {/* Removed legacy Activity Timeline block to standardize on MR-style timeline below */}
 
-        {/* Timeline Card */}
-        <Card>
-          <CardHeader
-            className="border-b cursor-pointer flex flex-row items-center justify-between"
-            onClick={() => toggleSection('timeline')}
-          >
-            <CardTitle className="text-lg font-semibold flex items-center">
-              <History className="h-5 w-5 mr-2 text-primary" />
-              Activity Timeline
-            </CardTitle>
-            {expandedSections.timeline ?
-              <ChevronUp className="h-5 w-5 text-muted-foreground" /> :
-              <ChevronDown className="h-5 w-5 text-muted-foreground" />
-            }
-          </CardHeader>
-          {expandedSections.timeline && (
-            <CardContent className="pt-6">
-              <div className="space-y-8">
-                {request.events?.length > 0 ? (
-                  request.events.map((event, index) => (
-                    <div key={`${event.id}-${index}`} className="flex items-start">
-                      <div className="flex flex-col items-center mr-4">
-                        <div className={`h-3 w-3 rounded-full ${
-                          event.type === 'created' ? 'bg-blue-500' :
-                          event.type === 'status_changed' ? 'bg-purple-500' :
-                          event.type === 'completed' ? 'bg-green-500' :
-                          event.type === 'rejected' ? 'bg-red-500' : 'bg-gray-500'
-                        }`}></div>
-                        {index < request.events.length - 1 && (
-                          <div className="w-0.5 h-10 bg-gray-200 mt-1"></div>
-                        )}
-                      </div>
-                      <div className="flex-1 pb-6">
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm font-medium">
-                            {event.description}
-                          </p>
-                          <span className="text-xs text-muted-foreground">
-                            {formatRelativeTime(event.created_at)}
-                          </span>
-                        </div>
-                        {event.metadata && (
-                          <div className="mt-2 text-sm text-muted-foreground">
-                            {event.metadata.notes && (
-                              <p className="italic">"{event.metadata.notes}"</p>
-                            )}
-                            {event.metadata.reason && (
-                              <p className="text-red-600">Reason: {event.metadata.reason}</p>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    No activity recorded yet
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          )}
-        </Card>
-
-        {/* Action Buttons */}
-        <div className="flex justify-end space-x-3 pt-4">
-          {request.status === 'pending' && canApproveReject() && (
-            <>
-              <Button
-                variant="default"
-                onClick={handleApprove}
-                disabled={actionLoading === 'approve'}
-              >
-                {actionLoading === 'approve' ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <CheckCircle2 className="h-4 w-4 mr-2" />
-                )}
-                Approve
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={handleReject}
-                disabled={actionLoading === 'reject'}
-              >
-                {actionLoading === 'reject' ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <XCircle className="h-4 w-4 mr-2" />
-                )}
-                Reject
-              </Button>
-            </>
-          )}
-
-          {(request.status === 'approved' || request.status === 'in_progress') && canComplete() && (
-            <Button
-              onClick={handleComplete}
-              disabled={actionLoading === 'complete'}
-            >
-              {actionLoading === 'complete' ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <CheckCircle2 className="h-4 w-4 mr-2" />
-              )}
-              Mark as Complete
-            </Button>
-          )}
-
-          {request.status === 'returned' && canEdit() && (
-            <Button
-              variant="outline"
-              onClick={() => request && navigate(`/requests/${request.id}/edit`)}
-              className="bg-blue-50 text-blue-700 hover:bg-blue-100"
-            >
-              <Edit className="h-4 w-4 mr-2" />
-              Update Request
-            </Button>
-          )}
-
-          <Button
-            variant="outline"
-            onClick={() => navigate(-1)}
-          >
-            Back to List
-          </Button>
-        </div>
+        {/* Removed action buttons including Back to List and Mark as Complete per request */}
 
         {/* Success message from navigation */}
         {location.state?.message && (
@@ -884,53 +690,6 @@ const RequestDetailsPage: React.FC = () => {
                     <CheckCircle className="h-4 w-4" />
                     <AlertDescription>
                       This request has been approved and is now in progress. The case note should be retrieved and delivered.
-                    </AlertDescription>
-                  </Alert>
-                )}
-              </CardContent>
-            </Card>
-          )}
-
-          {hasRole('CA') && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <User className="h-5 w-5" />
-                  <span>My Request Information</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">Submitted On</label>
-                    <div className="flex items-center space-x-2 mt-1">
-                      <Calendar className="h-4 w-4 text-gray-400" />
-                      <p className="text-gray-900">{formatDate(request.created_at)}</p>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">Current Status</label>
-                    <div className="mt-1">
-                      {getStatusBadge(request.status)}
-                    </div>
-                  </div>
-                </div>
-
-                {request.status === 'pending' && (
-                  <Alert>
-                    <Clock className="h-4 w-4" />
-                    <AlertDescription>
-                      Your request is currently under review by Medical Records staff. You will be notified once it's processed.
-                    </AlertDescription>
-                  </Alert>
-                )}
-
-                {request.status === 'approved' && (
-                  <Alert>
-                    <CheckCircle className="h-4 w-4" />
-                    <AlertDescription>
-                      Your request has been approved! The case note is being retrieved and can be collected at the Medical Report Department
                     </AlertDescription>
                   </Alert>
                 )}
@@ -1221,33 +980,7 @@ const RequestDetailsPage: React.FC = () => {
             </Card>
           )}
 
-          {request.can_be_completed && hasPermission('approve_requests') && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Complete Request</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Button
-                  onClick={handleComplete}
-                  disabled={actionLoading === 'complete'}
-                  className="w-full"
-                  variant="default"
-                >
-                  {actionLoading === 'complete' ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Completing...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle2 className="h-4 w-4 mr-2" />
-                      Mark Complete
-                    </>
-                  )}
-                </Button>
-              </CardContent>
-            </Card>
-          )}
+          {/* Removed Complete Request quick action card */}
 
           {/* Handover functionality has been removed */}
         </div>

@@ -112,10 +112,10 @@ export default function AppLayout() {
     }
   }, [user?.needs_password_change]);
 
-  // Load dashboard stats for navigation badges (only for CA users)
+  // Load dashboard stats for navigation badges (for CA and MR users)
   useEffect(() => {
     const loadDashboardStats = async () => {
-      if (user && hasRole('CA')) {
+      if (user && (hasRole('CA') || hasRole('MR_STAFF'))) {
         try {
           const response = await requestsApi.getOptimizedDashboardStats();
           if (response.success) {
@@ -420,6 +420,15 @@ export default function AppLayout() {
               });
             }
 
+            // MR notification badges
+            const mrPendingCaseNotes = parseInt(dashboardStats?.mr_pending_case_notes_count) || 0;
+            const mrPendingFilingRequests = parseInt(dashboardStats?.mr_pending_filing_requests_count) || 0;
+            const mrReturnedCaseNotesPendingVerification = parseInt(dashboardStats?.mr_returned_case_notes_pending_verification_count) || 0;
+
+            const showMrCaseNotesBadge = item.href === '/mrs-case-note-requests' && hasRole('MR_STAFF') && mrPendingCaseNotes > 0;
+            const showMrFilingBadge = item.href === '/mr-filing-request' && hasRole('MR_STAFF') && mrPendingFilingRequests > 0;
+            const showMrReturnedBadge = item.href === '/mrs-returned-case-notes' && hasRole('MR_STAFF') && mrReturnedCaseNotesPendingVerification > 0;
+
             return (
               <Link
                 key={item.name}
@@ -493,8 +502,45 @@ export default function AppLayout() {
                   </div>
                 )}
 
+                {/* MR Staff notification badges (Gmail/Facebook style) */}
+                {showMrCaseNotesBadge && (
+                  <div className="flex items-center space-x-2">
+                    <div className="relative">
+                      <div className="h-2 w-2 bg-red-500 rounded-full animate-pulse"></div>
+                      <div className="absolute -inset-1 h-4 w-4 bg-red-500 rounded-full opacity-30 animate-ping"></div>
+                    </div>
+                    <Badge variant="destructive" className="ml-1 text-xs bg-red-500 text-white">
+                      {mrPendingCaseNotes}
+                    </Badge>
+                  </div>
+                )}
+
+                {showMrFilingBadge && (
+                  <div className="flex items-center space-x-2">
+                    <div className="relative">
+                      <div className="h-2 w-2 bg-red-500 rounded-full animate-pulse"></div>
+                      <div className="absolute -inset-1 h-4 w-4 bg-red-500 rounded-full opacity-30 animate-ping"></div>
+                    </div>
+                    <Badge variant="destructive" className="ml-1 text-xs bg-red-500 text-white">
+                      {mrPendingFilingRequests}
+                    </Badge>
+                  </div>
+                )}
+
+                {showMrReturnedBadge && (
+                  <div className="flex items-center space-x-2">
+                    <div className="relative">
+                      <div className="h-2 w-2 bg-red-500 rounded-full animate-pulse"></div>
+                      <div className="absolute -inset-1 h-4 w-4 bg-red-500 rounded-full opacity-30 animate-ping"></div>
+                    </div>
+                    <Badge variant="destructive" className="ml-1 text-xs bg-red-500 text-white">
+                      {mrReturnedCaseNotesPendingVerification}
+                    </Badge>
+                  </div>
+                )}
+
                 {/* Regular badge for other items */}
-                {item.badge && Number(item.badge) > 0 && !showVerificationBadge && !showHandoverBadge && !showRejectedReturnsBadge && !showSendOutBadge && (
+                {item.badge && Number(item.badge) > 0 && !showVerificationBadge && !showHandoverBadge && !showRejectedReturnsBadge && !showSendOutBadge && !showMrCaseNotesBadge && !showMrFilingBadge && !showMrReturnedBadge && (
                   <Badge variant="secondary" className="ml-2 text-xs">
                     {item.badge}
                   </Badge>
@@ -583,10 +629,63 @@ export default function AppLayout() {
 
             <div className="flex items-center space-x-3">
               {/* Notifications */}
-              <Button variant="ghost" size="sm" className="relative">
-                <Bell className="h-5 w-5" />
-                <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full"></span>
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="relative">
+                    <Bell className="h-5 w-5" />
+                    {hasRole('MR_STAFF') && (() => {
+                      const mrPendingCaseNotes = parseInt(dashboardStats?.mr_pending_case_notes_count) || 0;
+                      const mrPendingFilingRequests = parseInt(dashboardStats?.mr_pending_filing_requests_count) || 0;
+                      const mrReturnedCaseNotesPendingVerification = parseInt(dashboardStats?.mr_returned_case_notes_pending_verification_count) || 0;
+                      const total = mrPendingCaseNotes + mrPendingFilingRequests + mrReturnedCaseNotesPendingVerification;
+                      return total > 0 ? (
+                        <>
+                          <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full animate-pulse"></span>
+                          <span className="absolute -top-2 -right-3 text-[10px] bg-red-600 text-white rounded-full px-1.5 py-0.5 leading-none shadow-sm">
+                            {total}
+                          </span>
+                        </>
+                      ) : null;
+                    })()}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-72" align="end" forceMount>
+                  <DropdownMenuLabel className="font-semibold">Notifications</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+
+                  {hasRole('MR_STAFF') ? (
+                    <>
+                      {(() => {
+                        const mrPendingCaseNotes = parseInt(dashboardStats?.mr_pending_case_notes_count) || 0;
+                        const mrPendingFilingRequests = parseInt(dashboardStats?.mr_pending_filing_requests_count) || 0;
+                        const mrReturnedCaseNotesPendingVerification = parseInt(dashboardStats?.mr_returned_case_notes_pending_verification_count) || 0;
+                        const items = [
+                          { name: 'Case Note Requests', count: mrPendingCaseNotes, href: '/mrs-case-note-requests' },
+                          { name: 'Filing Requests', count: mrPendingFilingRequests, href: '/mr-filing-request' },
+                          { name: 'Returned Case Notes', count: mrReturnedCaseNotesPendingVerification, href: '/mrs-returned-case-notes' },
+                        ];
+                        const hasAny = items.some(i => i.count > 0);
+                        return hasAny ? (
+                          items.map(item => (
+                            <DropdownMenuItem key={item.name} asChild>
+                              <Link to={item.href} className="flex items-center justify-between w-full">
+                                <span>{item.name}</span>
+                                {item.count > 0 && (
+                                  <span className="ml-2 text-xs bg-red-500 text-white rounded-full px-2 py-0.5">{item.count}</span>
+                                )}
+                              </Link>
+                            </DropdownMenuItem>
+                          ))
+                        ) : (
+                          <div className="px-3 py-2 text-sm text-gray-500">No new notifications</div>
+                        );
+                      })()}
+                    </>
+                  ) : (
+                    <div className="px-3 py-2 text-sm text-gray-500">No notifications</div>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
 
               {/* User menu */}
               <DropdownMenu>
