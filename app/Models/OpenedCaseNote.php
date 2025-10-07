@@ -17,6 +17,9 @@ class OpenedCaseNote extends Model
     const USER_TYPE_ED_STAFF = 'ed_staff';
     const USER_TYPE_MEDICAL_STAFF = 'medical_staff';
     const USER_TYPE_ICU_STAFF = 'icu_staff';
+    const USER_TYPE_SURGICAL_STAFF = 'surgical_staff';
+    const USER_TYPE_MATERNITY_STAFF = 'maternity_staff';
+    const USER_TYPE_NURSERY_STAFF = 'nursery_staff';
 
     protected $fillable = [
         'patient_id',
@@ -129,6 +132,9 @@ class OpenedCaseNote extends Model
             self::USER_TYPE_ED_STAFF => 'ED Staff',
             self::USER_TYPE_MEDICAL_STAFF => 'Medical Staff',
             self::USER_TYPE_ICU_STAFF => 'ICU Staff',
+            self::USER_TYPE_SURGICAL_STAFF => 'Surgical Staff',
+            self::USER_TYPE_MATERNITY_STAFF => 'Maternity Staff',
+            self::USER_TYPE_NURSERY_STAFF => 'Nursery Staff',
             default => 'Unknown'
         };
     }
@@ -143,6 +149,11 @@ class OpenedCaseNote extends Model
             self::USER_TYPE_ED_STAFF => 'ED Staff',
             self::USER_TYPE_MEDICAL_STAFF => 'Medical Staff',
             self::USER_TYPE_ICU_STAFF => 'ICU Staff',
+            self::USER_TYPE_SURGICAL_STAFF => 'Surgical Staff',
+            self::USER_TYPE_MATERNITY_STAFF => 'Maternity Staff',
+            self::USER_TYPE_NURSERY_STAFF => 'Nursery Staff',
+
+
         ];
     }
 

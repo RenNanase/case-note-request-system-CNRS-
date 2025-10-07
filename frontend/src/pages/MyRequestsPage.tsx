@@ -68,7 +68,7 @@ const getStatusBadge = (status: string, displayStatus?: string, isWaitingForAppr
     'pending': { icon: Clock, className: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
     'approved': { icon: CheckCircle, className: 'bg-green-100 text-green-800 border-green-200' },
     'in_progress': { icon: Clock, className: 'bg-purple-100 text-purple-800 border-purple-200' },
-    'completed': { icon: CheckCircle, className: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
+    'completed': { icon: CheckCircle, className: 'bg-blue-100 text-blue-800 border-blue-200' },
     'rejected': { icon: AlertTriangle, className: 'bg-red-100 text-red-800 border-red-200' }
   };
 
@@ -176,6 +176,8 @@ export default function MyRequestsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [involvementFilter, setInvolvementFilter] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const pageSize = 10;
 
   // Handover request modal state
   const [showHandoverModal, setShowHandoverModal] = useState(false);
@@ -288,6 +290,31 @@ export default function MyRequestsPage() {
     return matchesSearch && matchesStatus && matchesInvolvement;
   });
 
+  // Reset to first page when filters/search change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, involvementFilter]);
+
+  const totalItems = filteredRequests.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalItems);
+  const paginatedRequests = filteredRequests.slice(startIndex, endIndex);
+
+  const goToPage = (page: number) => {
+    const clamped = Math.min(Math.max(1, page), totalPages);
+    setCurrentPage(clamped);
+  };
+
+  const getPageNumbers = () => {
+    const pages: number[] = [];
+    const windowSize = 3; // how many pages to show around current
+    const start = Math.max(1, currentPage - windowSize);
+    const end = Math.min(totalPages, currentPage + windowSize);
+    for (let p = start; p <= end; p++) pages.push(p);
+    return pages;
+  };
+
 
 
 
@@ -390,7 +417,7 @@ export default function MyRequestsPage() {
         <CardHeader>
           <CardTitle>Case Note Requests</CardTitle>
           <CardDescription>
-            Showing {filteredRequests.length} of {allRequests.length} requests
+            Showing {totalItems === 0 ? 0 : startIndex + 1}-{endIndex} of {totalItems} filtered, from {allRequests.length} total
           </CardDescription>
           <div className="flex items-center space-x-4 mt-2 text-sm text-gray-600">
             <div className="flex items-center space-x-2">
@@ -439,11 +466,11 @@ export default function MyRequestsPage() {
                     <th className="text-left py-4 px-6 font-semibold text-gray-900 text-sm">MRN</th>
                     <th className="text-left py-4 px-6 font-semibold text-gray-900 text-sm">Status</th>
                     <th className="text-left py-4 px-6 font-semibold text-gray-900 text-sm">Involvement</th>
-                    {/* <th className="text-left py-4 px-6 font-semibold text-gray-900 text-sm">Actions</th> */}
+                    <th className="text-left py-4 px-6 font-semibold text-gray-900 text-sm">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredRequests.map((request) => {
+                  {paginatedRequests.map((request) => {
                     // Determine if the case note is completed and handed over (no longer active)
                     const isCompletedAndHandedOver = request.status === 'completed' &&
                       request.requested_by_user_id === user?.id &&
@@ -517,7 +544,7 @@ export default function MyRequestsPage() {
                           request.status
                         )}
                       </td>
-                      {/* <td className="py-4 px-6">
+                      <td className="py-4 px-6">
                         <div className="flex space-x-2">
                           <Link to={`/requests/${request.id}`}>
                             <Button variant="outline" size="sm" className="text-xs">
@@ -526,12 +553,48 @@ export default function MyRequestsPage() {
                             </Button>
                           </Link>
                         </div>
-                      </td> */}
+                      </td>
                     </tr>
                   );
                 })}
                 </tbody>
               </table>
+              {/* Pagination */}
+              <div className="flex items-center justify-between p-4">
+                <div className="text-sm text-gray-600">
+                  Page {currentPage} of {totalPages}
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Button variant="outline" size="sm" onClick={() => goToPage(1)} disabled={currentPage === 1}>
+                    « First
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => goToPage(currentPage - 1)} disabled={currentPage === 1}>
+                    ‹ Prev
+                  </Button>
+                  {currentPage - 3 > 1 && (
+                    <span className="px-2 text-gray-500">...</span>
+                  )}
+                  {getPageNumbers().map((p) => (
+                    <Button
+                      key={p}
+                      variant={p === currentPage ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => goToPage(p)}
+                    >
+                      {p}
+                    </Button>
+                  ))}
+                  {currentPage + 3 < totalPages && (
+                    <span className="px-2 text-gray-500">...</span>
+                  )}
+                  <Button variant="outline" size="sm" onClick={() => goToPage(currentPage + 1)} disabled={currentPage === totalPages}>
+                    Next ›
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => goToPage(totalPages)} disabled={currentPage === totalPages}>
+                    Last »
+                  </Button>
+                </div>
+              </div>
             </div>
           )}
         </CardContent>

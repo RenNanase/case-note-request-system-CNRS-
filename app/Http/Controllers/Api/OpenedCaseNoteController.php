@@ -102,6 +102,9 @@ class OpenedCaseNoteController extends Controller
                     OpenedCaseNote::USER_TYPE_ED_STAFF,
                     OpenedCaseNote::USER_TYPE_MEDICAL_STAFF,
                     OpenedCaseNote::USER_TYPE_ICU_STAFF,
+                    OpenedCaseNote::USER_TYPE_SURGICAL_STAFF,
+                    OpenedCaseNote::USER_TYPE_MATERNITY_STAFF,
+                    OpenedCaseNote::USER_TYPE_NURSERY_STAFF,
                 ])
             ],
             'remarks' => 'required|string|min:1|max:1000',

@@ -233,7 +233,7 @@ function CADashboard({ user, stats, loading, loadingProgress, executionTime, cac
       ) : stats ? (
         <div className="grid grid-cols-5 gap-4 overflow-x-auto hide-scrollbar animate-in fade-in duration-300">
           {/* Total Requests Card */}
-          <Link to="/individual-requests" className="group">
+          <Link to="/my-requests" className="group">
             <Card className="cursor-pointer h-28 bg-white border shadow-sm hover:shadow-md hover:border-purple-300 transition-all duration-200 group-hover:scale-105">
               <CardContent className="p-6 h-full">
                 <div className="flex items-center justify-between h-full">
@@ -267,7 +267,7 @@ function CADashboard({ user, stats, loading, loadingProgress, executionTime, cac
         </Link>
 
           {/* Today's Requests Card */}
-          <Link to="/individual-requests" className="group">
+          <Link to="/my-requests" className="group">
             <Card className="cursor-pointer h-28 bg-white border shadow-sm hover:shadow-md hover:border-green-300 transition-all duration-200 group-hover:scale-105">
               <CardContent className="p-6 h-full">
                 <div className="flex items-center justify-between h-full">

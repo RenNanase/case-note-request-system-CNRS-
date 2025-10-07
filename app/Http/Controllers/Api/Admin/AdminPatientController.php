@@ -129,7 +129,7 @@ class AdminPatientController extends Controller
     {
         try {
             $user = Auth::user();
-            
+
             $activeImports = ImportProgress::byType(ImportProgress::TYPE_PATIENTS)
                 ->active()
                 ->where('requested_by_user_id', $user->id)
@@ -169,7 +169,7 @@ class AdminPatientController extends Controller
     {
         try {
             $user = Auth::user();
-            
+
             $importProgress = ImportProgress::where('id', $id)
                 ->where('requested_by_user_id', $user->id)
                 ->whereIn('status', [ImportProgress::STATUS_PENDING, ImportProgress::STATUS_PROCESSING])
@@ -255,13 +255,13 @@ class AdminPatientController extends Controller
     {
         try {
             $totalPatients = Patient::count();
-            
+
             // Get the most recent import information
             $lastImport = ImportProgress::where('import_type', ImportProgress::TYPE_PATIENTS)
                 ->where('status', ImportProgress::STATUS_COMPLETED)
                 ->orderBy('completed_at', 'desc')
                 ->first();
-            
+
             $stats = [
                 'total_patients' => $totalPatients,
                 'active_patients' => $totalPatients, // Since is_active column doesn't exist, assume all are active

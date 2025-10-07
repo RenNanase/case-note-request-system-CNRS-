@@ -48,6 +48,9 @@ const userTypeOptions = [
   { value: 'ed_staff', label: 'ED Staff' },
   { value: 'medical_staff', label: 'Medical Staff' },
   { value: 'icu_staff', label: 'ICU Staff' },
+  { value: 'surgical_staff', label: 'Surgical Staff' },
+  { value: 'maternity_staff', label: 'Maternity Staff' },
+  { value: 'nursery_staff', label: 'Nursery Staff' },
 ];
 
 export default function OpenNewCaseNotePage() {
