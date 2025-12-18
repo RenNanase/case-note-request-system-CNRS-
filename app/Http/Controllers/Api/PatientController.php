@@ -49,11 +49,27 @@ class PatientController extends Controller
 
             // Add case note availability information for each patient
             $patientsWithAvailability = $patients->map(function($patient) {
+                /** @var \App\Models\Patient $patient */
                 $patientData = $patient->toSearchResult();
 
-                // Check if patient has any existing case note requests
+                // Check if patient has any existing/locking case note requests
+                // Locking states include:
+                //  - pending, approved, in_progress, pending_return_verification
+                //  - OR any case note that has been returned and not yet rejected (is_returned = true, is_rejected_return = false)
                 $existingRequests = \App\Models\Request::where('patient_id', $patient->id)
-                    ->whereIn('status', ['pending', 'approved']) // Check both pending and approved requests
+                    ->whereNull('deleted_at')
+                    ->where(function ($query) {
+                        $query->whereIn('status', [
+                                \App\Models\Request::STATUS_PENDING,
+                                \App\Models\Request::STATUS_APPROVED,
+                                \App\Models\Request::STATUS_IN_PROGRESS,
+                                \App\Models\Request::STATUS_PENDING_RETURN_VERIFICATION,
+                            ])
+                            ->orWhere(function ($q) {
+                                $q->where('is_returned', true)
+                                  ->where('is_rejected_return', false);
+                            });
+                    })
                     ->get();
 
                 Log::info('Patient request check', [
@@ -67,6 +83,12 @@ class PatientController extends Controller
                     // Check if any of the requests are currently held by someone
                     $hasCurrentPIC = $existingRequests->whereNotNull('current_pic_user_id')->count() > 0;
 
+                    // Check if any request is in a "pending return verification" lock
+                    $hasPendingReturnLock = $existingRequests->contains(function ($request) {
+                        return $request->status === \App\Models\Request::STATUS_PENDING_RETURN_VERIFICATION
+                            || ($request->is_returned && !$request->is_rejected_return);
+                    });
+
                     // Check if there are any pending handover requests
                     $pendingHandoverRequests = \App\Models\HandoverRequest::whereIn('case_note_id', $existingRequests->pluck('id'))
                         ->where('status', 'pending')
@@ -76,12 +98,25 @@ class PatientController extends Controller
                     // Use the first existing request (either pending or approved)
                     $caseNoteRequestId = $existingRequests->first()->id;
 
+                    // Determine availability and reason
+                    $isAvailable = !$hasCurrentPIC && $pendingHandoverRequests === 0 && !$hasPendingReturnLock;
+                    $availabilityReason = null;
+
+                    if ($hasPendingReturnLock) {
+                        $availabilityReason = 'pending_return_verification';
+                    } elseif ($pendingHandoverRequests > 0) {
+                        $availabilityReason = 'handover_requested';
+                    } elseif ($hasCurrentPIC) {
+                        $availabilityReason = 'held_by_other_ca';
+                    }
+
                     // Merge availability information with patient data
                     $patientData = array_merge($patientData, [
                         'has_existing_requests' => true,
-                        'is_available' => !$hasCurrentPIC && $pendingHandoverRequests === 0,
+                        'is_available' => $isAvailable,
                         'handover_status' => $pendingHandoverRequests > 0 ? 'requested' : 'none',
                         'case_note_request_id' => $caseNoteRequestId,
+                        'availability_reason' => $availabilityReason,
                     ]);
 
                     Log::info('Patient availability data', [

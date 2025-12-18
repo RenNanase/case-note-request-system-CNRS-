@@ -309,6 +309,11 @@ export default function PatientSearch({
                                   <Clock className="h-3 w-3 mr-1" />
                                   Handover Requested
                                 </Badge>
+                              ) : !patient.is_available && patient.availability_reason === 'pending_return_verification' ? (
+                                <Badge variant="outline" className="text-xs text-yellow-700 bg-yellow-50 border-yellow-200">
+                                  <Clock className="h-3 w-3 mr-1" />
+                                  Pending MR Verification
+                                </Badge>
                               ) : !patient.is_available ? (
                                 <Badge variant="destructive" className="text-xs">
                                   <XCircle className="h-3 w-3 mr-1" />
@@ -352,6 +357,11 @@ export default function PatientSearch({
                                     ⚠️ Handover request pending for this patient
                                   </p>
                                 )}
+                                {!patient.is_available && patient.availability_reason === 'pending_return_verification' && (
+                                  <p className="text-xs text-yellow-700">
+                                    ⚠️ Case note has been returned and is pending MR staff verification. Please ask MR staff to verify or complete it before creating a new request.
+                                  </p>
+                                )}
                                 {!patient.is_available && patient.current_holder && (
                                   <p className="text-xs text-red-600">
                                     🔒 Currently held by: {patient.current_holder.name}
@@ -370,7 +380,10 @@ export default function PatientSearch({
                     </button>
 
                     {/* Handover request button - positioned outside the main button */}
-                    {!patient.is_available && patient.has_existing_requests && onRequestHandover && (
+                    {!patient.is_available &&
+                     patient.has_existing_requests &&
+                     patient.availability_reason !== 'pending_return_verification' &&
+                     onRequestHandover && (
                       <div className="absolute top-2 right-2 z-10">
                         <button
                           type="button"

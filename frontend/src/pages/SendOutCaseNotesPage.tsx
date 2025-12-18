@@ -524,14 +524,14 @@ const SendOutCaseNotesPage: React.FC = () => {
                           />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between">
-                              <h4 className="font-medium text-gray-900">{caseNote.patient.name}</h4>
+                              <h4 className="font-medium text-gray-900">{caseNote.patient?.name || 'Unknown Patient'}</h4>
                               <Badge variant="outline" className="text-green-600 border-green-600">
                                 {caseNote.status}
                               </Badge>
                             </div>
-                            <p className="text-sm text-gray-600">MRN: {caseNote.patient.mrn}</p>
+                            <p className="text-sm text-gray-600">MRN: {caseNote.patient?.mrn || 'N/A'}</p>
                             <p className="text-sm text-gray-600">
-                              {caseNote.department.name} - {caseNote.doctor.name}
+                              {caseNote.department?.name || 'N/A'} - {caseNote.doctor?.name || 'N/A'}
                             </p>
                             <p className="text-xs text-gray-500">
                               Request: {caseNote.request_number} | Approved: {new Date(caseNote.approved_at).toLocaleDateString()}

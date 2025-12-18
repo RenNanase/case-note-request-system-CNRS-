@@ -362,6 +362,11 @@ export default function PatientSearch({
                                     <CheckCircle2 className="w-3 h-3 mr-1" />
                                     Available
                                   </Badge>
+                                ) : patient.availability_reason === 'pending_return_verification' ? (
+                                  <Badge variant="outline" className="text-xs px-2 py-0.5 bg-yellow-50 text-yellow-700 border-yellow-200">
+                                    <Clock className="w-3 h-3 mr-1" />
+                                    Pending MR Verification
+                                  </Badge>
                                 ) : (
                                   <Badge variant="outline" className="text-xs px-2 py-0.5 bg-red-50 text-red-700 border-red-200">
                                     <XCircle className="w-3 h-3 mr-1" />
@@ -370,6 +375,14 @@ export default function PatientSearch({
                                 )
                               )}
                             </div>
+
+                            {/* Pending return verification note */}
+                            {patient.has_existing_requests && !patient.is_available && patient.availability_reason === 'pending_return_verification' && (
+                              <div className="mt-2 text-xs text-yellow-800 bg-yellow-50 border border-yellow-200 rounded-md p-2">
+                                This patient&apos;s case note has already been returned and is pending MR staff verification.
+                                Please inform MR staff to verify or complete the case note before requesting it again.
+                              </div>
+                            )}
 
                             {/* MR Staff Restriction Banner */}
                             {patient.handover_status === "mr_staff_opened" && patient.restriction_details && (
@@ -432,7 +445,12 @@ export default function PatientSearch({
                         </button>
 
                         {/* Handover Request Button - Separate from clickable area */}
-                        {!patient.is_available && patient.has_existing_requests && patient.handover_status !== "requested" && patient.handover_status !== "mr_staff_opened" && onRequestHandover && (
+                        {!patient.is_available &&
+                         patient.has_existing_requests &&
+                         patient.handover_status !== "requested" &&
+                         patient.handover_status !== "mr_staff_opened" &&
+                         patient.availability_reason !== 'pending_return_verification' &&
+                         onRequestHandover && (
                           <div className="flex-shrink-0">
                             <Button
                               type="button"

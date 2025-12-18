@@ -285,6 +285,33 @@ class RequestController extends Controller
             ], 403);
         }
 
+        // Prevent creating a new request for a patient that already has an active/locking case note
+        // "Locking" states include:
+        //  - pending, approved, in progress, pending return verification
+        //  - OR any case note that has been returned and not yet rejected (is_returned = true, is_rejected_return = false)
+        $hasBlockingCase = \App\Models\Request::where('patient_id', $request->patient_id)
+            ->whereNull('deleted_at')
+            ->where(function ($query) {
+                $query->whereIn('status', [
+                        \App\Models\Request::STATUS_PENDING,
+                        \App\Models\Request::STATUS_APPROVED,
+                        \App\Models\Request::STATUS_IN_PROGRESS,
+                        \App\Models\Request::STATUS_PENDING_RETURN_VERIFICATION,
+                    ])
+                    ->orWhere(function ($q) {
+                        $q->where('is_returned', true)
+                          ->where('is_rejected_return', false);
+                    });
+            })
+            ->exists();
+
+        if ($hasBlockingCase) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This patient already has an active or returned case note that is pending MR staff action. Please verify or complete the existing case note before creating a new request.',
+            ], 409);
+        }
+
         $caseRequest = \App\Models\Request::create([
             'request_number' => \App\Models\Request::generateRequestNumber(),
             'patient_id' => $request->patient_id,
@@ -564,6 +591,27 @@ class RequestController extends Controller
             ], 403);
         }
 
+        // Prevent approving this request if another request for the same patient
+        // is currently in a locking state (especially a returned case pending MR verification).
+        $hasPendingReturnForPatient = \App\Models\Request::where('patient_id', $caseRequest->patient_id)
+            ->where('id', '!=', $caseRequest->id)
+            ->whereNull('deleted_at')
+            ->where(function ($query) {
+                $query->where('status', \App\Models\Request::STATUS_PENDING_RETURN_VERIFICATION)
+                      ->orWhere(function ($q) {
+                          $q->where('is_returned', true)
+                            ->where('is_rejected_return', false);
+                      });
+            })
+            ->exists();
+
+        if ($hasPendingReturnForPatient) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This patient has a returned case note that is still pending MR staff verification. Please verify or reject the existing return before approving a new request.',
+            ], 409);
+        }
+
         $validator = Validator::make($httpRequest->all(), [
             'remarks' => 'nullable|string|max:1000',
         ]);
@@ -614,6 +662,27 @@ class RequestController extends Controller
                 'success' => false,
                 'message' => 'You do not have permission to approve requests'
             ], 403);
+        }
+
+        // Prevent approving this request on behalf of another user if there is already
+        // a returned case note for the same patient pending MR staff verification.
+        $hasPendingReturnForPatient = \App\Models\Request::where('patient_id', $caseRequest->patient_id)
+            ->where('id', '!=', $caseRequest->id)
+            ->whereNull('deleted_at')
+            ->where(function ($query) {
+                $query->where('status', \App\Models\Request::STATUS_PENDING_RETURN_VERIFICATION)
+                      ->orWhere(function ($q) {
+                          $q->where('is_returned', true)
+                            ->where('is_rejected_return', false);
+                      });
+            })
+            ->exists();
+
+        if ($hasPendingReturnForPatient) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This patient has a returned case note that is still pending MR staff verification. Please verify or reject the existing return before approving a new request.',
+            ], 409);
         }
 
         $validator = Validator::make($httpRequest->all(), [
@@ -1352,6 +1421,8 @@ class RequestController extends Controller
                       });
             })
             ->where('status', '!=', \App\Models\Request::STATUS_COMPLETED) // Exclude already completed ones
+            // Only include records that have a returning CA set to avoid null dereferences
+            ->whereNotNull('returned_by_user_id')
             ->orderBy('returned_at', 'desc')
             ->get();
 
@@ -1363,29 +1434,29 @@ class RequestController extends Controller
 
                     return [
                         'ca_user_id' => $caUserId,
-                        'ca_name' => $caUser->name,
+                        'ca_name' => $caUser?->name ?? 'Unknown',
                         'submission_date' => $caseNotes->max('returned_at'),
                         'case_notes' => $caseNotes->map(function ($cn) {
                             return [
                                 'id' => $cn->id,
                                 'patient' => [
-                                    'id' => $cn->patient->id,
-                                    'name' => $cn->patient->name,
-                                    'mrn' => $cn->patient->mrn,
+                                    'id' => $cn->patient?->id,
+                                    'name' => $cn->patient?->name,
+                                    'mrn' => $cn->patient?->mrn,
                                 ],
                                 'department' => [
-                                    'id' => $cn->department->id,
-                                    'name' => $cn->department->name,
-                                    'code' => $cn->department->code,
+                                    'id' => $cn->department?->id,
+                                    'name' => $cn->department?->name,
+                                    'code' => $cn->department?->code,
                                 ],
                                 'doctor' => [
-                                    'id' => $cn->doctor->id,
-                                    'name' => $cn->doctor->name,
+                                    'id' => $cn->doctor?->id,
+                                    'name' => $cn->doctor?->name,
                                 ],
                                 'returned_at' => $cn->returned_at,
                                 'returned_by_user' => [
-                                    'id' => $cn->returnedBy->id,
-                                    'name' => $cn->returnedBy->name,
+                                    'id' => $cn->returnedBy?->id,
+                                    'name' => $cn->returnedBy?->name,
                                 ],
                                 'return_notes' => $cn->return_notes,
                                 'status' => $cn->status,
@@ -1558,17 +1629,20 @@ class RequestController extends Controller
 
                     } elseif ($action === 'reject') {
                         // Mark case note as rejected and return to CA
+                        // Preserve returned_by_user_id so CA can still see the rejected case note
+                        $originalReturnedByUserId = $caseNote->returned_by_user_id;
                         $caseNote->update([
                             'status' => \App\Models\Request::STATUS_APPROVED, // Reset to approved status
                             'is_returned' => false,
                             'returned_at' => null,
-                            'returned_by_user_id' => null,
+                            'returned_by_user_id' => $originalReturnedByUserId, // Keep the original CA who returned it
                             'return_notes' => null,
                             'is_received' => true, // Keep as received
                             'rejection_reason' => $rejectionReason,
                             'rejected_at' => now(),
                             'rejected_by_user_id' => $user->id,
                             'is_rejected_return' => true, // Mark as rejected return for CA visibility
+                            'current_pic_user_id' => $originalReturnedByUserId, // Ensure CA can see it in their list
                         ]);
 
                         // Create timeline event for rejection

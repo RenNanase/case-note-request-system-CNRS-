@@ -130,9 +130,37 @@ class IndividualRequestController extends Controller
         try {
             DB::beginTransaction();
 
+            // Prevent creating a new request for a patient that already has an active/locking case note.
+            // Locking states include:
+            //  - pending, approved, in progress, pending return verification
+            //  - OR any case note that has been returned and not yet rejected (is_returned = true, is_rejected_return = false)
+            $hasBlockingCase = CaseNoteRequest::where('patient_id', $request->patient_id)
+                ->whereNull('deleted_at')
+                ->where(function ($query) {
+                    $query->whereIn('status', [
+                            CaseNoteRequest::STATUS_PENDING,
+                            CaseNoteRequest::STATUS_APPROVED,
+                            CaseNoteRequest::STATUS_IN_PROGRESS,
+                            CaseNoteRequest::STATUS_PENDING_RETURN_VERIFICATION,
+                        ])
+                        ->orWhere(function ($q) {
+                            $q->where('is_returned', true)
+                              ->where('is_rejected_return', false);
+                        });
+                })
+                ->exists();
+
+            if ($hasBlockingCase) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This patient already has an active or returned case note that is pending MR staff action. Please verify or complete the existing case note before creating a new request.',
+                ], 409);
+            }
+
             // Create individual case note request
-                    $caseNoteRequest = CaseNoteRequest::create([
-            'request_number' => CaseNoteRequest::generateRequestNumber(),
+            $caseNoteRequest = CaseNoteRequest::create([
+                'request_number' => CaseNoteRequest::generateRequestNumber(),
                 'patient_id' => $request->patient_id,
                 'requested_by_user_id' => $user->id,
                 'department_id' => $request->department_id,

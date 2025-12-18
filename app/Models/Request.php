@@ -503,6 +503,7 @@ class Request extends Model
             self::STATUS_IN_PROGRESS => 'In Progress',
             self::STATUS_COMPLETED => 'Completed',
             self::STATUS_REJECTED => 'Rejected',
+            self::STATUS_PENDING_RETURN_VERIFICATION => 'Pending Return Verification',
         ];
     }
 
@@ -592,12 +593,18 @@ class Request extends Model
     public function canBeReturned(): bool
     {
         // Check if case note is in a returnable state
-        if ($this->status !== self::STATUS_APPROVED ||
-            !$this->is_received ||
-            $this->is_returned ||
-            $this->is_rejected_return) {
+        // Must be approved and received
+        if ($this->status !== self::STATUS_APPROVED || !$this->is_received) {
             return false;
         }
+
+        // If it's already returned and NOT rejected, it can't be returned again (it's pending verification)
+        if ($this->is_returned && !$this->is_rejected_return) {
+            return false;
+        }
+
+        // Rejected returns (is_rejected_return = true) CAN be re-returned
+        // Case notes that haven't been returned yet (is_returned = false) CAN be returned
 
         // Check if case note is currently sent out and not yet Acknowledge
         $pendingSendOut = \App\Models\SendOutCaseNote::where('status', \App\Models\SendOutCaseNote::STATUS_PENDING)

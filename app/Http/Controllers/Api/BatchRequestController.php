@@ -192,6 +192,34 @@ class BatchRequestController extends Controller
 
             // Create individual case note requests
             foreach ($request->case_notes as $caseNoteData) {
+                // Prevent creating a new request for a patient that already has an active/locking case note.
+                // Locking states include:
+                //  - pending, approved, in progress, pending return verification
+                //  - OR any case note that has been returned and not yet rejected (is_returned = true, is_rejected_return = false)
+                $hasBlockingCase = Request::where('patient_id', $caseNoteData['patient_id'])
+                    ->whereNull('deleted_at')
+                    ->where(function ($query) {
+                        $query->whereIn('status', [
+                                Request::STATUS_PENDING,
+                                Request::STATUS_APPROVED,
+                                Request::STATUS_IN_PROGRESS,
+                                Request::STATUS_PENDING_RETURN_VERIFICATION,
+                            ])
+                            ->orWhere(function ($q) {
+                                $q->where('is_returned', true)
+                                  ->where('is_rejected_return', false);
+                            });
+                    })
+                    ->exists();
+
+                if ($hasBlockingCase) {
+                    DB::rollBack();
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'One or more patients in this batch already have an active or returned case note that is pending MR staff verification. Please verify or complete the existing case notes before creating new requests.',
+                    ], 409);
+                }
+
                 $caseNoteRequest = Request::create([
                     'request_number' => Request::generateRequestNumber(),
                     'patient_id' => $caseNoteData['patient_id'],

@@ -209,11 +209,19 @@ export const BatchRequestForm: React.FC<BatchRequestFormProps> = ({
 
     // Check if patient is available
     if (patient.has_existing_requests && !patient.is_available) {
+      let description = 'This patient is currently unavailable for a new case note request.';
+
+      if (patient.availability_reason === 'pending_return_verification') {
+        description = 'This patient\'s case note has already been returned and is pending MR staff verification. Please ask MR staff to verify or complete the case note before requesting it again.';
+      } else if (patient.handover_status === 'requested' || patient.availability_reason === 'handover_requested') {
+        description = 'This patient has a pending handover request and cannot be selected.';
+      } else if (patient.availability_reason === 'held_by_other_ca') {
+        description = 'This patient\'s case note is currently held by another CA and cannot be selected.';
+      }
+
       toast({
         title: 'Patient Not Available',
-        description: patient.handover_status === 'requested'
-          ? 'This patient has a pending handover request and cannot be selected.'
-          : 'This patient is currently held by another CA and cannot be selected.',
+        description,
         variant: 'destructive',
       });
       return;
@@ -490,7 +498,7 @@ export const BatchRequestForm: React.FC<BatchRequestFormProps> = ({
                         <div className="flex-shrink-0 w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center text-sm font-medium text-purple-600">
                           {index + 1}
                         </div>
-                        
+
                         <div className="flex-1">
                           <FormField
                             control={form.control}

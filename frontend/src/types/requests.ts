@@ -13,6 +13,7 @@ export interface Patient {
   has_existing_requests?: boolean;
   is_available?: boolean;
   handover_status?: string;
+  availability_reason?: 'pending_return_verification' | 'handover_requested' | 'held_by_other_ca' | string;
   restriction_type?: string;
   restriction_details?: {
     department_name: string;
